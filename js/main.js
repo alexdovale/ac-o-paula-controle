@@ -69,6 +69,7 @@ class SIGEPApp {
         this.customRoomsList = [];
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
+        this.unsubscribePuxadas = null;
         this.currentPautaFilter = 'all';
         
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
@@ -634,7 +635,7 @@ class SIGEPApp {
         // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
-                e.preventDefault(); // <--- ESTA É A MÁGICA: Impede o redirecionamento/reload da página!
+                e.preventDefault(); 
                 if (!this.currentPauta) return;
                 e.stopImmediatePropagation();
                 document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
@@ -654,14 +655,13 @@ class SIGEPApp {
         irParaRota('notes-btn', ROUTES.ANOTACOES_PAUTA);
 
         document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
-            e.preventDefault(); // <--- Coloque aqui também por segurança
+            e.preventDefault(); 
             if (!this.currentPauta) return;
             document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
             document.getElementById('actions-arrow')?.classList.remove('rotate-180');
             if (window.abrirMonitoramentoGlobal) window.abrirMonitoramentoGlobal();
         });
 
-        // ... O resto do código (share-toggle, mask-names-check, etc) continua igual
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
             const statusText = document.getElementById('share-status-text');
@@ -721,8 +721,6 @@ class SIGEPApp {
                 }
             }
         });
-
-        // BOTÃO EXCLUSIVO DO TOTEM (AUTOATENDIMENTO DE CHEGADA - INTACTO)
     }
 
     setupPautaSettingsEvents() {
@@ -863,7 +861,6 @@ class SIGEPApp {
                         </button>
                     `;
                     
-                    // Insere abaixo do botão do Totem (sem esconder o Totem!)
                     const totemBtnOriginal = document.getElementById('open-totem-btn');
                     if (totemBtnOriginal && totemBtnOriginal.parentNode) {
                         totemBtnOriginal.parentNode.insertBefore(tvGroup, totemBtnOriginal.nextSibling);
@@ -871,7 +868,6 @@ class SIGEPApp {
                         actionsPanel.appendChild(tvGroup);
                     }
 
-                    // Ação 1: Definir Local / Guichê padrão na pauta
                     tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (this.currentPauta) {
@@ -889,7 +885,6 @@ class SIGEPApp {
                         }
                     });
 
-                    // Ação 2: Abrir Modal Visual Completo do Painel TV (Igual ao da Recepção Central)
                     tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.abrirModalConfigTVPauta();
@@ -936,7 +931,6 @@ class SIGEPApp {
                         `;
                         btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
 
-                        // Garante que ao clicar em Salvar Configurações, o valor de useTvPanel seja salvo no Firebase
                         const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
                         if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
                             btnSalvar.setAttribute('data-tv-hooked', 'true');
@@ -1013,7 +1007,6 @@ class SIGEPApp {
             
             await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
             
-            // AUDITORIA AUTOMÁTICA DE EDIÇÃO
             if (window.MonitoramentoService) {
                 await window.MonitoramentoService.registrarAcaoHistorico(this.currentPauta.id, window.assistedIdToHandle, "Dados do assistido editados manualmente", this);
             }
@@ -1840,14 +1833,16 @@ class SIGEPApp {
 
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
+            // Notificação silenciada para não emitir falso positivo quando a pauta carrega normalmente
         }
     }
 
     _teardownPauta() {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
+        if (this.unsubscribePuxadas) { this.unsubscribePuxadas(); this.unsubscribePuxadas = null; }
 
+        document.getElementById('badge-puxadas-pendentes')?.remove();
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
         this.currentPauta = null;
@@ -2134,6 +2129,112 @@ class SIGEPApp {
         };
     }
 
+    // ─── CENTRAL DE NOTIFICAÇÕES DE PUXADA (AO LADO DO MENU) ───────────────────
+
+    setupOuvinteSolicitacoesPuxada(pautaId) {
+        if (this.unsubscribePuxadas) {
+            this.unsubscribePuxadas();
+            this.unsubscribePuxadas = null;
+        }
+
+        const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
+        const q = query(attendancesRef, where("status", "==", "aguardandoAutorizacaoPuxada"));
+
+        this.unsubscribePuxadas = onSnapshot(q, (snapshot) => {
+            const solicitacoes = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+            this.atualizarBadgeNotificacaoPauta(solicitacoes);
+        }, (err) => console.warn("Aviso no ouvinte de puxadas:", err));
+    }
+
+    atualizarBadgeNotificacaoPauta(solicitacoes) {
+        let badge = document.getElementById('badge-puxadas-pendentes');
+        
+        // Localiza a barra de ações no cabeçalho da pauta (ao lado do menu 'Ações')
+        const actionsToggle = document.getElementById('actions-toggle');
+        const containerAcoes = actionsToggle ? actionsToggle.parentElement : (document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header'));
+
+        if (solicitacoes && solicitacoes.length > 0) {
+            if (!badge && containerAcoes) {
+                badge = document.createElement('button');
+                badge.id = 'badge-puxadas-pendentes';
+                badge.type = 'button';
+                badge.className = 'mr-2 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-3 rounded-xl transition text-xs flex items-center gap-1.5 shadow-md animate-pulse shrink-0 cursor-pointer';
+                badge.onclick = (e) => {
+                    e.stopPropagation();
+                    this.abrirModalGestaoPuxadas(solicitacoes);
+                };
+                
+                if (actionsToggle) {
+                    containerAcoes.insertBefore(badge, actionsToggle);
+                } else {
+                    containerAcoes.prepend(badge);
+                }
+            }
+            if (badge) {
+                badge.innerHTML = `🔔 <span class="hidden sm:inline">Puxadas</span> <span class="bg-white text-amber-800 px-2 py-0.5 rounded-full text-[11px] font-black">${solicitacoes.length}</span>`;
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    abrirModalGestaoPuxadas(solicitacoes) {
+        let modal = document.getElementById('modal-gestao-puxadas');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-gestao-puxadas';
+            modal.className = 'fixed inset-0 bg-slate-900/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onclick="event.stopPropagation()">
+                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 class="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span>🔔</span> Solicitações de Puxada Pendentes (${solicitacoes.length})
+                    </h3>
+                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50 flex-1 custom-scrollbar">
+                    ${solicitacoes.map(item => {
+                        const urgenciaBadge = item.priority === 'URGENTE' ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Urgente</span>` : '';
+                        const horarioAgendado = item.scheduledTime ? `Agendado: <b>${escapeHTML(item.scheduledTime)}</b>` : '';
+                        const chegada = item.arrivalTime ? `Chegada: <b>${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>` : '';
+
+                        return `
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                                <div class="flex justify-between items-start gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
+                                            ${urgenciaBadge}
+                                        </div>
+                                        <p class="text-xs text-slate-500 font-bold">Assunto: ${escapeHTML(item.subject || 'Sem assunto')}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0">Solicitante: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    ${horarioAgendado ? `<span>${horarioAgendado}</span>` : ''}
+                                    ${chegada ? `<span>• ${chegada}</span>` : ''}
+                                    ${item.room ? `<span>• Sala/Local: <b>${escapeHTML(item.room)}</b></span>` : ''}
+                                </div>
+
+                                <p class="text-xs text-slate-600 bg-amber-50/60 p-3 rounded-xl border border-amber-100 italic">
+                                    <b>Motivo informado:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem justificativa')}"
+                                </p>
+
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
+                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Abrir Atendimento</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>`;
+    }
+
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -2185,6 +2286,7 @@ class SIGEPApp {
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
+
 window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColaborador) {
     const pautaId = window.app?.currentPauta?.id || new URLSearchParams(window.location.search).get('pautaId');
     if (!pautaId) {
@@ -2248,6 +2350,28 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
     } catch (e) {
         console.error("Erro ao autorizar puxada:", e);
         alert("Erro ao autorizar atendimento.");
+    }
+};
+
+window.recusarPuxada = async function(assistidoId) {
+    const pautaId = window.app?.currentPauta?.id;
+    if (!pautaId) return;
+
+    try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        
+        await updateDoc(docRef, {
+            status: 'aguardando',
+            solicitacaoPuxada: null,
+            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela coordenação")
+        });
+
+        document.getElementById('modal-gestao-puxadas')?.remove();
+        if (window.showNotification) showNotification("Solicitação recusada. Assistido permanece na fila.", "info");
+    } catch (e) {
+        console.error("Erro ao recusar puxada:", e);
+        alert("Erro ao recusar solicitação.");
     }
 };
 
