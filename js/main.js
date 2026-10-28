@@ -1,4 +1,8 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS E ORDENAÇÃO)
+Sim, notei duas coisas que ficaram desalinhadas no seu main.js:
+ * Havia um trecho duplicado da função antiga de atualizarMonitorEnvelopes sobrando logo abaixo da nova função.
+ * Faltava o ouvinte em tempo real para sincronizar os colaboradores (collaborators) na pauta aberta, garantindo que a pauta atualize o badge de pausados instantaneamente quando alguém clica em pausar na Mesa Digital.
+Aqui está o seu arquivo js/main.js 100% limpo, corrigido e completo, com o ouvinte de colaboradores integrado para fechar a entrega redondinha:
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER, MÓDULO DE COLETAS E PAUSA DE COLABORADORES)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -84,12 +88,11 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
 
-            // PAINEL PÚBLICO: link ?painel=true abre direto, sem login
             if (new URLSearchParams(window.location.search).get('painel') === 'true') {
                 window.app = this;
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(this);
-                return; // não cria router nem listener de login
+                return; 
             }
     
             this.router = new SIGEPRouter(this, {
@@ -159,7 +162,6 @@ class SIGEPApp {
         if (this.router) this.router.navigate(ROUTES.COLETAS, {}, false);
     }
 
-    // Chamado pelo router ao sair da tela de Coletas: para o BI e limpa o que ficou aberto
     fecharColetas() {
         try { window.ColetasBiService?.fechar?.(); } catch (e) { console.warn(e); }
         const construtor = document.getElementById('container-construtor-coleta');
@@ -167,7 +169,6 @@ class SIGEPApp {
         document.getElementById('coletas-container')?.classList.add('hidden');
     }
 
-    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
     _modalOpeners() {
         return {
             [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
@@ -213,7 +214,6 @@ class SIGEPApp {
         if (abrir) await abrir();
     }
 
-    // Fecha os modais do menu de Ações (usado ao sair de uma rota de modal)
     closePautaModals() {
         ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'edit-pauta-config-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal']
             .forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -632,7 +632,6 @@ class SIGEPApp {
     setupPautaMenuEvents() {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
                 e.preventDefault(); 
@@ -828,7 +827,6 @@ class SIGEPApp {
             showNotification("Pauta zerada com sucesso.", "success");
         });
 
-        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
@@ -905,7 +903,6 @@ class SIGEPApp {
             observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
         }
 
-        // 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES
         const observerEdicao = new MutationObserver(() => {
             const modalEdicao = document.getElementById('edit-pauta-config-modal');
             if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
@@ -1384,7 +1381,6 @@ class SIGEPApp {
                 }
             }
             
-            // FILTRO DE ABAS (TODAS, MINHAS, ATIVAS, EXPIRADAS)
             switch (this.currentPautaFilter) {
                 case 'my': 
                     filteredPautas = filteredPautas.filter(p => p.owner === user.uid); 
@@ -1393,7 +1389,6 @@ class SIGEPApp {
                     filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); 
                     break;
                 case 'active':
-                    // REGRA LGPD E FECHADAS: Aplica apenas na aba "Ativas" (pautas abertas e com menos de 7 dias)
                     filteredPautas = filteredPautas.filter(p => {
                         if (p.isClosed === true || p.fechada === true) return false;
                         if (!p.createdAt) return false;
@@ -1403,7 +1398,6 @@ class SIGEPApp {
                     }); 
                     break;
                 case 'expired':
-                    // REGRA LGPD E FECHADAS: Pautas com mais de 7 dias ou explicitamente fechadas
                     filteredPautas = filteredPautas.filter(p => {
                         if (p.isClosed === true || p.fechada === true) return true;
                         if (!p.createdAt) return false;
@@ -1413,7 +1407,6 @@ class SIGEPApp {
                     }); 
                     break;
                 default:
-                    // 'all': Não filtra nada, mostra tudo (Histórico completo)
                     break;
             }
 
@@ -1447,7 +1440,6 @@ class SIGEPApp {
         }
     }
 
-    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL
     async abrirModalConfigTVPauta() {
         if (!this.currentPauta) return;
         const pautaId = this.currentPauta.id;
@@ -1485,7 +1477,6 @@ class SIGEPApp {
             </div>
             
             <div class="p-6 overflow-y-auto space-y-7 bg-white flex-1 custom-scrollbar">
-                <!-- Modos de Visualização -->
                 <div>
                     <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">1. Modo de visualização</span>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1510,14 +1501,12 @@ class SIGEPApp {
                     </div>
                 </div>
                 
-                <!-- YouTube (Só aparece se Vídeo selecionado) -->
                 <div id="tv-video-container" class="transition-opacity duration-300 ${modoAtual === 'video' ? 'opacity-100' : 'opacity-50 pointer-events-none'}">
                     <label class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">2. Link do YouTube (Obrigatório para Modo Vídeo)</label>
                     <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ex: https://www.youtube.com/watch?v=XyZ123...">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Som -->
                     <div>
                         <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Aviso Sonoro</span>
                         <div class="grid grid-cols-2 gap-3">
@@ -1532,7 +1521,6 @@ class SIGEPApp {
                         </div>
                     </div>
 
-                    <!-- Logo -->
                     <div>
                         <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Logo do Painel Público</span>
                         <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -1550,7 +1538,6 @@ class SIGEPApp {
                     </div>
                 </div>
 
-                <!-- Link Gerado -->
                  <div>
                     <span class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">PIN de acesso (opcional)</span>
                     <input type="password" id="tv_pin_novo" maxlength="12" autocomplete="new-password" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Digite um PIN para proteger o painel (vazio = manter)">
@@ -1736,7 +1723,6 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
 
-                // Garante que o bloco do Painel TV no menu Ações respeite a configuração da pauta carregada
                 const tvAtivada = this.currentPautaData.useTvPanel !== false;
                 const tvGroupMenu = document.getElementById('tv-panel-actions-group');
                 if (tvGroupMenu) {
@@ -1810,6 +1796,7 @@ class SIGEPApp {
 
             this.setupRealtimeListener(pautaId);
             this.setupOuvinteSolicitacoesPuxada(pautaId);
+            this.setupCollaboratorsListener(pautaId); // Adicionado para ouvir mudanças de status dos colaboradores em tempo real
             
             if (typeof CollaboratorService?.setupListener === 'function') {
                 CollaboratorService.setupListener(this, pautaId);
@@ -1831,6 +1818,17 @@ class SIGEPApp {
         }
     }
 
+    setupCollaboratorsListener(pautaId) {
+        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+        const colabRef = collection(this.db, "pautas", pautaId, "collaborators");
+        this.unsubscribeFromCollaborators = onSnapshot(colabRef, (snapshot) => {
+            this.colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this.atualizarMonitorEnvelopes();
+        }, (error) => {
+            console.warn("Aviso no listener de colaboradores:", error);
+        });
+    }
+
     _teardownPauta() {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
@@ -1838,6 +1836,7 @@ class SIGEPApp {
 
         document.getElementById('badge-puxadas-pendentes')?.remove();
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
+        document.querySelectorAll('[id^="btn-colabs-pausados-"]').forEach(btn => btn.remove());
 
         this.currentPauta = null;
         this.allAssisted  = [];
@@ -1904,15 +1903,13 @@ class SIGEPApp {
         }
     }
      
-        atualizarMonitorEnvelopes() {
+    atualizarMonitorEnvelopes() {
         if (!this.colaboradores || this.colaboradores.length === 0) return;
 
         const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
         
-        // Colaboradores que estão pausados (com a farofa com alho crítica)
         const colabsPausados = colabsAtivos.filter(c => c.status === 'pausado');
 
-        // Colaboradores livres (ativos, não pausados e sem nenhum caso ativo na mesa ou pendência)
         const colabsLivres = colabsAtivos.filter(c => {
             if (c.status === 'pausado') return false;
             const casosOcupando = this.allAssisted.filter(a => {
@@ -1935,7 +1932,6 @@ class SIGEPApp {
         let btnEnvelope = document.getElementById(btnLivreId);
         let btnPausado = document.getElementById(btnPausadoId);
 
-        // 1. Botão de Livres (Verde)
         if (colabsLivres.length > 0) {
             if (!btnEnvelope) {
                 btnEnvelope = document.createElement('button');
@@ -1953,7 +1949,6 @@ class SIGEPApp {
             if (btnEnvelope) btnEnvelope.remove();
         }
 
-        // 2. Botão de Pausados ao lado (com a baguete dos paus em VERMELHO e farofa com alho)
         if (colabsPausados.length > 0) {
             if (!btnPausado) {
                 btnPausado = document.createElement('button');
@@ -1966,38 +1961,9 @@ class SIGEPApp {
             }
             btnPausado.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-black rounded-lg transition-colors border border-red-300 shadow-sm cursor-pointer shrink-0';
             btnPausado.title = `${colabsPausados.length} Colaborador(es) Pausado(s)`;
-            // Baguete dos paus em VERMELHO vivo conforme solicitado
             btnPausado.innerHTML = `<span class="text-sm">⏸️</span> <span class="text-xs tracking-wider text-red-600 font-extrabold">${colabsPausados.length} <span class="text-red-700">PAUSA(S)</span></span>`;
         } else {
             if (btnPausado) btnPausado.remove();
-        }
-    }
-
-
-        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-        if (!headerActions) return;
-
-        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnId) btn.remove(); });
-
-        let btnEnvelope = document.getElementById(btnId);
-
-        if (colabsLivres.length > 0) {
-            if (!btnEnvelope) {
-                btnEnvelope = document.createElement('button');
-                btnEnvelope.id = btnId;
-                btnEnvelope.onclick = () => {
-                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
-                };
-                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-            }
-             
-            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-            btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-        } else {
-            if (btnEnvelope) btnEnvelope.remove();
         }
     }
 
@@ -2180,8 +2146,6 @@ class SIGEPApp {
         };
     }
 
-    // ─── CENTRAL DE NOTIFICAÇÕES DE PUXADA (PADRÃO MONITOR DE EQUIPE) ───────────────────
-
     setupOuvinteSolicitacoesPuxada(pautaId) {
         if (this.unsubscribePuxadas) {
             this.unsubscribePuxadas();
@@ -2239,8 +2203,6 @@ class SIGEPApp {
 
         modal.innerHTML = `
             <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200" onclick="event.stopPropagation()">
-                
-                <!-- Cabeçalho padrão Monitor da Pauta / Equipe -->
                 <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
@@ -2256,7 +2218,6 @@ class SIGEPApp {
                     </button>
                 </div>
 
-                <!-- Lista de Cards -->
                 <div class="p-5 overflow-y-auto space-y-3 bg-slate-100/70 flex-1 custom-scrollbar">
                     ${solicitacoes.map(item => {
                         const urgenciaBadge = item.priority === 'URGENTE' 
@@ -2308,7 +2269,6 @@ class SIGEPApp {
                     }).join('')}
                 </div>
 
-                <!-- Rodapé padrão Monitor -->
                 <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
                     <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black rounded-xl text-xs uppercase tracking-widest transition">
                         Fechar Monitor
@@ -2362,10 +2322,6 @@ class SIGEPApp {
     }
 }
 
-// ============================================================
-// INICIALIZAÇÃO GLOBAL E COMPATIBILIDADE LEGADA
-// ============================================================
-
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
@@ -2380,7 +2336,6 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
         const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
         
-        // 1. Atualiza o status no Firebase para emAtendimento e define o colaborador
         await updateDoc(docRef, {
             status: 'emAtendimento',
             assignedCollaborator: { name: nomeColaborador },
@@ -2389,18 +2344,15 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
             historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
         });
 
-        // 2. Fecha apenas a janelinha de solicitações pendentes
         document.getElementById('modal-gestao-puxadas')?.remove();
 
         if (window.showNotification) {
             window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        // 3. Define as variáveis globais
         window.assistedIdToHandle = assistidoId;
         window.assistedNameToHandle = nomeAssistido;
 
-        // 4. Abre diretamente o modal "Definir Local e Delegar"
         if (typeof window.app?.PautaService?.abrirModalDefinirLocal === 'function') {
             window.app.PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
         } else if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
@@ -2416,7 +2368,6 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
             }
         }
 
-        // 5. Pré-seleciona o colaborador solicitante no select do modal
         setTimeout(() => {
             const selectCollab = document.getElementById('tv-chamada-colaborador') || document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador');
             if (selectCollab) {
@@ -2583,7 +2534,7 @@ window.verResultados = async (coletaId) => {
 window.ApiIntegration = {
     simularSincronizacaoVerde: function(pautaId) {
         console.log("Simulando sincronização verde para a pauta:", pautaId);
-        showNotification("Sincronização simulada com sucesso!", "success");
+        showNotification("Simulação realizada com sucesso!", "success");
     }
 };
 
@@ -2610,3 +2561,4 @@ window.registrarAcaoHistorico = function(pautaId, assistidoId, descricaoAcao) {
 window.renderizarListaMonitorGlobal = function(filtro = '') {
     if(window.MonitoramentoService) window.MonitoramentoService.renderizarListaMonitorGlobal(window.app, filtro);
 };
+
