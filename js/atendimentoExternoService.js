@@ -597,6 +597,14 @@ export const AtendimentoExternoService = {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
         });
+
+        document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', (e) => {
+                const b = e.currentTarget;
+                this._solicitarPuxarCaso(b.dataset.assistidoId, b.dataset.assistidoNome);
+            });
+        });
     },
 
     // ─── OVERLAYS ─────────────────────────────────────────────────────────────
