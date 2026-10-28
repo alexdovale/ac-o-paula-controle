@@ -1,5 +1,4 @@
-
-// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO E RETORNO DE ATENDIDOS
+// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO, RETORNO DE ATENDIDOS E INTEGRAÇÃO DE TV COMPLETA
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -68,7 +67,7 @@ export const PautaService = {
             this.finishAttendance(app, id, app.currentUserName, []);
         } else {
             if (app.currentPautaData?.useTvPanel !== false) {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
+                this.abrirModalDefinirLocal(id, assisted.name || '');
             } else {
                 this._abrirModalClassico(app, assisted, 'delegar');
             }
@@ -298,7 +297,6 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
 
-            // Guarda por onde o assistido já passou (usado pelo botão "Voltar" dos atendidos)
             if (updates.status && currentData.status && updates.status !== currentData.status) {
                 const trilha = Array.isArray(currentData.statusTrail) ? currentData.statusTrail.slice(-7) : [];
                 trilha.push(currentData.status);
@@ -592,20 +590,27 @@ export const PautaService = {
         }
     },
 
-    // ── GERAÇÃO DO NOVO MODAL DE TV E LOCAL ──
-    abrirModalChamadaTV(app, assisted, pauta, tipoAcao) {
+    // ── GERAÇÃO DO NOVO MODAL "Definir Local e Delegar" (Integrado e Atualizado) ──
+    abrirModalDefinirLocal(assistidoId, nomeAssistido) {
+        document.getElementById('modal-definir-local-delegar')?.remove();
         document.getElementById('modal-chamada-tv-global')?.remove();
+        
+        const app = window.app;
+        if (!app || !app.currentPauta) return;
+
+        const assisted = app.allAssisted?.find(a => a.id === assistidoId) || { name: nomeAssistido, id: assistidoId };
 
         const ROTULOS = ['Sala', 'Recepção', 'Vara', 'Guichê', 'Mesa', 'Balcão'];
-        const pautaId = pauta.id || app.currentPauta?.id;
-        const pautaName = pauta.name || pauta.nome || app.currentPauta?.name || 'Pauta';
+        const pautaId = app.currentPauta.id;
+        const pautaName = app.currentPauta.name || 'Pauta';
         const chave = `sigep_local_chamada_${pautaId}`;
+        
         let salvo = null;
         try { salvo = JSON.parse(localStorage.getItem(chave)); } catch (e) { salvo = null; }
 
         const rotuloInicial = salvo?.rotulo || 'Sala';
         const ehPadrao = ROTULOS.includes(rotuloInicial);
-        const valorInicial = salvo?.valor ?? (pauta.sala || '');
+        const valorInicial = salvo?.valor ?? (app.currentPauta.sala || '');
 
         const colaboradores = app.colaboradores || [];
         const ordenados = [...colaboradores].sort((a, b) => {
@@ -622,23 +627,25 @@ export const PautaService = {
         }).join('');
 
         const modal = document.createElement('div');
-        modal.id = 'modal-chamada-tv-global';
-        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4';
+        modal.id = 'modal-definir-local-delegar';
+        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 animate-fade-in';
         modal.innerHTML = `
             <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
                     <div>
                         <h3 class="font-extrabold text-lg text-slate-800">Definir Local e Delegar</h3>
-                        <p class="text-sm font-semibold text-blue-600 mt-0.5">${escapeHTML(assisted.name)}</p>
+                        <p class="text-sm font-semibold text-blue-600 mt-0.5 uppercase tracking-wider">${escapeHTML(assisted.name)}</p>
                     </div>
-                    <button id="btn-fechar-chamada-tv" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">${ico('x')}</button>
+                    <button id="btn-fechar-chamada-tv" class="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 w-8 h-8 rounded-full shadow-sm flex items-center justify-center transition-colors">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
                 
-                <div class="p-6 overflow-y-auto space-y-5 flex-1">
+                <div class="p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
                     <div class="grid grid-cols-5 gap-3">
                         <div class="col-span-2">
                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Local</label>
-                            <select id="tv-chamada-rotulo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            <select id="tv-chamada-rotulo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
                                 ${ROTULOS.map(r => `<option value="${r}" ${ehPadrao && r === rotuloInicial ? 'selected' : ''}>${r}</option>`).join('')}
                                 <option value="__outro" ${!ehPadrao ? 'selected' : ''}>Outro...</option>
                             </select>
@@ -710,7 +717,6 @@ export const PautaService = {
             const colabNome = colabId ? selColab.options[selColab.selectedIndex].dataset.nome : null;
 
             close();
-
             const inAttendanceTime = new Date().toISOString();
             
             if (colabId) {
@@ -749,6 +755,10 @@ export const PautaService = {
                 showNotification("Aviso: Status atualizado, mas houve falha ao enviar o nome para a TV.", "warning");
             }
         };
+    },
+    // Compatibilidade reversa: mantém a função antiga apontando para a nova
+    abrirModalChamadaTV(app, assisted, pauta, tipoAcao) {
+        this.abrirModalDefinirLocal(assisted.id, assisted.name);
     },
 
     // Abertura Condicional do Modal Clássico
@@ -817,30 +827,9 @@ export const PautaService = {
         }
 
         if (app.currentPautaData?.useTvPanel !== false) {
-            this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, tipoAcao);
+            this.abrirModalDefinirLocal(nextAssisted.id, nextAssisted.name);
         } else {
             this._abrirModalClassico(app, nextAssisted, tipoAcao);
-        }
-    },
-
-    actionAttendDirectly(app, id, assisted) {
-        const useDist = app.currentPautaData?.useDistributionFlow === true;
-        const useDelegation = app.currentPautaData?.useDelegationFlow === true;
-        const timestampIso = new Date().toISOString();
-
-        if (useDist) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
-            }, app.currentUserName);
-            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição!`, "success");
-        } else {
-            const tipoAcao = useDelegation ? 'delegar' : 'atender_direto';
-            
-            if (app.currentPautaData?.useTvPanel !== false) {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
-            } else {
-                this._abrirModalClassico(app, assisted, tipoAcao);
-            }
         }
     },
 
@@ -1296,6 +1285,10 @@ export const PautaService = {
             });
         }
     },
+    
+    isMobileDevice() {
+        return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+    },
 
     preencherSelectColaboradores(app, selectId) {
         const select = document.getElementById(selectId);
@@ -1363,7 +1356,7 @@ export const PautaService = {
             return this.handleQuickActionItem(app, button, id, assisted);
         }
 
-        // MAPA DE AÇÕES ATUALIZADO COM AS NOVAS FUNÇÕES
+        // MAPA DE AÇÕES ATUALIZADO
         const actionMap = {
             'update-doc-status-btn': () => this.actionUpdateDocStatus(button, id, assisted),
             'check-in-btn': () => this.actionCheckIn(id),
@@ -1387,9 +1380,9 @@ export const PautaService = {
             'view-details-btn': () => { if (window.openDetailsModal) window.openDetailsModal({ assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted, db: app.db }); },
             'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted),
             
-            // --- NOVAS AÇÕES DE TV E RECHAMADA ---
+            // --- AÇÕES DE TV REESTRUTURADAS ---
             'chamar-distribuicao-tv-btn': () => {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'distribuicao');
+                this.abrirModalDefinirLocal(assisted.id, assisted.name);
             },
             'rechamar-tv-btn': async () => {
                 const localSalvo = localStorage.getItem(`sigep_tv_local_${app.currentPauta.id}`) || assisted.localChamada?.valor || 'Atendimento';
@@ -1490,7 +1483,7 @@ export const PautaService = {
         showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
         
         if (app.currentPautaData?.useTvPanel !== false) {
-            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
+            this.abrirModalDefinirLocal(id, assisted.name);
         } else {
             this._abrirModalClassico(app, assisted, tipoAcao);
         }
@@ -1638,7 +1631,7 @@ export const PautaService = {
 
     actionSelectCollaborator(app, id, assisted) {
         if (app.currentPautaData?.useTvPanel !== false) {
-            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
+            this.abrirModalDefinirLocal(id, assisted.name);
         } else {
             this._abrirModalClassico(app, assisted, 'delegar');
         }
@@ -1766,7 +1759,6 @@ export const PautaService = {
     actionReturnFromAtendido(app, id, assisted) {
         const destino = this.getDestinoRetorno(app, assisted);
 
-        // Limpa o que só faz sentido para quem já foi atendido
         const base = {
             status: destino,
             attendedTime: null,
@@ -1778,7 +1770,6 @@ export const PautaService = {
 
         let updateData;
         if (destino === 'aguardando') {
-            // Volta para a fila preservando a posição original (chegada e ordem de check-in)
             updateData = {
                 ...base,
                 attendedBy: null,
@@ -1790,7 +1781,6 @@ export const PautaService = {
         } else if (destino === 'aguardandoDistribuicao') {
             updateData = { ...base, distributionStatus: 'pending' };
         } else {
-            // emAtendimento: mantém o colaborador responsável
             updateData = {
                 ...base,
                 assignedCollaborator: assisted?.assignedCollaborator || null,
@@ -1884,4 +1874,3 @@ function abrirModalSenhaPainel(pautaId, tokenCorreto) {
 }
 
 export default PautaService;
-
