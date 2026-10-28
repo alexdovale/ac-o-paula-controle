@@ -2286,44 +2286,40 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
     try {
         const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        
+        const colaboradorObj = window.app?.colaboradores?.find(c => c.nome === nomeColaborador) || { name: nomeColaborador };
 
-        // 1. Atualiza o status e define o colaborador solicitante
+        // 1. Atualiza o status para emAtendimento e atribui ao colaborador que solicitou
         await updateDoc(docRef, {
             status: 'emAtendimento',
-            assignedCollaborator: { name: nomeColaborador },
+            assignedCollaborator: {
+                id: colaboradorObj.id || 'manual',
+                name: nomeColaborador,
+                email: colaboradorObj.email || ''
+            },
             inAttendanceTime: new Date().toISOString(),
             solicitacaoPuxada: null,
             historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
         });
 
-        // 2. Fecha o modal de gestão de pedidos de puxada
+        // 2. Fecha o modal de gestão de puxadas
         document.getElementById('modal-gestao-puxadas')?.remove();
 
         if (window.showNotification) {
             window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        // 3. ABRE O POP-UP NATIVO DE ATENDIMENTO / CHAMADA NA TV COM O COLABORADOR JÁ PREENCHIDO
-        // Define as variáveis globais que o seu sistema usa para identificar o assistido atual
-        window.assistedIdToHandle = assistidoId;
-        window.assistedNameToHandle = nomeAssistido;
-        window.selectedCollaboratorName = nomeColaborador;
-
-        // Se o seu sistema tiver a função ou modal padrão de escolher atendente/chamar na TV:
-        const modalAtendente = document.getElementById('select-collaborator-modal') || document.getElementById('attendant-modal');
-        if (modalAtendente) {
-            // Se houver um select do colaborador no modal, pré-seleciona o nome dele
-            const selectCollab = document.getElementById('attendant-select') || document.getElementById('collaborator-select');
-            if (selectCollab) {
-                selectCollab.value = nomeColaborador;
-            }
-            modalAtendente.classList.remove('hidden');
-        } else if (typeof window.app?.abrirModalAtendimento === 'function') {
-            window.app.abrirModalAtendimento(assistidoId);
-        } else {
-            // Alternativa: Se preferir abrir o modal de chamada direta na TV / Guichê
+        // 3. ABRE A TELA DO ASSISTIDO OU A CONFIGURAÇÃO DE CHAMADA CORRETA
+        // Em vez de abrir o modal de escolher colaborador da imagem, direcionamos para o atendimento do assistido
+        if (window.app && typeof window.app.loadPauta === 'function') {
+            // Se estivermos no app principal, abre diretamente a visão individual do caso
             const baseUrl = window.location.href.split('?')[0];
             window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
+        } else {
+            // Se estiver na mesa digital externa, redireciona com os parâmetros corretos
+            const currentPath = window.location.pathname;
+            const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+            window.location.href = `${basePath}mesa_digital.html?pautaId=${pautaId}&assistidoId=${assistidoId}`;
         }
 
     } catch (e) {
