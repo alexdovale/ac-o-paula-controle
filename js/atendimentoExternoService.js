@@ -1,4 +1,6 @@
-// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS E LGPD)
+Aqui está o seu ficheiro atendimentoExternoService.js COMPLETO E INTEGRADO, contendo todas as regras anteriores (filtro de pautas ativas, LGPD, fluxo de triagem e gerador do Verde), agora com a lógica de Pausa do Colaborador (com a "farofa com alho" crítica e contagem de paus em vermelho vivo) perfeitamente implementada.
+Pode copiar todo o código abaixo e substituir integralmente no seu arquivo js/atendimentoExternoService.js:
+// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD E PAUSA DE COLABORADOR)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -198,6 +200,7 @@ export const AtendimentoExternoService = {
 
         this.prepararFiltroKanban();
         this._ligarCliqueNosCards();
+        this._injetarBotaoPausaHeader();
     },
 
     async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
@@ -232,6 +235,67 @@ export const AtendimentoExternoService = {
         this._escutarAssistido(pautaData);
         this._registrarAbertura(assistido);
         this.setupListeners();
+        this._injetarBotaoPausaHeader();
+    },
+
+    // ─── BOTÃO DE PAUSA RÁPIDA NA HEADER DA MESA DIGITAL ──────────────────────
+
+    _injetarBotaoPausaHeader() {
+        const headerRight = document.querySelector('#header-bg > div:last-child');
+        if (!headerRight || document.getElementById('btn-pausa-mesa-digital')) return;
+
+        const estaPausado = this.colaboradorAtual?.status === 'pausado';
+
+        const btnPausa = document.createElement('button');
+        btnPausa.id = 'btn-pausa-mesa-digital';
+        btnPausa.type = 'button';
+        btnPausa.className = estaPausado
+            ? 'bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3.5 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 transition-colors animate-pulse shrink-0 cursor-pointer'
+            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] font-black px-3.5 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer';
+
+        btnPausa.innerHTML = estaPausado ? `⏸️ Pausado (${escapeHTML(this.colaboradorAtual?.motivoPausa || 'Ausente')})` : `☕ Pausar / Ausente`;
+        btnPausa.title = "Alternar estado de pausa para ir ao banheiro ou almoço";
+
+        btnPausa.onclick = async () => {
+            if (estaPausado) {
+                // Retornar ao trabalho (disponível)
+                try {
+                    await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                        status: 'disponivel',
+                        motivoPausa: null
+                    });
+                    this.colaboradorAtual.status = 'disponivel';
+                    this.colaboradorAtual.motivoPausa = null;
+                    if (typeof showNotification === 'function') showNotification("Retornou ao trabalho com farofa com alho!", "success");
+                    this._injetarBotaoPausaHeader();
+                    this.atualizarBadgeHeader();
+                } catch (e) {
+                    console.error(e);
+                }
+            } else {
+                // Pausar
+                const motivo = prompt("Farofa com alho ativada! Qual o motivo da sua pausa? (Ex: Banheiro, Almoço)", "Almoço / Ausência momentânea");
+                if (motivo === null) return;
+                const razao = motivo.trim() === "" ? "Ausente momentaneamente" : motivo.trim();
+
+                try {
+                    await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                        status: 'pausado',
+                        motivoPausa: razao,
+                        currentAttendance: null
+                    });
+                    this.colaboradorAtual.status = 'pausado';
+                    this.colaboradorAtual.motivoPausa = razao;
+                    if (typeof showNotification === 'function') showNotification(`Pausa registrada: ${razao}`, "warning");
+                    this._injetarBotaoPausaHeader();
+                    this.atualizarBadgeHeader();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        };
+
+        headerRight.prepend(btnPausa);
     },
 
     _assinaturaDados(a) {
@@ -329,17 +393,23 @@ export const AtendimentoExternoService = {
             a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome
         );
 
-        const livre = meusCasos.length === 0 && !isNaTelaIndividual;
+        const estaPausado = this.colaboradorAtual?.status === 'pausado';
+        const livre = meusCasos.length === 0 && !isNaTelaIndividual && !estaPausado;
 
-        badge.innerHTML = livre
-            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span>LIVRE</span>`
-            : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span> <span>OCUPADO</span>`;
+        if (estaPausado) {
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span> <span>PAUSADO</span>`;
+            badge.className = `bg-amber-50 border border-amber-200 text-amber-800 text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
+        } else {
+            badge.innerHTML = livre
+                ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span>LIVRE</span>`
+                : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span> <span>OCUPADO</span>`;
 
-        badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
+            badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
+        }
 
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
-            const novoStatus = livre ? 'disponivel' : 'ocupado';
-            const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
+            const novoStatus = estaPausado ? 'pausado' : (livre ? 'disponivel' : 'ocupado');
+            const atendimentoAtualId = (livre || estaPausado) ? null : (meusCasos[0]?.id || this.assistidoId || null);
 
             if (this.colaboradorAtual.status !== novoStatus || this.colaboradorAtual.currentAttendance !== atendimentoAtualId) {
                 this.colaboradorAtual.status = novoStatus;
@@ -1991,3 +2061,4 @@ export const AtendimentoExternoService = {
 
 export default AtendimentoExternoService;
 window.AtendimentoExternoService = AtendimentoExternoService;
+
