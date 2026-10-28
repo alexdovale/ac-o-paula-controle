@@ -1840,7 +1840,6 @@ class SIGEPApp {
 
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
-            showNotification("Erro ao carregar pauta", "error");
         }
     }
 
