@@ -2266,7 +2266,16 @@ class SIGEPApp {
                     </button>
                 </div>
             </div>`;
-    }
+    } // <--- FECHA APENAS O MÉTODO abrirModalGestaoPuxadas
+
+                <!-- Rodapé padrão Monitor -->
+                <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black rounded-xl text-xs uppercase tracking-widest transition">
+                        Fechar Monitor
+                    </button>
+                </div>
+            </div>`;
+    
         
     saveColumnPreferences() {
         const preferences = {
