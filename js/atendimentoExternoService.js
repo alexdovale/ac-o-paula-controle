@@ -505,7 +505,7 @@ export const AtendimentoExternoService = {
         container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
     },
 
-    _htmlCardKanban(assistido, modo) {
+    htmlCardKanban(assistido, modo) {
         let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
         const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
         const paraMim = this._ehPendenteDoDefensor(assistido);
@@ -533,7 +533,8 @@ export const AtendimentoExternoService = {
             }
         } else {
             if (modo === 'puxar') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Atender</a>`;
+                // Alterado para chamar a função de "Puxar para mim" com justificativa em texto livre
+                botoesHtml = `<button type="button" class="btn-puxar-caso block w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Puxar para mim</button>`;
             } else if (modo === 'mesa' && ehPendente) {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
             } else if (modo === 'mesa') {
