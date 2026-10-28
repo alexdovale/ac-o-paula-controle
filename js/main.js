@@ -2284,49 +2284,52 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
     }
 
     try {
-        // Fecha o modal de gestão de puxadas pendentes
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        
+        // 1. Atualiza o status no Firebase para emAtendimento e define o colaborador
+        await updateDoc(docRef, {
+            status: 'emAtendimento',
+            assignedCollaborator: { name: nomeColaborador },
+            inAttendanceTime: new Date().toISOString(),
+            solicitacaoPuxada: null,
+            historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
+        });
+
+        // 2. Fecha apenas a janelinha de solicitações pendentes
         document.getElementById('modal-gestao-puxadas')?.remove();
 
         if (window.showNotification) {
-            window.showNotification(`Preparando chamada para ${nomeColaborador}...`, "info");
+            window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        // DISPARA A FUNÇÃO NATIVA DO SEU SISTEMA QUE ABRE O MODAL "Definir Local e Delegar"
-        // No SIGEP, esta função costuma ser chamada quando o operador clica em "Chamar Próximo" ou abre as opções de chamada na TV para um assistido específico.
+        // 3. DEFINE AS VARIÁVEIS GLOBAIS DO ASSISTIDO NA APLICAÇÃO
         window.assistedIdToHandle = assistidoId;
         window.assistedNameToHandle = nomeAssistido;
 
-        // Se o seu sistema tiver uma função específica para abrir este modal de chamada da TV (ex: PautaService ou UIService):
+        // 4. ABRE DIRETAMENTE O MODAL "Definir Local e Delegar" (Sem recarregar a página!)
+        // Se a função nativa do PautaService estiver disponível para abrir este modal:
         if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
             PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
-        } else if (typeof window.abrirModalDefinirLocal === 'function') {
-            window.abrirModalDefinirLocal(assistidoId, nomeAssistido);
         } else {
-            // Caso o modal seja aberto por ID ou classe genérica no DOM, disparamos o gatilho nativo do card:
-            const cardAssistido = document.querySelector(`[data-assistido-id="${assistidoId}"]`) || document.querySelector(`[data-id="${assistidoId}"]`);
-            const btnChamarNativo = cardAssistido?.querySelector('.btn-chamar-tv, .btn-atender-assistido, [data-action="chamar"]');
-            
-            if (btnChamarNativo) {
-                btnChamarNativo.click();
+            // Caso contrário, procura o modal HTML correspondente na tela atual e exibe-o
+            const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('definir-local-modal') || document.getElementById('attendant-modal');
+            if (modalDefinirLocal) {
+                modalDefinirLocal.classList.remove('hidden');
             } else {
-                // Alternativa padrão: Procura o modal no DOM e define o assistido
-                const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('definir-local-modal');
-                if (modalDefinirLocal) {
-                    modalDefinirLocal.classList.remove('hidden');
-                } else {
-                    // Se não encontrar o modal solto na tela, abre a visão do assistido onde esse painel está integrado
-                    const baseUrl = window.location.href.split('?')[0];
-                    window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
-                    return;
+                // Se o modal não estiver presente nesta view, chama o botão de atendimento do próprio card na pauta
+                const card = document.querySelector(`[data-assistido-id="${assistidoId}"]`);
+                const btnAtender = card?.querySelector('.btn-atender, button[data-action="atender"]');
+                if (btnAtender) {
+                    btnAtender.click();
                 }
             }
         }
 
-        // PRÉ-PREENCHE O COLABORADOR SOLICITANTE NO SELECT DO MODAL DA TV
+        // 5. PRÉ-PREENCHE O COLABORADOR SOLICITANTE NO CAMPO DE DELEGAÇÃO
         setTimeout(() => {
             const selectCollab = document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador') || document.querySelector('select[name="colaborador"]');
             if (selectCollab) {
-                // Tenta encontrar e selecionar a opção correspondente ao nome do colaborador que puxou
                 for (let opt of selectCollab.options) {
                     if (opt.value === nomeColaborador || opt.textContent.includes(nomeColaborador)) {
                         selectCollab.value = opt.value;
@@ -2334,11 +2337,11 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
                     }
                 }
             }
-        }, 150);
+        }, 200);
 
     } catch (e) {
-        console.error("Erro ao abrir modal de chamada:", e);
-        alert("Erro ao abrir o painel de chamada.");
+        console.error("Erro ao autorizar puxada:", e);
+        alert("Erro ao autorizar atendimento.");
     }
 };
 window.app = new SIGEPApp();
