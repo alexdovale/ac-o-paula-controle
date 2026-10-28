@@ -302,7 +302,7 @@ export const AtendimentoExternoService = {
         
         badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
 
-        // Proteção contra loop infinito de re-renderização/atualização no Firestore
+        // Proteção contra loop infinito de atualizações no Firestore
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
             const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
@@ -538,6 +538,7 @@ export const AtendimentoExternoService = {
             }
         } else {
             if (modo === 'puxar') {
+                // CORRIGIDO: Agora exibe o botão funcional "Puxar para mim" com justificativa livre
                 botoesHtml = `<button type="button" class="btn-puxar-caso block w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Puxar para mim</button>`;
             } else if (modo === 'mesa' && ehPendente) {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
