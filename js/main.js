@@ -2158,7 +2158,8 @@ class SIGEPApp {
                 badge = document.createElement('button');
                 badge.id = 'badge-puxadas-pendentes';
                 badge.type = 'button';
-                badge.className = 'mr-2 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-3 rounded-xl transition text-xs flex items-center gap-1.5 shadow-md animate-pulse shrink-0 cursor-pointer';
+                badge.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-black rounded-lg transition-colors border border-amber-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+                badge.title = `${solicitacoes.length} Solicitação(ões) de Puxada Pendente(s)`;
                 badge.onclick = (e) => {
                     e.stopPropagation();
                     this.abrirModalGestaoPuxadas(solicitacoes);
@@ -2171,7 +2172,7 @@ class SIGEPApp {
                 }
             }
             if (badge) {
-                badge.innerHTML = `🔔 <span class="hidden sm:inline">Puxadas</span> <span class="bg-white text-amber-800 px-2 py-0.5 rounded-full text-[11px] font-black">${solicitacoes.length}</span>`;
+                badge.innerHTML = `<span class="text-sm">${ico('bell')}</span> <span class="text-xs tracking-wider uppercase">${solicitacoes.length} PUXADA(S)</span>`;
             }
         } else if (badge) {
             badge.remove();
@@ -2188,53 +2189,85 @@ class SIGEPApp {
         }
 
         modal.innerHTML = `
-            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onclick="event.stopPropagation()">
-                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
-                    <h3 class="font-black text-sm uppercase tracking-wider flex items-center gap-2">
-                        <span>🔔</span> Solicitações de Puxada Pendentes (${solicitacoes.length})
-                    </h3>
-                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+            <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200" onclick="event.stopPropagation()">
+                
+                <!-- Cabeçalho padrão Monitor da Pauta / Equipe -->
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
+                            ${ico('bell', 'w-5 h-5')}
+                        </div>
+                        <div>
+                            <h3 class="font-black text-base text-slate-800 uppercase tracking-wide leading-tight">Monitor de Puxadas de Fila</h3>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${solicitacoes.length} solicitação(ões) aguardando liberação</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm">
+                        ${ico('x', 'w-4 h-4')}
+                    </button>
                 </div>
-                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50 flex-1 custom-scrollbar">
+
+                <!-- Lista de Cards -->
+                <div class="p-5 overflow-y-auto space-y-3 bg-slate-100/70 flex-1 custom-scrollbar">
                     ${solicitacoes.map(item => {
-                        const urgenciaBadge = item.priority === 'URGENTE' ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Urgente</span>` : '';
-                        const horarioAgendado = item.scheduledTime ? `Agendado: <b>${escapeHTML(item.scheduledTime)}</b>` : '';
-                        const chegada = item.arrivalTime ? `Chegada: <b>${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>` : '';
+                        const urgenciaBadge = item.priority === 'URGENTE' 
+                            ? `<span class="bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest">Urgente</span>` 
+                            : '';
+                        const horarioAgendado = item.scheduledTime ? `<span>📅 Agendado: <b class="text-slate-700">${escapeHTML(item.scheduledTime)}</b></span>` : '';
+                        const chegada = item.arrivalTime ? `<span>🕒 Chegada: <b class="text-slate-700">${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b></span>` : '';
 
                         return `
-                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                                <div class="flex justify-between items-start gap-2">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
+                                
+                                <div class="pl-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
                                     <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(item.name)}</h4>
                                             ${urgenciaBadge}
                                         </div>
-                                        <p class="text-xs text-slate-500 font-bold">Assunto: ${escapeHTML(item.subject || 'Sem assunto')}</p>
+                                        <p class="text-[11px] text-slate-500 font-semibold mt-0.5">${escapeHTML(item.subject || 'Sem assunto informado')}</p>
                                     </div>
-                                    <span class="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0">Solicitante: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                                    <div class="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg shrink-0">
+                                        <span class="text-xs">${ico('user', 'w-3.5 h-3.5')}</span>
+                                        <span class="text-[10px] font-black uppercase tracking-wider">${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                                    </div>
                                 </div>
 
-                                <div class="flex flex-wrap gap-3 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                    ${horarioAgendado ? `<span>${horarioAgendado}</span>` : ''}
-                                    ${chegada ? `<span>• ${chegada}</span>` : ''}
-                                    ${item.room ? `<span>• Sala/Local: <b>${escapeHTML(item.room)}</b></span>` : ''}
+                                <div class="pl-2 grid grid-cols-1 sm:grid-cols-2 gap-2 my-3 text-[11px] text-slate-500 font-medium">
+                                    <div class="flex flex-wrap items-center gap-3 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                        ${horarioAgendado}
+                                        ${chegada}
+                                        ${item.room ? `<span>📍 <b class="text-slate-700">${escapeHTML(item.room)}</b></span>` : ''}
+                                    </div>
+                                    <div class="bg-amber-50/70 px-3 py-2 rounded-lg border border-amber-100 text-amber-900 text-xs">
+                                        <span class="font-black text-[9px] uppercase tracking-widest text-amber-600 block">Justificativa da Puxada:</span>
+                                        <span class="italic font-semibold">"${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem justificativa')}"</span>
+                                    </div>
                                 </div>
 
-                                <p class="text-xs text-slate-600 bg-amber-50/60 p-3 rounded-xl border border-amber-100 italic">
-                                    <b>Motivo informado:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem justificativa')}"
-                                </p>
-
-                                <div class="flex gap-2 pt-2">
-                                    <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
-                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Abrir Atendimento</button>
+                                <div class="pl-2 flex justify-end gap-2 pt-1">
+                                    <button onclick="window.recusarPuxada('${item.id}')" class="px-4 py-2 bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-slate-600 font-black rounded-lg text-[10px] uppercase tracking-widest transition active:scale-95">
+                                        Negar e Devolver
+                                    </button>
+                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-[10px] uppercase tracking-widest transition shadow-sm flex items-center gap-1.5 active:scale-95">
+                                        ${ico('checkCircle', 'w-3.5 h-3.5')} Autorizar e Delegar
+                                    </button>
                                 </div>
                             </div>
                         `;
                     }).join('')}
                 </div>
-            </div>`;
-    }
 
+                <!-- Rodapé padrão Monitor -->
+                <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black rounded-xl text-xs uppercase tracking-widest transition">
+                        Fechar Monitor
+                    </button>
+                </div>
+            </div>`;
+
+        
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
