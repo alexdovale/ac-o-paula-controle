@@ -1397,7 +1397,7 @@ class SIGEPApp {
                 }
             }
             
-            sswitch (this.currentPautaFilter) {
+            switch (this.currentPautaFilter) {
                 case 'my': filteredPautas = filteredPautas.filter(p => p.owner === user.uid); break;
                 case 'shared': filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); break;
                 case 'active':
