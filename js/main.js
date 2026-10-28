@@ -1413,8 +1413,17 @@ class SIGEPApp {
                         return new Date() > dExp || p.isClosed || p.fechada === true;
                     }); break;
                 default:
-                    // Oculta automaticamente pautas fechadas ou encerradas na listagem principal
-                    filteredPautas = filteredPautas.filter(p => !p.isClosed && p.fechada !== true);
+                    // REGRA LGPD E ATIVAS: Remove automaticamente pautas fechadas (isClosed ou fechada === true) ou expiradas (7 dias)
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (p.isClosed === true || p.fechada === true) return false;
+                        if (p.createdAt) {
+                            const dataCriacao = new Date(p.createdAt);
+                            const dataExpiracao = new Date(dataCriacao);
+                            dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                            if (new Date() > dataExpiracao) return false; // Expirada pelo prazo de 7 dias da LGPD
+                        }
+                        return true;
+                    });
                     break;
             }
 
