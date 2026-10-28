@@ -56,7 +56,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (Correção de Token Integrada)");
+        console.log("Mesa Digital V4 Inicializada (Completa)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -188,10 +188,8 @@ export const AtendimentoExternoService = {
         this.assistidoData = assistido;
         this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
 
-        // CORREÇÃO DA VALIDAÇÃO DE TOKEN: Só valida o token se houver um token explícito na URL
-        // (indicando acesso via link externo de e-mail). Se o usuário clicou na Mesa, o token da BD é ignorado com segurança.
         if (tokenRecebido && assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            this.showError("Acesso Seguro", "Este link expirou (o caso foi repassado). Abra o caso diretamente pela sua mesa.");
+            this.showError("Acesso Seguro", "Este link expirou (o caso foi repassado). Abra o caso pela sua mesa.");
             return;
         }
 
@@ -282,7 +280,7 @@ export const AtendimentoExternoService = {
                     <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
                     <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
                     <p class="text-gray-500 font-semibold text-sm">${message}</p>
-                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
+                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-950 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
                 </div>
             </div>`;
     },
@@ -343,7 +341,7 @@ export const AtendimentoExternoService = {
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                         <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
                         <div class="flex items-center gap-2">
-                            <button id="btn-pauta-completa" class="bg-slate-800 hover:bg-slate-900 text-white font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition active:scale-95">Ver completa</button>
+                            <button id="btn-pauta-completa" class="bg-slate-800 hover:bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition active:scale-95">Ver completa</button>
                             <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
                         </div>
                     </div>
@@ -531,7 +529,7 @@ export const AtendimentoExternoService = {
         if (this.pautaFechada) {
             botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
             if (modo === 'auditoria') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-950 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
             }
         } else {
             if (modo === 'puxar') {
@@ -548,7 +546,7 @@ export const AtendimentoExternoService = {
                 if (assistido.status === 'aguardandoNumero') {
                     botoesHtml += `<a href="${linkIndividual}" class="block mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Registrar CNP</a>`;
                 }
-                botoesHtml += `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
+                botoesHtml += `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-950 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
             }
         }
 
@@ -1007,7 +1005,7 @@ export const AtendimentoExternoService = {
                              <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
                              <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
                          </div>
-                         <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
+                         <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-950 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
                 grupos.forEach((docs, secao) => {
                     html += `<p class="text-[10px] font-black text-sky-700 uppercase tracking-wider mt-3 mb-2">${escapeHTML(secao)}</p><ul class="space-y-2">`;
                     docs.forEach(({ id, nome }) => {
@@ -1101,6 +1099,22 @@ export const AtendimentoExternoService = {
             }
         }
         
+        const arquivos = Array.isArray(assistido.documentosDigitalizados) ? assistido.documentosDigitalizados : [];
+        if (assistido.noVerde || assistido.pdfLink || assistido.pdfObservacoes || arquivos.length) {
+            const urlOk = (u) => /^https?:\/\//i.test(u || '') ? escapeHTML(u) : '#';
+            html += `
+                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('folder', 'w-3.5 h-3.5')} ACOMPANHAMENTO</h4>
+                    <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
+                        <span class="text-[11px] font-bold text-slate-600">Verde</span>
+                        <span class="px-2.5 py-1 rounded-lg font-black text-[9px] uppercase ${assistido.noVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-600'}">${assistido.noVerde ? 'Inserido' : 'Pendente'}</span>
+                    </div>
+                    ${assistido.pdfLink ? `<a href="${urlOk(assistido.pdfLink)}" target="_blank" rel="noopener" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold py-2 rounded-xl mb-3">Abrir link principal</a>` : ''}
+                    ${assistido.pdfObservacoes ? `<p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 italic mb-3">${escapeHTML(assistido.pdfObservacoes)}</p>` : ''}
+                    ${arquivos.map(d => `<div class="flex justify-between items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 mb-1.5"><span class="text-[11px] font-bold text-slate-700 truncate">${escapeHTML(d.titulo || d.nomeArquivo || 'Arquivo')}</span><a href="${urlOk(d.url)}" target="_blank" rel="noopener" class="bg-slate-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">Abrir</a></div>`).join('')}
+                </div>`;
+        }
+
         container.innerHTML = html;
 
         const btnPlanilha = container.querySelector('[data-baixar-planilha]');
@@ -1151,7 +1165,7 @@ export const AtendimentoExternoService = {
                 <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
                 <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
             </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
+            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
         `;
     },
 
@@ -1191,7 +1205,7 @@ export const AtendimentoExternoService = {
                     <input type="text" id="input-cnp-final" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono" placeholder="Ex: 1045239">
                     <button id="btn-registrar-cnp" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-md text-xs uppercase tracking-widest active:scale-95">Registrar CNP e Concluir</button>
                 </div>
-                <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+                <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
             `;
             document.getElementById('btn-registrar-cnp').onclick = () => this.registrarCnpFinal();
             return;
@@ -1203,7 +1217,7 @@ export const AtendimentoExternoService = {
                 <p class="text-xs font-bold text-emerald-700 leading-relaxed">Atendimento salvo por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
                 ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
             </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
         `;
     },
 
@@ -1359,7 +1373,7 @@ export const AtendimentoExternoService = {
                 </div>
             </div>
 
-            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto mb-2">
+            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-slate-950 text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto mb-2">
                 EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4')}
             </button>
         `;
