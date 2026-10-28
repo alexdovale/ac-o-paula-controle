@@ -828,9 +828,7 @@ class SIGEPApp {
             showNotification("Pauta zerada com sucesso.", "success");
         });
 
-        // ------------------------------------------------------------------------------------------
-        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!)
-        // ------------------------------------------------------------------------------------------
+        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
@@ -907,9 +905,7 @@ class SIGEPApp {
             observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
         }
 
-        // ------------------------------------------------------------------------------------------
         // 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES
-        // ------------------------------------------------------------------------------------------
         const observerEdicao = new MutationObserver(() => {
             const modalEdicao = document.getElementById('edit-pauta-config-modal');
             if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
@@ -958,7 +954,6 @@ class SIGEPApp {
         
         const modalEdicaoEl = document.getElementById('edit-pauta-config-modal');
         if (modalEdicaoEl) observerEdicao.observe(modalEdicaoEl, { attributes: true, attributeFilter: ['class'] });
-        // ------------------------------------------------------------------------------------------
     }
 
     setupAttendanceEvents() {
@@ -1398,7 +1393,7 @@ class SIGEPApp {
                     filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); 
                     break;
                 case 'active':
-                    // REGRA LGPD: Aplica apenas na aba "Ativas" (pautas abertas e com menos de 7 dias)
+                    // REGRA LGPD E FECHADAS: Aplica apenas na aba "Ativas" (pautas abertas e com menos de 7 dias)
                     filteredPautas = filteredPautas.filter(p => {
                         if (p.isClosed === true || p.fechada === true) return false;
                         if (!p.createdAt) return false;
@@ -1408,7 +1403,7 @@ class SIGEPApp {
                     }); 
                     break;
                 case 'expired':
-                    // REGRA LGPD: Pautas com mais de 7 dias ou explicitamente fechadas
+                    // REGRA LGPD E FECHADAS: Pautas com mais de 7 dias ou explicitamente fechadas
                     filteredPautas = filteredPautas.filter(p => {
                         if (p.isClosed === true || p.fechada === true) return true;
                         if (!p.createdAt) return false;
@@ -1833,7 +1828,6 @@ class SIGEPApp {
 
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
-            // Notificação silenciada para não emitir falso positivo quando a pauta carrega normalmente
         }
     }
 
@@ -1874,25 +1868,25 @@ class SIGEPApp {
     async deletePauta(pautaId, pautaName) {
         const pautaRef = doc(this.db, "pautas", pautaId);
         const pautaSnap = await getDoc(pautaRef);
-        
+         
         if (!pautaSnap.exists()) return showNotification("Pauta não encontrada!", "error");
-        
+         
         const pautaData = pautaSnap.data();
         const currentUserId = this.auth.currentUser?.uid;
-        
+         
         if (pautaData.owner !== currentUserId && this.currentUser?.role !== 'admin' && this.currentUser?.role !== 'superadmin') {
             return showNotification("Você não tem permissão para excluir esta pauta!", "error");
         }
-        
+         
         if (!confirm(`ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
-        
+         
         showNotification(`Excluindo pauta "${pautaName}"...`, "info");
-        
+         
         try {
             const attendancesSnap = await getDocs(collection(this.db, "pautas", pautaId, "attendances"));
             const batch = writeBatch(this.db);
             let operationCount = 0;
-            
+             
             for (const doc of attendancesSnap.docs) {
                 batch.delete(doc.ref);
                 operationCount++;
@@ -1900,16 +1894,16 @@ class SIGEPApp {
             }
             if (operationCount > 0) await batch.commit();
             await deleteDoc(pautaRef);
-            
+             
             showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
             await this.loadPautasWithFilter();
-            
+             
         } catch (error) {
             console.error("Erro ao excluir pauta:", error);
             showNotification("Erro ao excluir pauta. Tente novamente.", "error");
         }
     }
-    
+     
     atualizarMonitorEnvelopes() {
         if (!this.colaboradores || this.colaboradores.length === 0) return;
 
@@ -1941,7 +1935,7 @@ class SIGEPApp {
                 };
                 headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
             }
-            
+             
             btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
             btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
             btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
@@ -1969,10 +1963,10 @@ class SIGEPApp {
                     criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
                     criadoEm: new Date().toISOString()
                 };
-                
+                 
                 const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
-                
+                 
                 showNotification("Nova coleta criada com sucesso!", "success");
                 this.listarColetas();
             } catch (error) {
@@ -1984,7 +1978,7 @@ class SIGEPApp {
     async listarColetas() {
         const container = document.getElementById('lista-de-coletas');
         if (!container) return;
-        
+         
         container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
 
         try {
@@ -2028,7 +2022,7 @@ class SIGEPApp {
 
         const subjectInput = document.getElementById('assisted-subject');
         const descriptionBox = document.getElementById('subject-description');
-        
+         
         if (subjectInput) {
             subjectInput.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase();
@@ -2076,9 +2070,9 @@ class SIGEPApp {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
                 this.currentUser = { ...this.currentUser, ...userData }; 
-                
+                 
                 this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
-                
+                 
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
                 this.applyRoleBasedUI(); 
             }
@@ -2099,7 +2093,7 @@ class SIGEPApp {
 
         const nameInput = document.getElementById('pref-user-name');
         if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
-        
+         
         const emailInput = document.getElementById('pref-user-email');
         if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
 
@@ -2129,7 +2123,7 @@ class SIGEPApp {
         };
     }
 
-    // ─── CENTRAL DE NOTIFICAÇÕES DE PUXADA (AO LADO DO MENU) ───────────────────
+    // ─── CENTRAL DE NOTIFICAÇÕES DE PUXADA (PADRÃO MONITOR DE EQUIPE) ───────────────────
 
     setupOuvinteSolicitacoesPuxada(pautaId) {
         if (this.unsubscribePuxadas) {
@@ -2148,8 +2142,6 @@ class SIGEPApp {
 
     atualizarBadgeNotificacaoPauta(solicitacoes) {
         let badge = document.getElementById('badge-puxadas-pendentes');
-        
-        // Localiza a barra de ações no cabeçalho da pauta (ao lado do menu 'Ações')
         const actionsToggle = document.getElementById('actions-toggle');
         const containerAcoes = actionsToggle ? actionsToggle.parentElement : (document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header'));
 
@@ -2266,10 +2258,8 @@ class SIGEPApp {
                     </button>
                 </div>
             </div>`;
-    } // <--- FECHA APENAS O MÉTODO abrirModalGestaoPuxadas
+    }
 
-    
-        
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -2287,11 +2277,11 @@ class SIGEPApp {
         const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
         const chkDistribuicao = document.getElementById('toggle-distribuicao');
         const chkFaltosos = document.getElementById('toggle-faltosos');
-        
+         
         if (chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
         if (chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
         if (chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
-        
+         
         this.applyColumnPreferences(preferences);
     }
 
@@ -2305,7 +2295,7 @@ class SIGEPApp {
 
         if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
         if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
-        
+         
         if (faltososColumn) {
             const pautaColumn = document.getElementById('pauta-column');
             if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
@@ -2391,22 +2381,19 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
 window.recusarPuxada = async function(assistidoId) {
     const pautaId = window.app?.currentPauta?.id;
     if (!pautaId) return;
-
+    
     try {
         const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        
         await updateDoc(docRef, {
             status: 'aguardando',
             solicitacaoPuxada: null,
             historicoAcoes: arrayUnion("Solicitação de puxada recusada pela coordenação")
         });
-
         document.getElementById('modal-gestao-puxadas')?.remove();
-        if (window.showNotification) showNotification("Solicitação recusada. Assistido permanece na fila.", "info");
-    } catch (e) {
-        console.error("Erro ao recusar puxada:", e);
-        alert("Erro ao recusar solicitação.");
+        if (window.showNotification) window.showNotification("Solicitação recusada. Assistido permanece na fila.", "info");
+    } catch(e) {
+        console.error(e);
     }
 };
 
