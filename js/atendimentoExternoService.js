@@ -56,7 +56,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (4 Colunas + Histórico Rico)");
+        console.log("Mesa Digital V4 Inicializada (Correção de Token Integrada)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -69,7 +69,6 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            // Aguarda o Firebase restaurar a sessão (evita falso 'Sessão expirada' no reload)
             if (typeof auth.authStateReady === 'function') await auth.authStateReady();
             const user = auth.currentUser;
             if (!user) {
@@ -138,7 +137,6 @@ export const AtendimentoExternoService = {
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // Avisa (som + toast) quando alguém novo entra na fila, exceto na carga inicial
                 if (!primeiraCarga) {
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added' && change.doc.data().status === 'aguardando') {
@@ -190,8 +188,10 @@ export const AtendimentoExternoService = {
         this.assistidoData = assistido;
         this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
 
-        if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            this.showError("Acesso Seguro", "O token de segurança é inválido ou expirou.");
+        // CORREÇÃO DA VALIDAÇÃO DE TOKEN: Só valida o token se houver um token explícito na URL
+        // (indicando acesso via link externo de e-mail). Se o usuário clicou na Mesa, o token da BD é ignorado com segurança.
+        if (tokenRecebido && assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
+            this.showError("Acesso Seguro", "Este link expirou (o caso foi repassado). Abra o caso diretamente pela sua mesa.");
             return;
         }
 
@@ -203,8 +203,6 @@ export const AtendimentoExternoService = {
         this.setupListeners();
     },
 
-    // Mantém nome, assunto, checklist e histórico sincronizados enquanto o atendimento está aberto.
-    // Não redesenha o painel de ações (para não apagar o que o colaborador está digitando).
     _assinaturaDados(a) {
         return JSON.stringify([a.name, a.subject, a.status, a.documentChecklist || null, a.demandas?.descricoes || null, a.historicoTransferencia || null]);
     },
@@ -227,7 +225,6 @@ export const AtendimentoExternoService = {
                 if (nomeEl) nomeEl.textContent = novo.name || 'Assistido';
                 if (assuntoEl) assuntoEl.textContent = novo.subject || 'Sem assunto';
 
-                // Se o status mudou (ex.: outro colaborador concluiu), refaz a tela inteira
                 if (statusAnterior !== novo.status && !this.isProcessing) {
                     this.renderizarSplitScreen(this.assistidoData, pautaData);
                 } else {
@@ -238,7 +235,6 @@ export const AtendimentoExternoService = {
         );
     },
 
-    // Auditoria: quem abriu o caso na Mesa Digital (não repete se a última abertura foi da mesma pessoa)
     _registrarAbertura(assistido) {
         if (this.pautaFechada || !this.colaboradorNome) return;
         if (['atendido', 'aguardandoNumero', 'faltoso'].includes(assistido.status)) return;
@@ -262,7 +258,6 @@ export const AtendimentoExternoService = {
         } catch { this.todosColaboradores = []; }
     },
 
-    // Registro no formato do Monitoramento: "ação (por Fulano) às HH:MM" -> aparece em "Últimos eventos" e no Dossiê PDF
     _registroHistorico(descricao, iso = new Date().toISOString(), autor = this.colaboradorNome) {
         const hora = new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         return `${descricao} (por ${autor || 'Mesa Digital'}) às ${hora}`;
@@ -325,7 +320,6 @@ export const AtendimentoExternoService = {
         return this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
     },
 
-    // Caso que está na mesa de quem usa a página: em atendimento com o usuário OU aguardando assinatura/avaliação dele (defensor)
     _ehPendenteDoDefensor(a) {
         return this._ehDefensor()
             && ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
@@ -338,12 +332,10 @@ export const AtendimentoExternoService = {
     // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
 
     _ajustarGrelhaKanban() {
-        // Altera a grid do HTML para suportar 4 colunas em vez de 3
         const grid = document.querySelector('#view-dashboard .grid');
         if (grid) {
             grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0 pb-2';
             
-            // Injeta a 4ª coluna HTML se ela não existir
             if (!document.getElementById('kanban-pauta-geral')) {
                 const col4 = document.createElement('div');
                 col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
@@ -361,14 +353,11 @@ export const AtendimentoExternoService = {
                 col4.querySelector('#btn-pauta-completa').onclick = () => this.abrirPautaCompleta();
             }
 
-            // Altera o título da 3ª coluna para "Meus Concluídos"
             const titleCol3 = document.querySelector('#kanban-auditoria')?.previousElementSibling?.querySelector('h3');
             if (titleCol3) titleCol3.innerHTML = '✅ Meus Concluídos';
         }
     },
 
-    // O index.html liga no botão um listener que recarrega a lista de pautas. Recriamos o botão
-    // para que, dentro de um atendimento, "Voltar" leve à Mesa (kanban) e não à lista de pautas.
     _configurarBotaoVoltar(modo) {
         if (this._modoVoltar === modo) return;
         const antigo = document.getElementById('btn-voltar-portal');
@@ -386,7 +375,7 @@ export const AtendimentoExternoService = {
                 this.assistidoData = null;
                 this._ajustarGrelhaKanban();
                 this.renderizarKanban();
-                this.iniciarDashboardKanban();   // religa a sincronização em tempo real da mesa
+                this.iniciarDashboardKanban();
                 this.atualizarBadgeHeader();
             };
         } else {
@@ -422,19 +411,13 @@ export const AtendimentoExternoService = {
             window.history.pushState({}, '', url);
         }
 
-        // 1. FILA DE ESPERA
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
-        
-        // 2. MINHA MESA (Atendendo agora)
         const mesa = this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a));
-        
-        // 3. MEUS CONCLUÍDOS (O que eu fiz)
         const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
             const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
             return isDone && !this._ehPendenteDoDefensor(a) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
         });
 
-        // 4. PAUTA GERAL (Tudo o resto: atendendo por outros, concluído por outros, etc.)
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
             const isMine = this._pertenceAMim(a) || 
                            (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
@@ -456,7 +439,6 @@ export const AtendimentoExternoService = {
         this._aplicarFiltroKanban();
     },
 
-    // Clicar em qualquer ponto do card (fora de botões/links) abre o histórico do checklist
     _ligarCliqueNosCards() {
         if (this._cliqueCardsPronto) return;
         this._cliqueCardsPronto = true;
@@ -467,7 +449,6 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // Abas Encerramento / Histórico da tela individual (se existirem no HTML)
     setupListeners() {
         document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
         document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
@@ -619,7 +600,7 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── OVERLAYS (histórico rápido e pauta completa) ─────────────────────────
+    // ─── OVERLAYS ─────────────────────────────────────────────────────────────
 
     _criarOverlay(id, titulo, larguraMax = 'max-w-3xl') {
         document.getElementById(id)?.remove();
@@ -654,7 +635,6 @@ export const AtendimentoExternoService = {
         if (id === 'overlay-pauta-completa') this.pautaCompletaAberta = false;
     },
 
-    // Histórico do assistido (checklist, documentos, perfil, gastos...) direto do card, sem depender de módulo externo
     abrirHistoricoRapido(assistidoId) {
         const assistido = this.todosAtendimentosPauta.find(a => a.id === assistidoId);
         if (!assistido) { alert("Assistido não encontrado na pauta."); return; }
@@ -672,7 +652,6 @@ export const AtendimentoExternoService = {
         corpo.appendChild(btn);
     },
 
-    // Linha do tempo nativa: junta o que foi feito na Mesa Digital (history) com o log do Monitoramento (historicoAcoes)
     abrirLinhaDoTempo(assistido) {
         const rotulos = {
             APROVADO_E_CONCLUIDO: 'Concluído', APROVADO_AGUARDANDO_NUMERO: 'Aguardando CNP',
@@ -693,7 +672,6 @@ export const AtendimentoExternoService = {
         }));
         const chavesMesa = new Set(doMesa.map(e => e.chave));
 
-        // Log do Monitoramento: "ação (por Fulano) às HH:MM" (sem data, então usamos o dia da chegada/criação)
         const base = new Date(assistido.arrivalTime || assistido.createdAt || Date.now());
         const doMonitor = [];
         (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).forEach(txt => {
@@ -728,8 +706,6 @@ export const AtendimentoExternoService = {
             </li>`).join('')}</ol>`;
     },
 
-    // ─── PAUTA COMPLETA (visível para todos os colaboradores) ─────────────────
-
     abrirPautaCompleta() {
         this.pautaCompletaAberta = true;
         this._criarOverlay('overlay-pauta-completa', escapeHTML(this.pautaNome), 'max-w-6xl');
@@ -740,7 +716,6 @@ export const AtendimentoExternoService = {
         const corpo = document.querySelector('#overlay-pauta-completa [data-corpo]');
         if (!corpo) { this.pautaCompletaAberta = false; return; }
 
-        // Guarda quais grupos o usuário abriu/fechou para não perder ao atualizar ao vivo
         corpo.querySelectorAll('details[data-grupo]').forEach(d => { this._gruposPautaEstado[d.dataset.grupo] = d.open; });
         const scrollTop = corpo.scrollTop;
 
@@ -806,7 +781,7 @@ export const AtendimentoExternoService = {
         corpo.scrollTop = scrollTop;
     },
 
-    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL + HISTÓRICO ORIGINAL) 
+    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL) ──────────────────
 
     renderizarSplitScreen(assistido, pautaData) {
         document.getElementById('view-dashboard').classList.add('hidden');
@@ -833,7 +808,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // Nome e seção de um documento marcado no checklist (id: doc-<acao>-<secao>-<indice>)
     _infoDocumento(id, actionData) {
         let nome = id.replace(/-/g, ' ').toUpperCase(), secao = 'Outros';
         if (actionData && id.startsWith('doc-')) {
@@ -862,7 +836,6 @@ export const AtendimentoExternoService = {
         return { moradores, familia, crianca, totalFamilia, totalCrianca, total: totalFamilia + totalCrianca };
     },
 
-    // Mesmo PDF "checklist unificado" gerado na recepção, a partir do que está salvo
     async _baixarChecklistPdf(assistido) {
         const svc = PDFService?.generateChecklistPDF ? PDFService : window.PDFService;
         if (!svc || typeof svc.generateChecklistPDF !== 'function') { alert("Módulo de PDF não carregado."); return; }
@@ -900,7 +873,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // Texto base da petição com as despesas (igual ao "Gerador de texto" da recepção)
     _copiarTextoPeticao(assistido) {
         const c = this._calcularGastos(assistido.documentChecklist?.expenseData);
         if (c.total === 0) { showNotification("Os valores de despesa estão zerados.", "warning"); return; }
@@ -932,7 +904,6 @@ export const AtendimentoExternoService = {
             [rua, num].filter(Boolean).join(', '), comp, bairro, [cidade, uf].filter(Boolean).join('/'), cep ? `CEP ${cep}` : ''
         ].filter(Boolean).join(' - ');
 
-        // 1. AVISO DE TRANSFERÊNCIA (SE HOUVER)
         if (assistido.historicoTransferencia) {
             html += `
                 <div class="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
@@ -945,7 +916,6 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // 2. BOTÕES NO TOPO (Editar checklist só aparece se o módulo original estiver carregado)
         const temDetalhes = typeof window.openDetailsModal === 'function' && !!document.getElementById('assisted-details-modal');
         if (mostrarBotoes) html += `
             <div class="grid grid-cols-1 ${temDetalhes ? 'sm:grid-cols-2' : ''} gap-4 mb-6">
@@ -961,7 +931,6 @@ export const AtendimentoExternoService = {
             </div>
         `;
 
-        // NOTA de quem enviou / motivo da devolução (o defensor precisa ver isso logo no topo)
         const notaEnvio = assistido.notasRevisao || assistido.reviewMotivoDevolucao;
         if (notaEnvio && ['aguardandoDistribuicao', 'aguardandoCorrecao', 'emAtendimento'].includes(assistido.status)) {
             html += `
@@ -972,7 +941,6 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // IDENTIFICAÇÃO DO ASSISTIDO
         const txtVal = (v) => Array.isArray(v) ? v.filter(Boolean).join(' | ') : (v == null ? '' : String(v));
         const linhasId = [
             ['Nome', assistido.name], ['CPF', assistido.cpf], ['Telefone', assistido.telefone || assistido.phone],
@@ -989,7 +957,6 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // 3. INJEÇÃO DO HISTÓRICO ORIGINAL DA RECEPÇÃO
         const chk = assistido.documentChecklist || {};
         const baseDeDados = documentsData || window.documentsData || {};
         
@@ -1005,7 +972,6 @@ export const AtendimentoExternoService = {
                     <p class="text-base font-black text-white uppercase leading-tight">${actionTitle}</p>
                 </div>`;
 
-            // PERFIL SOCIOECONÔMICO
             if (chk.socioData) {
                 const s = chk.socioData;
                 let socioHtml = '';
@@ -1025,7 +991,6 @@ export const AtendimentoExternoService = {
                 }
             }
 
-            // LISTA DE DOCUMENTOS (agrupada por seção, com contagem e PDF do checklist)
             const idsDocs = (chk.checkedIds || []).filter(id => !id.startsWith('reu-') && !id.startsWith('gasto-'));
             if (idsDocs.length > 0) {
                 const totalPrevisto = actionData
@@ -1059,7 +1024,6 @@ export const AtendimentoExternoService = {
                 html += `</div>`;
             }
 
-            // DEMANDAS ACUMULADAS
             if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
                 html += `
                     <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
@@ -1074,7 +1038,6 @@ export const AtendimentoExternoService = {
                 `;
             }
 
-            // PLANILHA DE GASTOS
             if (chk.expenseData && chk.expenseData.checkExibirGastos) {
                 const g = chk.expenseData;
                 const moradores = Math.max(1, parseInt(g.quantidadeMoradores) || 1);
@@ -1117,7 +1080,6 @@ export const AtendimentoExternoService = {
                 }
             }
 
-            // DADOS DO RÉU
             if (chk.reuData && chk.reuData.checkReuUnico) {
                 const reu = chk.reuData;
                 html += `
@@ -1139,23 +1101,6 @@ export const AtendimentoExternoService = {
             }
         }
         
-        // ACOMPANHAMENTO (campos do Monitoramento: Verde, link principal, observações e arquivos enviados)
-        const arquivos = Array.isArray(assistido.documentosDigitalizados) ? assistido.documentosDigitalizados : [];
-        if (assistido.noVerde || assistido.pdfLink || assistido.pdfObservacoes || arquivos.length) {
-            const urlOk = (u) => /^https?:\/\//i.test(u || '') ? escapeHTML(u) : '#';
-            html += `
-                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('folder', 'w-3.5 h-3.5')} ACOMPANHAMENTO</h4>
-                    <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
-                        <span class="text-[11px] font-bold text-slate-600">Verde</span>
-                        <span class="px-2.5 py-1 rounded-lg font-black text-[9px] uppercase ${assistido.noVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-600'}">${assistido.noVerde ? 'Inserido' : 'Pendente'}</span>
-                    </div>
-                    ${assistido.pdfLink ? `<a href="${urlOk(assistido.pdfLink)}" target="_blank" rel="noopener" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold py-2 rounded-xl mb-3">Abrir link principal</a>` : ''}
-                    ${assistido.pdfObservacoes ? `<p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 italic mb-3">${escapeHTML(assistido.pdfObservacoes)}</p>` : ''}
-                    ${arquivos.map(d => `<div class="flex justify-between items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 mb-1.5"><span class="text-[11px] font-bold text-slate-700 truncate">${escapeHTML(d.titulo || d.nomeArquivo || 'Arquivo')}</span><a href="${urlOk(d.url)}" target="_blank" rel="noopener" class="bg-slate-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">Abrir</a></div>`).join('')}
-                </div>`;
-        }
-
         container.innerHTML = html;
 
         const btnPlanilha = container.querySelector('[data-baixar-planilha]');
@@ -1173,7 +1118,6 @@ export const AtendimentoExternoService = {
 
         if (!mostrarBotoes) return;
 
-        // VINCULANDO AÇÕES AOS BOTÕES NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
         setTimeout(() => {
             const btnDocs = container.querySelector('#btn-nativ-docs');
             const btnTime = container.querySelector('#btn-nativ-time');
@@ -1207,7 +1151,7 @@ export const AtendimentoExternoService = {
                 <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
                 <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
             </div>
-            <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
+            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
         `;
     },
 
@@ -1228,7 +1172,7 @@ export const AtendimentoExternoService = {
                 history: arrayUnion({ action: 'APROVADO_E_DISTRIBUIDO', by: this.colaboradorNome || 'Sistema', msg: `Nº CNP: ${cnp}`, at: iso })
             });
             if (typeof showNotification === 'function') showNotification("CNP registrado. Caso concluído!", "success");
-            document.getElementById('btn-voltar-portal').click();
+            document.getElementById('btn-voltar-dashboard').click();
         } catch (error) {
             console.error(error);
             alert(`Erro ao registrar o CNP: ${error.message}`);
@@ -1247,7 +1191,7 @@ export const AtendimentoExternoService = {
                     <input type="text" id="input-cnp-final" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono" placeholder="Ex: 1045239">
                     <button id="btn-registrar-cnp" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-md text-xs uppercase tracking-widest active:scale-95">Registrar CNP e Concluir</button>
                 </div>
-                <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+                <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
             `;
             document.getElementById('btn-registrar-cnp').onclick = () => this.registrarCnpFinal();
             return;
@@ -1259,11 +1203,10 @@ export const AtendimentoExternoService = {
                 <p class="text-xs font-bold text-emerald-700 leading-relaxed">Atendimento salvo por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
                 ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
             </div>
-            <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
         `;
     },
 
-    // Cartão "Link de acesso manual • Verde" (painel do defensor)
     _htmlCartaoVerde(assistido, isDefensor) {
         if (!isDefensor) return '';
         const cnp = assistido.numeroProcesso || '';
@@ -1829,7 +1772,7 @@ export const AtendimentoExternoService = {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
             
-            document.getElementById('btn-voltar-portal').click();
+            document.getElementById('btn-voltar-dashboard').click();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
