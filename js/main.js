@@ -2284,47 +2284,61 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
     }
 
     try {
-        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        
-        const colaboradorObj = window.app?.colaboradores?.find(c => c.nome === nomeColaborador) || { name: nomeColaborador };
-
-        // 1. Atualiza o status para emAtendimento e atribui ao colaborador que solicitou
-        await updateDoc(docRef, {
-            status: 'emAtendimento',
-            assignedCollaborator: {
-                id: colaboradorObj.id || 'manual',
-                name: nomeColaborador,
-                email: colaboradorObj.email || ''
-            },
-            inAttendanceTime: new Date().toISOString(),
-            solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
-        });
-
-        // 2. Fecha o modal de gestão de puxadas
+        // Fecha o modal de gestão de puxadas pendentes
         document.getElementById('modal-gestao-puxadas')?.remove();
 
         if (window.showNotification) {
-            window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
+            window.showNotification(`Preparando chamada para ${nomeColaborador}...`, "info");
         }
 
-        // 3. ABRE A TELA DO ASSISTIDO OU A CONFIGURAÇÃO DE CHAMADA CORRETA
-        // Em vez de abrir o modal de escolher colaborador da imagem, direcionamos para o atendimento do assistido
-        if (window.app && typeof window.app.loadPauta === 'function') {
-            // Se estivermos no app principal, abre diretamente a visão individual do caso
-            const baseUrl = window.location.href.split('?')[0];
-            window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
+        // DISPARA A FUNÇÃO NATIVA DO SEU SISTEMA QUE ABRE O MODAL "Definir Local e Delegar"
+        // No SIGEP, esta função costuma ser chamada quando o operador clica em "Chamar Próximo" ou abre as opções de chamada na TV para um assistido específico.
+        window.assistedIdToHandle = assistidoId;
+        window.assistedNameToHandle = nomeAssistido;
+
+        // Se o seu sistema tiver uma função específica para abrir este modal de chamada da TV (ex: PautaService ou UIService):
+        if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
+            PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
+        } else if (typeof window.abrirModalDefinirLocal === 'function') {
+            window.abrirModalDefinirLocal(assistidoId, nomeAssistido);
         } else {
-            // Se estiver na mesa digital externa, redireciona com os parâmetros corretos
-            const currentPath = window.location.pathname;
-            const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-            window.location.href = `${basePath}mesa_digital.html?pautaId=${pautaId}&assistidoId=${assistidoId}`;
+            // Caso o modal seja aberto por ID ou classe genérica no DOM, disparamos o gatilho nativo do card:
+            const cardAssistido = document.querySelector(`[data-assistido-id="${assistidoId}"]`) || document.querySelector(`[data-id="${assistidoId}"]`);
+            const btnChamarNativo = cardAssistido?.querySelector('.btn-chamar-tv, .btn-atender-assistido, [data-action="chamar"]');
+            
+            if (btnChamarNativo) {
+                btnChamarNativo.click();
+            } else {
+                // Alternativa padrão: Procura o modal no DOM e define o assistido
+                const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('definir-local-modal');
+                if (modalDefinirLocal) {
+                    modalDefinirLocal.classList.remove('hidden');
+                } else {
+                    // Se não encontrar o modal solto na tela, abre a visão do assistido onde esse painel está integrado
+                    const baseUrl = window.location.href.split('?')[0];
+                    window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
+                    return;
+                }
+            }
         }
+
+        // PRÉ-PREENCHE O COLABORADOR SOLICITANTE NO SELECT DO MODAL DA TV
+        setTimeout(() => {
+            const selectCollab = document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador') || document.querySelector('select[name="colaborador"]');
+            if (selectCollab) {
+                // Tenta encontrar e selecionar a opção correspondente ao nome do colaborador que puxou
+                for (let opt of selectCollab.options) {
+                    if (opt.value === nomeColaborador || opt.textContent.includes(nomeColaborador)) {
+                        selectCollab.value = opt.value;
+                        break;
+                    }
+                }
+            }
+        }, 150);
 
     } catch (e) {
-        console.error("Erro ao autorizar puxada:", e);
-        alert("Erro ao autorizar atendimento.");
+        console.error("Erro ao abrir modal de chamada:", e);
+        alert("Erro ao abrir o painel de chamada.");
     }
 };
 window.app = new SIGEPApp();
