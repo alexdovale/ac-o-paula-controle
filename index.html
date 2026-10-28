@@ -118,13 +118,129 @@
         html.alto-contraste [vw] {
             filter: invert(1) hue-rotate(180deg);
         }
+
+        .column-maximized {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            z-index: 99999 !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            background-color: #f1f5f9 !important;
+            box-sizing: border-box !important;
+        }
+        
+        .column-maximized > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            height: 100% !important;
+            max-height: none !important;
+            align-content: start;
+            overflow-y: auto !important;
+        }
+
+        body.is-popout {
+            background-color: #f1f5f9 !important;
+            overflow: hidden !important; 
+        }
+        
+        body.is-popout #main-wrapper,
+        body.is-popout #app-container,
+        body.is-popout #main-content {
+            max-width: none !important;
+            width: 100% !important;
+            height: 100vh !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
+        body.is-popout > *:not(#main-wrapper) { display: none !important; }
+        
+        body.is-popout #app-container > header,
+        body.is-popout #form-agendamento,
+        body.is-popout .mt-6.flex.justify-center,
+        body.is-popout #toggle-faltosos-btn,
+        body.is-popout #main-footer,
+        body.is-popout .border-b.overflow-x-auto {
+            display: none !important;
+        }
+        
+        body.is-popout .column-wrapper-base { display: none !important; }
+        
+        body.is-popout .column-wrapper-base.popout-active {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            box-sizing: border-box !important;
+        }
+        
+        body.is-popout .column-wrapper-base.popout-active > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            align-content: start;
+            flex-grow: 1 !important;
+        }
+
+        .column-maximized > div.column-content > *,
+        body.is-popout .column-wrapper-base.popout-active > div.column-content > * {
+            margin-top: 0 !important;
+        }
+
+        body.is-popout .btn-maximize, 
+        body.is-popout .btn-popout {
+            display: none !important; 
+        }
+
+        @keyframes piscaAlertaVermelho {
+            0% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { border-color: #fca5a5; box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        @keyframes piscaAlertaAmarelo {
+            0% { border-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            70% { border-color: #fde68a; box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+            100% { border-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        
+        .card-alerta-atrasado {
+            border: 2px solid #ef4444 !important;
+            animation: piscaAlertaVermelho 2s infinite;
+        }
+        
+        .card-alerta-espera {
+            border: 2px solid #f59e0b !important;
+            animation: piscaAlertaAmarelo 2s infinite;
+        }
+        
+        .card-alerta-critico {
+            border: 2px solid #dc2626 !important;
+            background-color: #fff5f5 !important;
+            animation: piscaAlertaVermelho 1s infinite;
+        }
     </style>
 </head>
-<body class="p-0 pt-16 sm:pt-20 md:pt-20">
+<body class="p-0 pt-16 sm:p-0 sm:pt-16 md:p-0 md:pt-16">
 
-    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) - ALINHADO À ESQUERDA E LIMPO -->
-    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-2.5 shadow-md">
-        <!-- LADO ESQUERDO: Logo, Nome e Links -->
+    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) - ALINHADO À ESQUERDA -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-2 shadow-sm">
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-6 w-auto drop-shadow-sm">
@@ -144,7 +260,6 @@
             </div>
         </div>
 
-        <!-- LADO DIREITO: Botão Sair Fixo Único -->
         <div class="flex items-center justify-end">
             <button id="logout-btn-app-top" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors text-[10px] sm:text-[11px] uppercase tracking-wider" onclick="if(window.app && window.app.auth) { window.app.auth.signOut().then(() => window.location.reload()); } else { window.location.reload(); }">
                 <span class="inline">Sair</span>
@@ -201,82 +316,88 @@
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE MODO (REPOSICIONADA E MODERNA) -->
-        <div id="modo-selection-screen" class="hidden flex-col items-center justify-center p-4 max-w-5xl w-full mx-auto min-h-[85vh] pt-16 sm:pt-20 pb-12 animate-fade-in">
-            <div class="text-center mb-10">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-50 text-green-600 rounded-2xl shadow-inner mb-4 border border-green-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor" class="w-8 h-8"><path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9 0h9.75" /></svg>
+        <!-- TELA DE SELEÇÃO DE MODO -->
+        <div id="modo-selection-screen" class="hidden flex-col items-center justify-center p-4 max-w-4xl w-full mx-auto min-h-[80vh]">
+            <div class="text-center mb-10 animate-fade-in" style="opacity: 0;">
+                <div class="flex justify-center mb-4">
+                    <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">Bem-vindo ao SIGEP</h1>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter uppercase">Bem-vindo ao SIGEP</h1>
                 <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">Escolha o modo de operação para iniciar</p>
             </div>
             
             <div id="modo-selection-view" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
                 
-                <div id="card-modo-normal" class="card-modo relative bg-white p-8 rounded-3xl shadow-md border border-slate-200/80 hover:border-green-500 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group cursor-pointer overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform pointer-events-none"></div>
+                <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards;">
+                    <div class="absolute -top-3 left-6">
+                        <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase shadow-sm">Rotina Diária</span>
+                    </div>
                     <div>
-                        <div class="flex items-center gap-4 mb-6 relative z-10">
-                            <div class="bg-green-600 text-white w-14 h-14 flex items-center justify-center rounded-2xl shadow-md group-hover:rotate-6 transition-transform">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor" class="w-7 h-7"><path d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-200 group-hover:bg-blue-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
                             </div>
-                            <div>
-                                <span class="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-2.5 py-1 rounded-md border border-green-100">Rotina Diária</span>
-                                <h2 class="font-black text-xl text-slate-900 uppercase mt-1">Modo Normal</h2>
-                            </div>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Normal</h2>
                         </div>
-                        <div class="space-y-3 mb-8 relative z-10 text-slate-600 text-sm">
-                            <p class="flex items-center gap-2.5 font-medium">
-                                <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
-                                <span>Fluxo completo com Recepção Central e Delegação</span>
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Fluxo com <strong>Recepção Central e Delegação</strong></span>
                             </p>
-                            <p class="flex items-center gap-2.5 font-medium">
-                                <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
-                                <span>Controle rigoroso de Agendamentos e Salas</span>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Controle rigoroso de <strong>Agendamentos</strong></span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Gestão de <strong>Múltiplas Pautas e Salas</strong></span>
                             </p>
                         </div>
                     </div>
-                    <div class="pt-5 border-t border-slate-100 mt-auto relative z-10">
-                        <button id="btn-modo-normal" class="w-full bg-slate-900 hover:bg-green-600 text-white font-black py-4 rounded-2xl text-xs shadow-md transition-all uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
-                            <span>Avançar para o Modo Normal</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor" class="w-4 h-4"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-normal" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                         </button>
                     </div>
                 </div>
 
-                <div id="card-modo-evento" class="card-modo relative bg-white p-8 rounded-3xl shadow-md border border-slate-200/80 hover:border-emerald-500 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group cursor-pointer overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform pointer-events-none"></div>
+                <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.2s; opacity: 0; animation-fill-mode: forwards;">
+                    <div class="absolute -top-3 left-6">
+                        <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase shadow-sm">Ações Externas</span>
+                    </div>
                     <div>
-                        <div class="flex items-center gap-4 mb-6 relative z-10">
-                            <div class="bg-emerald-600 text-white w-14 h-14 flex items-center justify-center rounded-2xl shadow-md group-hover:rotate-6 transition-transform">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-currentColor" class="w-7 h-7"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-200 group-hover:bg-emerald-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                             </div>
-                            <div>
-                                <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Ações Externas</span>
-                                <h2 class="font-black text-xl text-slate-900 uppercase mt-1">Modo Evento</h2>
-                            </div>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Evento</h2>
                         </div>
-                        <div class="space-y-3 mb-8 relative z-10 text-slate-600 text-sm">
-                            <p class="flex items-center gap-2.5 font-medium">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                <span>Fluxo simplificado de triagem instantânea</span>
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span><strong>Fluxo Simplificado</strong> de triagem instantânea</span>
                             </p>
-                            <p class="flex items-center gap-2.5 font-medium">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                <span>Ideal para Mutirões, Plantões e Ações Sociais</span>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Sem hierarquias complexas de prédios</span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Ideal para <strong>Mutirão, Plantão e Ação Social</strong></span>
                             </p>
                         </div>
                     </div>
-                    <div class="pt-5 border-t border-slate-100 mt-auto relative z-10">
-                        <button id="btn-modo-evento" class="w-full bg-slate-900 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xs shadow-md transition-all uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
-                            <span>Avançar para o Modo Evento</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-currentColor" class="w-4 h-4"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-evento" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                         </button>
                     </div>
                 </div>
             </div>
             
-            <button id="modo-back-to-login" class="mt-8 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors">&larr; Sair e Voltar ao Login</button>
+            <button id="modo-back-to-login" class="mt-8 text-sm text-slate-400 hover:text-slate-600 font-semibold transition-colors">&larr; Sair e Voltar ao Login</button>
         </div>
 
         <!-- TELA DE SELEÇÃO DE PAUTAS -->
@@ -293,7 +414,6 @@
                 </button>
             </div>
 
-            <!-- MENU PRINCIPAL PADRONIZADO COM TOOLTIPS -->
             <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-6">
                 <button id="btn-mesa-digital" onclick="window.open('mesa_digital.html', '_blank')" title="Acesse sua Mesa Digital para chamar os assistidos da sua pauta." class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md text-sm flex items-center gap-2 justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
@@ -329,7 +449,6 @@
             
             <div id="filters-container" class="mb-4"></div>
             
-            <!-- BARRA DE PESQUISA DE PAUTAS (BLINDADA CONTRA AUTOFILL DE E-MAIL) -->
             <div class="mb-6 flex justify-end w-full">
                 <div class="relative w-full sm:w-96">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -870,7 +989,7 @@
                                    <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Atendidos</span>
                                    <span id="atendidos-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                                </h3>
-                                <button id="download-pdf-btn" class="ml-2 flex-shrink-0 bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-blue-700 text-xs sm:text-sm">PDF</button>
+                               <button id="download-pdf-btn" class="ml-2 flex-shrink-0 bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-blue-700 text-xs sm:text-sm">PDF</button>
                             </div>
                             <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
@@ -1009,7 +1128,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <span>Alto Contraste</span>
                 </button>
-                
+
                 <div id="manual-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
                         <div class="p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white">
@@ -1047,7 +1166,6 @@
         </div>
     </footer>
 
-    <!-- MODAL LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
             <div class="text-center mb-6">
@@ -1079,7 +1197,6 @@
 
     <div id="modals-container"></div>
 
-    <!-- MODAL DE OUVIDORIA / FEEDBACK -->
     <div id="feedback-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
             <div class="bg-blue-600 px-6 py-5 flex justify-between items-center shrink-0">
@@ -1119,7 +1236,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE SELEÇÃO DE UNIDADE -->
     <div id="select-unidade-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" onclick="event.stopPropagation()">
             <div class="text-center mb-6">
@@ -1141,7 +1257,6 @@
         </div>
     </div>
     
-    <!-- SELECT COLLABORATOR MODAL -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
@@ -1172,7 +1287,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM -->
     <div id="doc-status-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
@@ -1187,7 +1301,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMAÇÃO DE ATENDENTE -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-green-600 to-green-700">
@@ -1207,7 +1320,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO DE ATENDENTE -->
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-amber-600 to-amber-700">
@@ -1227,7 +1339,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO DE ASSISTIDO -->
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-slate-600 to-slate-700">
@@ -1247,8 +1358,7 @@
             </div>
         </div>
     </div>
-    
-    <!-- MODAL DE CONFIGURAÇÃO DE LINKS EXTERNOS BI -->
+
     <div id="bi-links-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
@@ -1269,7 +1379,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE MONITORAMENTO E LINHA DO TEMPO INDIVIDUAL -->
     <div id="monitoramento-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
@@ -1284,7 +1393,6 @@
             </div>
             
             <div class="flex flex-col md:flex-row flex-1 overflow-hidden bg-slate-50">
-                <!-- Gestão de Documentos Avançada -->
                 <div class="w-full md:w-1/2 p-5 overflow-y-auto border-r border-slate-200 bg-white">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
@@ -1297,13 +1405,11 @@
                     </div>
 
                     <div class="space-y-5">
-                        <!-- SELETOR: UPLOAD OU LINK -->
                         <div class="flex gap-2 p-1 bg-slate-100 rounded-lg">
                             <button type="button" id="monitor-btn-tab-upload" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all">Upload (Arquivo/Foto)</button>
                             <button type="button" id="monitor-btn-tab-link" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">Link Principal</button>
                         </div>
 
-                        <!-- CAIXA DE UPLOAD DIRETO -->
                         <div id="monitor-box-upload" class="block space-y-3">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Título / Descrição do Documento</label>
@@ -1320,14 +1426,12 @@
                                 ENVIAR PARA A NUVEM
                             </button>
                             
-                            <!-- Lista de Arquivos já anexados -->
                             <div class="mt-4 border-t border-slate-100 pt-3">
                                 <h5 class="text-[10px] font-black text-slate-400 uppercase mb-2">Arquivos Anexados</h5>
                                 <div id="monitor-lista-arquivos-anexados" class="space-y-2"></div>
                             </div>
                         </div>
 
-                        <!-- CAIXA DE LINK PRINCIPAL -->
                         <div id="monitor-box-link" class="hidden space-y-3">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Link Principal (Ex: Google Drive)</label>
@@ -1339,7 +1443,6 @@
                             </div>
                         </div>
 
-                        <!-- Observações de Pendências (Fixo) -->
                         <div class="pt-2 border-t border-slate-100">
                             <label class="text-[10px] font-black text-slate-400 uppercase">Observações / Pendências de Docs</label>
                             <div class="flex gap-2 mt-1">
@@ -1350,7 +1453,6 @@
                     </div>
                 </div>
 
-                <!-- Linha do Tempo -->
                 <div class="w-full md:w-1/2 p-5 overflow-y-auto">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2 flex items-center gap-2">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -1364,10 +1466,8 @@
         </div>
     </div>
     
-    <!-- MODAL DE MONITORAMENTO GLOBAL -->
     <div id="monitoramento-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
-            <!-- Cabeçalho -->
             <div class="bg-indigo-700 p-5 text-white flex justify-between items-center shrink-0">
                 <div>
                     <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
@@ -1379,19 +1479,16 @@
                 <button onclick="document.getElementById('monitoramento-global-modal').classList.add('hidden')" class="text-indigo-300 hover:text-white text-3xl font-bold leading-none">&times;</button>
             </div>
             
-            <!-- Barra de Busca -->
             <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
                 <input type="text" id="monitor-global-search" placeholder="Buscar assistido no monitor..." class="w-full p-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm transition-all">
             </div>
 
-            <!-- Lista de Assistidos e Timeline (Corpo) -->
             <div class="flex-1 overflow-y-auto p-2 bg-slate-100" id="monitor-global-list">
                 <p class="text-center text-slate-400 py-10 font-bold animate-pulse">Carregando dados da pauta...</p>
             </div>
         </div>
     </div>
 
-    <!-- WIDGET DE ACESSIBILIDADE: VLIBRAS -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper>
@@ -1403,7 +1500,6 @@
         new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
 
-    <!-- SCRIPT DE EXIBIÇÃO DA BARRA SUPERIOR -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const loginContainer = document.getElementById('login-container');
@@ -1422,7 +1518,6 @@
         });
     </script>
 
-    <!-- SCRIPT DE SALVAMENTO DE OUVIDORIA NO FIREBASE -->
     <script type="module">
         import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
@@ -1489,22 +1584,18 @@
         });
     </script>
 
-    <!-- MÓDULO SENTRY -> FIREBASE -->
     <script type="module">
         import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         window.salvarErroSentryNoFirebase = async function(event) {
-            // Verifica se o Firebase já conectou e o banco tá pronto
             if (!window.app || !window.app.db) return;
             
             try {
-                // Pega a mensagem de erro técnica que quebrou o sistema
                 let msgErro = "Erro interno Javascript";
                 if (event.exception && event.exception.values && event.exception.values.length > 0) {
                     msgErro = event.exception.values[0].type + ": " + event.exception.values[0].value;
                 }
                 
-                // Grava silenciosamente na tabela da Ouvidoria
                 await addDoc(collection(window.app.db, "feedbacks_sistema"), {
                     tipo: "Erro Automático Sentry",
                     mensagem: "O sistema detectou uma falha de código automaticamente: " + msgErro,
@@ -1520,7 +1611,6 @@
     </script>
 
     <script>
-        // Lógica independente e super rápida para salvar o status com 1 clique
         document.getElementById('doc-status-buttons-container')?.addEventListener('click', async (e) => {
             const btn = e.target.closest('.doc-etapa-btn');
             if (!btn) return;
@@ -1538,7 +1628,6 @@
                 const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistedId);
                 await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
                 
-                // RASTRO DE AUDITORIA DO STATUS
                 if (window.MonitoramentoService && window.app) {
                     await window.MonitoramentoService.registrarAcaoHistorico(pautaId, assistedId, `Status da Triagem alterado para: ${novaEtapa}`, window.app);
                 }
@@ -1554,7 +1643,6 @@
     <script type="module" src="./js/main.js?v=3"></script>
 
     <script>
-        // Script do Botão de Alto Contraste
         (function() {
             const btnContraste = document.getElementById('btn-alto-contraste');
             const htmlElement = document.documentElement;
