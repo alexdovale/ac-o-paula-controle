@@ -14,14 +14,14 @@ import { ico } from './icons.js';
 // ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
 
 const statusMap = {
-    pauta:                    { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
-    aguardando:               { cor: 'text-amber-700 border-amber-200 bg-amber-50',    txt: 'Espera' },
-    emAtendimento:            { cor: 'text-blue-700 border-blue-200 bg-blue-50',        txt: 'Atendendo' },
+    pauta:                  { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
+    aguardando:             { cor: 'text-amber-700 border-amber-200 bg-amber-50',     txt: 'Espera' },
+    emAtendimento:          { cor: 'text-blue-700 border-blue-200 bg-blue-50',        txt: 'Atendendo' },
     aguardandoDistribuicao: { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',        txt: 'No Defensor' },
-    aguardandoCorrecao:       { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
-    atendido:                 { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
-    aguardandoNumero:         { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
-    faltoso:                  { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
+    aguardandoCorrecao:     { cor: 'text-orange-700 border-orange-200 bg-orange-50',  txt: 'Avaliação' },
+    atendido:               { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
+    aguardandoNumero:       { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',  txt: 'Aguard. CNP' },
+    faltoso:                { cor: 'text-red-700 border-red-200 bg-red-50',           txt: 'Faltoso' },
 };
 
 const app = initializeApp(firebaseConfig);
@@ -302,18 +302,13 @@ export const AtendimentoExternoService = {
         
         badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
 
-        // Proteção contra loop infinito de atualizações no Firestore
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
-            const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
-            
-            if (this.colaboradorAtual.status !== novoStatus || this.colaboradorAtual.currentAttendance !== atendimentoAtualId) {
+            if (this.colaboradorAtual.status !== novoStatus) {
                 this.colaboradorAtual.status = novoStatus; 
-                this.colaboradorAtual.currentAttendance = atendimentoAtualId;
-                
                 updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: novoStatus,
-                    currentAttendance: atendimentoAtualId
+                    currentAttendance: livre ? null : (meusCasos[0]?.id || this.assistidoId || null)
                 }).catch(()=>{});
             }
         }
@@ -423,7 +418,7 @@ export const AtendimentoExternoService = {
 
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
             const isMine = this._pertenceAMim(a) || 
-                         (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const isEspera = a.status === 'aguardando';
             return !isMine && !isEspera && a.status !== 'faltoso';
         });
@@ -510,7 +505,7 @@ export const AtendimentoExternoService = {
         container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
     },
 
-    htmlCardKanban(assistido, modo) {
+    _htmlCardKanban(assistido, modo) {
         let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
         const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
         const paraMim = this._ehPendenteDoDefensor(assistido);
@@ -538,8 +533,7 @@ export const AtendimentoExternoService = {
             }
         } else {
             if (modo === 'puxar') {
-                // CORRIGIDO: Agora exibe o botão funcional "Puxar para mim" com justificativa livre
-                botoesHtml = `<button type="button" class="btn-puxar-caso block w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Puxar para mim</button>`;
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Atender</a>`;
             } else if (modo === 'mesa' && ehPendente) {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
             } else if (modo === 'mesa') {
@@ -601,44 +595,6 @@ export const AtendimentoExternoService = {
         document.querySelectorAll('.btn-auditar-nativo:not([data-bound])').forEach(btn => {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
-        });
-
-        // VÍNCULO DO BOTÃO PUXAR PARA MIM
-        document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', (e) => {
-                const b = e.currentTarget;
-                this._solicitarPuxarCaso(b.dataset.assistidoId, b.dataset.assistidoNome);
-            });
-        });
-    },
-
-    // ─── SOLICITAÇÃO DE PUXADA COM TEXTO LIVRE ─────────────────────────────────
-
-    _solicitarPuxarCaso(assistidoId, nomeAssistido) {
-        const motivo = prompt(`Informe o motivo para puxar "${nomeAssistido}" para a sua mesa:`, "Atendimento prioritário / Urgência");
-        if (motivo === null) return;
-
-        const timestampIso = new Date().toISOString();
-        const colabNome = this.colaboradorNome || 'Colaborador';
-
-        updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
-            status: 'aguardandoAutorizacaoPuxada',
-            solicitacaoPuxada: {
-                solicitante: colabNome,
-                motivo: motivo || 'Sem justificativa informada',
-                solicitadoEm: timestampIso
-            },
-            historicoAcoes: arrayUnion(`Solicitou puxar caso para si (Motivo: ${motivo}) por ${colabNome}`)
-        }).then(() => {
-            if (typeof showNotification === 'function') {
-                showNotification("Solicitação enviada para a pauta!", "success");
-            } else {
-                alert("Solicitação enviada com sucesso!");
-            }
-        }).catch(err => {
-            console.error(err);
-            alert("Erro ao solicitar puxada de caso.");
         });
     },
 
@@ -1045,11 +1001,11 @@ export const AtendimentoExternoService = {
                     grupos.get(info.secao).push({ id, nome: info.nome });
                 });
                 html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                       <div class="flex items-center justify-between gap-2 mb-4">
-                           <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                           <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
-                       </div>
-                       <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-950 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
+                         <div class="flex items-center justify-between gap-2 mb-4">
+                             <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
+                             <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
+                         </div>
+                         <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-950 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
                 grupos.forEach((docs, secao) => {
                     html += `<p class="text-[10px] font-black text-sky-700 uppercase tracking-wider mt-3 mb-2">${escapeHTML(secao)}</p><ul class="space-y-2">`;
                     docs.forEach(({ id, nome }) => {
@@ -1135,8 +1091,8 @@ export const AtendimentoExternoService = {
                             ${reu.estadoCivil ? `<p><b class="text-rose-900 font-black block mb-1">Estado civil:</b> ${escapeHTML(reu.estadoCivil)}</p>` : ''}
                             ${reu.ganhos ? `<p><b class="text-rose-900 font-black block mb-1">Ganhos:</b> ${escapeHTML(reu.ganhos)}${reu.fonteRenda ? ' (' + escapeHTML(reu.fonteRenda) + ')' : ''}</p>` : ''}
                             ${reu.referencia ? `<p class="sm:col-span-2"><b class="text-rose-900 font-black block mb-1">Ponto de referência:</b> ${escapeHTML(reu.referencia)}</p>` : ''}
-                            {(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
-                            {(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
+                            ${(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
+                            ${(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
                         </div>
                     </div>
                 `;
@@ -1308,6 +1264,7 @@ export const AtendimentoExternoService = {
         if (!inputId) return;
 
         const processarValor = (rawVal) => {
+            // Extrai apenas os números da string (ex: "CNP 7039722" vira "7039722")
             const apenasNumeros = rawVal.replace(/\D/g, '');
             
             if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
@@ -1325,6 +1282,7 @@ export const AtendimentoExternoService = {
             processarValor(e.target.value);
         });
 
+        // Evento de colagem inteligente (Smart Paste)
         inputId.addEventListener('paste', (e) => {
             e.preventDefault();
             const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
