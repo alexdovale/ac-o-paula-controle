@@ -603,6 +603,7 @@ export const AtendimentoExternoService = {
             btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
         });
 
+        // VÍNCULO DO BOTÃO PUXAR PARA MIM
         document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => {
