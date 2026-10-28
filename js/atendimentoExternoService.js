@@ -14,14 +14,15 @@ import { ico } from './icons.js';
 // ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
 
 const statusMap = {
-    pauta:                    { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
-    aguardando:               { cor: 'text-amber-700 border-amber-200 bg-amber-50',    txt: 'Espera' },
-    emAtendimento:            { cor: 'text-blue-700 border-blue-200 bg-blue-50',        txt: 'Atendendo' },
-    aguardandoDistribuicao: { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',        txt: 'No Defensor' },
+    pauta:                    { cor: 'text-slate-600 border-slate-200 bg-slate-50',      txt: 'Na Pauta' },
+    aguardando:               { cor: 'text-amber-700 border-amber-200 bg-amber-50',      txt: 'Espera' },
+    emAtendimento:            { cor: 'text-blue-700 border-blue-200 bg-blue-50',         txt: 'Atendendo' },
+    aguardandoDistribuicao:   { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',         txt: 'No Defensor' },
     aguardandoCorrecao:       { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
     atendido:                 { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
     aguardandoNumero:         { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
     faltoso:                  { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
+    aguardandoAutorizacaoPuxada: { cor: 'text-violet-700 border-violet-200 bg-violet-50', txt: 'Puxada pendente' },
 };
 
 const app = initializeApp(firebaseConfig);
@@ -35,7 +36,7 @@ export const AtendimentoExternoService = {
     pautaId: null,
     pautaNome: 'Pauta',
     pautaTipo: '',
-    pautaFechada: false, 
+    pautaFechada: false,
     assistidoId: null,
     colaboradorNome: null,
     colaboradorId: null,
@@ -119,7 +120,7 @@ export const AtendimentoExternoService = {
 
     async iniciarDashboardKanban() {
         this._cancelarListeners();
-        
+
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
             if (snap.exists()) {
                 const fechou = snap.data().fechada === true;
@@ -172,9 +173,9 @@ export const AtendimentoExternoService = {
         this._cancelarListeners();
 
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
-            if(snap.exists()) {
+            if (snap.exists()) {
                 this.pautaFechada = snap.data().fechada === true;
-                if(this.pautaFechada) this.renderizarSplitScreen(this.assistidoData, pautaData);
+                if (this.pautaFechada) this.renderizarSplitScreen(this.assistidoData, pautaData);
             }
         });
 
@@ -269,7 +270,7 @@ export const AtendimentoExternoService = {
     showError(titulo, message) {
         const shell = document.getElementById('shell-atendimento');
         if (shell) shell.classList.add('hidden');
-        
+
         const wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = `
             <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
@@ -296,25 +297,25 @@ export const AtendimentoExternoService = {
 
         const livre = meusCasos.length === 0 && !isNaTelaIndividual;
 
-        badge.innerHTML = livre 
+        badge.innerHTML = livre
             ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span>LIVRE</span>`
             : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span> <span>OCUPADO</span>`;
-        
+
         badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
 
         // Proteção contra loop infinito de atualizações no Firestore
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
             const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
-            
+
             if (this.colaboradorAtual.status !== novoStatus || this.colaboradorAtual.currentAttendance !== atendimentoAtualId) {
-                this.colaboradorAtual.status = novoStatus; 
+                this.colaboradorAtual.status = novoStatus;
                 this.colaboradorAtual.currentAttendance = atendimentoAtualId;
-                
+
                 updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: novoStatus,
                     currentAttendance: atendimentoAtualId
-                }).catch(()=>{});
+                }).catch(() => {});
             }
         }
     },
@@ -338,7 +339,7 @@ export const AtendimentoExternoService = {
         const grid = document.querySelector('#view-dashboard .grid');
         if (grid) {
             grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0 pb-2';
-            
+
             if (!document.getElementById('kanban-pauta-geral')) {
                 const col4 = document.createElement('div');
                 col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
@@ -407,7 +408,7 @@ export const AtendimentoExternoService = {
         document.getElementById('view-dashboard').classList.add('flex');
         document.getElementById('view-atendimento').classList.add('hidden');
         document.getElementById('view-atendimento').classList.remove('flex');
-        
+
         const url = new URL(window.location.href);
         if (url.searchParams.has('assistidoId')) {
             url.searchParams.delete('assistidoId');
@@ -422,8 +423,8 @@ export const AtendimentoExternoService = {
         });
 
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
-            const isMine = this._pertenceAMim(a) || 
-                         (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+            const isMine = this._pertenceAMim(a) ||
+                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const isEspera = a.status === 'aguardando';
             return !isMine && !isEspera && a.status !== 'faltoso';
         });
@@ -510,7 +511,8 @@ export const AtendimentoExternoService = {
         container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
     },
 
-    htmlCardKanban(assistido, modo) {
+    // CORRIGIDO: nome com underscore (as chamadas usam this._htmlCardKanban)
+    _htmlCardKanban(assistido, modo) {
         let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
         const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
         const paraMim = this._ehPendenteDoDefensor(assistido);
@@ -520,7 +522,7 @@ export const AtendimentoExternoService = {
         const primeiroNome = (n) => escapeHTML(String(n || '').split(' ')[0]);
         const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
         const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
-        
+
         const baseUrl = window.location.href.split('?')[0];
         const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
 
@@ -530,15 +532,32 @@ export const AtendimentoExternoService = {
             donoLabel = paraMim ? (assistido.enviadoPor ? `De ${primeiroNome(assistido.enviadoPor)}` : '') : (assistido.defensorResponsavel ? `Com ${primeiroNome(assistido.defensorResponsavel)}` : 'Distribuição');
         }
 
+        const puxadaPendente = assistido.status === 'aguardandoAutorizacaoPuxada';
+        if (puxadaPendente) {
+            donoLabel = assistido.solicitacaoPuxada?.solicitante ? `Pede ${primeiroNome(assistido.solicitacaoPuxada.solicitante)}` : '';
+        }
+
         let botoesHtml = '';
         if (this.pautaFechada) {
             botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
             if (modo === 'auditoria') {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-950 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
             }
+        } else if (puxadaPendente) {
+            const sol = assistido.solicitacaoPuxada || {};
+            const souEu = sol.solicitante === this.colaboradorNome;
+            const motivo = sol.motivo ? `<p class="mt-2 text-[10px] text-slate-500 italic bg-violet-50 border border-violet-100 rounded-lg p-2">${escapeHTML(sol.motivo)}</p>` : '';
+            if (souEu) {
+                botoesHtml = `${motivo}<div class="mt-3 text-center py-2 bg-violet-50 rounded-lg text-[9px] font-black text-violet-700 uppercase tracking-widest">Aguardando autorização</div>`;
+            } else {
+                botoesHtml = `${motivo}
+                    <div class="flex gap-2 mt-3">
+                        <button class="btn-autorizar-puxada flex-1 bg-violet-600 hover:bg-violet-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-assistido-id="${assistido.id}">Autorizar</button>
+                        <button class="btn-negar-puxada flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-assistido-id="${assistido.id}">Negar</button>
+                    </div>`;
+            }
         } else {
             if (modo === 'puxar') {
-                // CORRIGIDO: Botão interativo de "Puxar para mim" com justificativa
                 botoesHtml = `<button type="button" class="btn-puxar-caso block w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Puxar para mim</button>`;
             } else if (modo === 'mesa' && ehPendente) {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
@@ -603,13 +622,23 @@ export const AtendimentoExternoService = {
             btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
         });
 
-        // VÍNCULO DO BOTÃO "PUXAR PARA MIM"
+        // Botão "Puxar para mim"
         document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => {
                 const b = e.currentTarget;
                 this._solicitarPuxarCaso(b.dataset.assistidoId, b.dataset.assistidoNome);
             });
+        });
+
+        // Autorizar / negar puxada
+        document.querySelectorAll('.btn-autorizar-puxada:not([data-bound])').forEach(btn => {
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', (e) => this._autorizarPuxada(e.currentTarget.dataset.assistidoId));
+        });
+        document.querySelectorAll('.btn-negar-puxada:not([data-bound])').forEach(btn => {
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', (e) => this._negarPuxada(e.currentTarget.dataset.assistidoId));
         });
     },
 
@@ -626,10 +655,12 @@ export const AtendimentoExternoService = {
             status: 'aguardandoAutorizacaoPuxada',
             solicitacaoPuxada: {
                 solicitante: colabNome,
+                solicitanteId: this.colaboradorId || '',
+                solicitanteEmail: this.colaboradorAtual?.email || '',
                 motivo: motivo || 'Sem justificativa informada',
                 solicitadoEm: timestampIso
             },
-            historicoAcoes: arrayUnion(`Solicitou puxar caso para si (Motivo: ${motivo}) por ${colabNome}`)
+            historicoAcoes: arrayUnion(this._registroHistorico(`Solicitou puxar caso para si (Motivo: ${motivo || 'não informado'})`, timestampIso, colabNome))
         }).then(() => {
             if (typeof showNotification === 'function') {
                 showNotification("Solicitação enviada para a pauta!", "success");
@@ -640,6 +671,53 @@ export const AtendimentoExternoService = {
             console.error(err);
             alert("Erro ao solicitar puxada de caso.");
         });
+    },
+
+    async _autorizarPuxada(assistidoId) {
+        const a = this.todosAtendimentosPauta.find(x => x.id === assistidoId);
+        const sol = a?.solicitacaoPuxada;
+        if (!a || !sol) return;
+        if (!confirm(`Autorizar que ${sol.solicitante} puxe "${a.name}" para a mesa dele(a)?`)) return;
+
+        const iso = new Date().toISOString();
+        const destino = this.todosColaboradores.find(c => c.nome === sol.solicitante);
+        try {
+            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
+                status: 'emAtendimento',
+                assignedCollaborator: { id: destino?.id || sol.solicitanteId || 'manual', name: sol.solicitante, email: destino?.email || sol.solicitanteEmail || '' },
+                inAttendanceTime: iso,
+                solicitacaoPuxada: null,
+                historicoAcoes: arrayUnion(this._registroHistorico(`Puxada autorizada para ${sol.solicitante}`, iso)),
+                history: arrayUnion({ action: 'TRANSFERENCIA_DE_CASO', by: this.colaboradorNome, msg: `Puxada autorizada por ${this.colaboradorNome} para ${sol.solicitante}`, at: iso })
+            });
+            if (destino?.id) {
+                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", destino.id), { status: 'ocupado', currentAttendance: assistidoId }).catch(() => {});
+            }
+            if (typeof showNotification === 'function') showNotification("Puxada autorizada.", "success");
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao autorizar a puxada.");
+        }
+    },
+
+    async _negarPuxada(assistidoId) {
+        const a = this.todosAtendimentosPauta.find(x => x.id === assistidoId);
+        const sol = a?.solicitacaoPuxada;
+        if (!a) return;
+        if (!confirm(`Negar a solicitação e devolver "${a.name}" para a fila de espera?`)) return;
+
+        const iso = new Date().toISOString();
+        try {
+            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
+                status: 'aguardando',
+                solicitacaoPuxada: null,
+                historicoAcoes: arrayUnion(this._registroHistorico(`Puxada negada${sol?.solicitante ? ` (solicitante: ${sol.solicitante})` : ''}`, iso))
+            });
+            if (typeof showNotification === 'function') showNotification("Solicitação negada. Caso voltou para a fila.", "info");
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao negar a puxada.");
+        }
     },
 
     // ─── OVERLAYS ─────────────────────────────────────────────────────────────
@@ -836,7 +914,7 @@ export const AtendimentoExternoService = {
 
         document.getElementById('assistido-nome').textContent = assistido.name || 'Assistido';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Sem assunto';
-        
+
         this._configurarBotaoVoltar('mesa');
 
         this._renderizarLadoEsquerdo(assistido);
@@ -1001,13 +1079,13 @@ export const AtendimentoExternoService = {
 
         const chk = assistido.documentChecklist || {};
         const baseDeDados = documentsData || window.documentsData || {};
-        
+
         if (!chk.action) {
             html += `<div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl"><span class="text-4xl block mb-2 text-slate-300">${ico('inbox')}</span><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhum checklist da recepção registado.</p></div>`;
         } else {
             const actionData = baseDeDados[chk.action];
             const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
-            
+
             html += `
                 <div class="bg-slate-900 p-5 rounded-2xl mb-6 shadow-md relative overflow-hidden">
                     <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5">Ação Selecionada na Recepção</p>
@@ -1023,7 +1101,7 @@ export const AtendimentoExternoService = {
                     }
                 };
                 addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda', s.ganhos); addLinha('Fonte Renda', s.fonteRenda);
-                
+
                 if (socioHtml) {
                     html += `
                         <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
@@ -1135,14 +1213,14 @@ export const AtendimentoExternoService = {
                             ${reu.estadoCivil ? `<p><b class="text-rose-900 font-black block mb-1">Estado civil:</b> ${escapeHTML(reu.estadoCivil)}</p>` : ''}
                             ${reu.ganhos ? `<p><b class="text-rose-900 font-black block mb-1">Ganhos:</b> ${escapeHTML(reu.ganhos)}${reu.fonteRenda ? ' (' + escapeHTML(reu.fonteRenda) + ')' : ''}</p>` : ''}
                             ${reu.referencia ? `<p class="sm:col-span-2"><b class="text-rose-900 font-black block mb-1">Ponto de referência:</b> ${escapeHTML(reu.referencia)}</p>` : ''}
-                            {(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
-                            {(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
+                            ${(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
+                            ${(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
                         </div>
                     </div>
                 `;
             }
         }
-        
+
         const arquivos = Array.isArray(assistido.documentosDigitalizados) ? assistido.documentosDigitalizados : [];
         if (assistido.noVerde || assistido.pdfLink || assistido.pdfObservacoes || arquivos.length) {
             const urlOk = (u) => /^https?:\/\//i.test(u || '') ? escapeHTML(u) : '#';
@@ -1179,7 +1257,7 @@ export const AtendimentoExternoService = {
         setTimeout(() => {
             const btnDocs = container.querySelector('#btn-nativ-docs');
             const btnTime = container.querySelector('#btn-nativ-time');
-            
+
             if (btnDocs) {
                 btnDocs.addEventListener('click', () => {
                     if (typeof window.openDetailsModal === 'function') {
@@ -1281,7 +1359,7 @@ export const AtendimentoExternoService = {
             <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md mb-6">
                 <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Gerador de Link Direto • VERDE</p>
                 <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link de acesso:</p>
-                
+
                 <div class="mb-3">
                     <input type="text" id="input-id-caso-verde" value="${escapeHTML(idCasoAtual)}" placeholder="Ex: 7039722" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
@@ -1308,8 +1386,9 @@ export const AtendimentoExternoService = {
         if (!inputId) return;
 
         const processarValor = (rawVal) => {
+            // Extrai apenas os números da string (ex: "CNP 7039722" vira "7039722")
             const apenasNumeros = rawVal.replace(/\D/g, '');
-            
+
             if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
                 inputId.value = apenasNumeros;
                 const url = this._gerarUrlVerde(apenasNumeros);
@@ -1325,6 +1404,7 @@ export const AtendimentoExternoService = {
             processarValor(e.target.value);
         });
 
+        // Colagem inteligente (Smart Paste)
         inputId.addEventListener('paste', (e) => {
             e.preventDefault();
             const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
@@ -1510,9 +1590,9 @@ export const AtendimentoExternoService = {
             btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-2xl text-left transition-all shadow-md group`;
 
             Object.keys(configBoxes).forEach(key => {
-                if(configBoxes[key]) configBoxes[key].classList.add('hidden');
+                if (configBoxes[key]) configBoxes[key].classList.add('hidden');
             });
-            if(configBoxes[fluxo]) configBoxes[fluxo].classList.remove('hidden');
+            if (configBoxes[fluxo]) configBoxes[fluxo].classList.remove('hidden');
         };
 
         document.getElementById('btn-opt-direto')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'direto'));
@@ -1568,7 +1648,7 @@ export const AtendimentoExternoService = {
 
     povoarSelectsDinamicos() {
         const defensores = this.todosColaboradores.filter(c => c.cargo?.toLowerCase().includes('defensor'));
-        const equipeTecnica = this.todosColaboradores.filter(c => !c.cargo?.toLowerCase().includes('defensor')); 
+        const equipeTecnica = this.todosColaboradores.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
         const todosMenosEu = this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome);
 
         const preencher = (idSelect, lista, defaultOpt, valueToSelect = null) => {
@@ -1587,7 +1667,7 @@ export const AtendimentoExternoService = {
         preencher('select-defensor-distribuicao', defensores, '--- SELECIONE ---');
         preencher('select-defensor-correcao', defensores, '--- SELECIONE ---');
         preencher('select-transferir-colega', todosMenosEu, '--- SELECIONE ---');
-        
+
         const enviadoPorInicial = this.assistidoData?.enviadoPor || '';
         preencher('select-servidor-devolver', equipeTecnica, '--- SELECIONE ---', enviadoPorInicial);
     },
@@ -1606,7 +1686,7 @@ export const AtendimentoExternoService = {
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
 
         const numProcessoSeguro = document.getElementById('input-numero-caso')?.value.trim() || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema'; 
+        const colabSeguro = this.colaboradorNome || 'Sistema';
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
@@ -1638,8 +1718,8 @@ export const AtendimentoExternoService = {
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorColaborador = this.assistidoData?.enviadoPor || null;
                 const mapaProdutividadeBI = {};
-                if (enviadoPorColaborador) mapaProdutividadeBI[enviadoPorColaborador] = 1; 
-                mapaProdutividadeBI[colabSeguro] = 1; 
+                if (enviadoPorColaborador) mapaProdutividadeBI[enviadoPorColaborador] = 1;
+                mapaProdutividadeBI[colabSeguro] = 1;
 
                 let statusDestinoFinal = 'aguardandoNumero';
                 if (numProcessoSeguro || !temDistribuicaoAtiva) statusDestinoFinal = 'atendido';
@@ -1647,14 +1727,14 @@ export const AtendimentoExternoService = {
                 await updateDoc(docRef, {
                     ...atualizacaoDeResponsavel,
                     status: statusDestinoFinal,
-                    attendedBy: colabSeguro,                    
-                    enviadoPor: enviadoPorColaborador,                
-                    trabalhosPorUsuario: mapaProdutividadeBI,       
-                    creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null), 
+                    attendedBy: colabSeguro,
+                    enviadoPor: enviadoPorColaborador,
+                    trabalhosPorUsuario: mapaProdutividadeBI,
+                    creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null),
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
-                    demandas: objetoDemandasFinal, 
+                    demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
@@ -1666,20 +1746,20 @@ export const AtendimentoExternoService = {
 
                 tituloSucesso = "Atendimento Finalizado!";
                 subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
-            } 
+            }
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
                 const finalidade = document.getElementById('select-finalidade-envio')?.value === 'distribuir' ? 'distribuir' : 'assinar';
                 const verboFinalidade = finalidade === 'distribuir' ? 'distribuição' : 'assinatura';
-                if (!def) { 
-                    alert("Obrigatório selecionar um Defensor."); 
+                if (!def) {
+                    alert("Obrigatório selecionar um Defensor.");
                     this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`; 
-                    return; 
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
+                    return;
                 }
-                
+
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
                 await updateDoc(docRef, {
@@ -1691,9 +1771,9 @@ export const AtendimentoExternoService = {
                     finalidadeEnvio: finalidade,
                     enviadoEm: timestampIso,
                     distributionStatus: 'pending',
-                    enviadoPor: colabSeguro, 
+                    enviadoPor: colabSeguro,
                     delegationToken: novoToken,
-                    demandas: objetoDemandasFinal, 
+                    demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para ${verboFinalidade} do Defensor(a) ${def}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
@@ -1709,26 +1789,26 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'correcao') {
                 const def = document.getElementById('select-defensor-correcao')?.value || '';
                 const nota = document.getElementById('notas-correcao-dinamico')?.value || '';
-                if (!def) { 
-                    alert("Obrigatório selecionar um Defensor."); 
+                if (!def) {
+                    alert("Obrigatório selecionar um Defensor.");
                     this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`; 
-                    return; 
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
+                    return;
                 }
-                
+
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
-                await updateDoc(docRef, { 
+                await updateDoc(docRef, {
                     ...atualizacaoDeResponsavel,
-                    status: 'aguardandoCorrecao', 
-                    defensorResponsavel: def, 
-                    notasRevisao: nota, 
+                    status: 'aguardandoCorrecao',
+                    defensorResponsavel: def,
+                    notasRevisao: nota,
                     reviewMotivoDevolucao: nota,
                     numeroProcesso: numProcessoSeguro,
                     finalidadeEnvio: 'corrigir',
                     enviadoEm: timestampIso,
-                    enviadoPor: colabSeguro, 
+                    enviadoPor: colabSeguro,
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para avaliação do Defensor(a) ${def}`, timestampIso, colabSeguro)),
@@ -1746,20 +1826,20 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'devolver') {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
                 const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
-                if (!serv) { 
-                    alert("Selecione o profissional de destino."); 
+                if (!serv) {
+                    alert("Selecione o profissional de destino.");
                     this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`; 
-                    return; 
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
+                    return;
                 }
-                
+
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === serv);
 
                 await updateDoc(docRef, {
-                    status: 'emAtendimento', 
+                    status: 'emAtendimento',
                     assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: serv, email: colaboradorDestinoObj?.email || '' },
-                    inAttendanceTime: timestampIso, 
+                    inAttendanceTime: timestampIso,
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido p/ Correção por ${colabSeguro}. Msg: ${nota}`,
                     demandas: objetoDemandasFinal,
@@ -1804,20 +1884,20 @@ export const AtendimentoExternoService = {
             }
             else if (this.fluxoSelecionado === 'transferir') {
                 const colega = document.getElementById('select-transferir-colega')?.value || '';
-                if (!colega) { 
-                    alert("Selecione um colega."); 
+                if (!colega) {
+                    alert("Selecione um colega.");
                     this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`; 
-                    return; 
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
+                    return;
                 }
-                
+
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === colega);
 
                 await updateDoc(docRef, {
-                    status: 'emAtendimento', 
+                    status: 'emAtendimento',
                     assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: colega, email: colaboradorDestinoObj?.email || '' },
-                    inAttendanceTime: timestampIso, 
+                    inAttendanceTime: timestampIso,
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
                     demandas: objetoDemandasFinal,
@@ -1835,10 +1915,10 @@ export const AtendimentoExternoService = {
                 }
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
-            } 
+            }
             else if (this.fluxoSelecionado === 'pausar') {
                 await updateDoc(docRef, {
-                    status: 'aguardando', 
+                    status: 'aguardando',
                     assignedCollaborator: null,
                     delegatedBy: null,
                     delegatedAt: null,
@@ -1877,7 +1957,7 @@ export const AtendimentoExternoService = {
             } else {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
-            
+
             document.getElementById('btn-voltar-dashboard').click();
 
         } catch (error) {
@@ -1888,7 +1968,7 @@ export const AtendimentoExternoService = {
                 btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
             }
         } finally {
-            this.isProcessing = false; 
+            this.isProcessing = false;
         }
     }
 };
