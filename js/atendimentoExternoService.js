@@ -1,3 +1,4 @@
+// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS E LGPD)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -14,14 +15,14 @@ import { ico } from './icons.js';
 // ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
 
 const statusMap = {
-    pauta:                    { cor: 'text-slate-600 border-slate-200 bg-slate-50',      txt: 'Na Pauta' },
-    aguardando:               { cor: 'text-amber-700 border-amber-200 bg-amber-50',      txt: 'Espera' },
-    emAtendimento:            { cor: 'text-blue-700 border-blue-200 bg-blue-50',         txt: 'Atendendo' },
+    pauta:                      { cor: 'text-slate-600 border-slate-200 bg-slate-50',      txt: 'Na Pauta' },
+    aguardando:                 { cor: 'text-amber-700 border-amber-200 bg-amber-50',      txt: 'Espera' },
+    emAtendimento:              { cor: 'text-blue-700 border-blue-200 bg-blue-50',         txt: 'Atendendo' },
     aguardandoDistribuicao:   { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',         txt: 'No Defensor' },
-    aguardandoCorrecao:       { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
-    atendido:                 { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
-    aguardandoNumero:         { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
-    faltoso:                  { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
+    aguardandoCorrecao:        { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
+    atendido:                   { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
+    aguardandoNumero:          { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
+    faltoso:                    { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
     aguardandoAutorizacaoPuxada: { cor: 'text-violet-700 border-violet-200 bg-violet-50', txt: 'Puxada pendente' },
 };
 
@@ -70,10 +71,20 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            if (typeof auth.authStateReady === 'function') await auth.authStateReady();
-            const user = auth.currentUser;
+            if (auth && typeof auth.authStateReady === 'function') {
+                await auth.authStateReady();
+            } else if (auth && auth.currentUser === null) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            const user = auth?.currentUser;
             if (!user) {
                 this.showError("Acesso Negado", "Sessão expirada. Volte e faça login novamente no painel principal.");
+                return;
+            }
+
+            if (!db) {
+                this.showError("Erro de Conexão", "Banco de dados não inicializado.");
                 return;
             }
 
@@ -82,10 +93,29 @@ export const AtendimentoExternoService = {
                 this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
                 return;
             }
+
             const pautaData = pautaDoc.data();
+
+            // VALIDAÇÃO DE PAUTA ATIVA (LGPD 7 DIAS + FECHAMENTO MANUAL NO FIREBASE)
+            const fechadaBanco = pautaData.isClosed === true || pautaData.fechada === true;
+            let expiradaBanco = false;
+            if (pautaData.createdAt) {
+                const dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
+                const expirationDate = new Date(dataBase);
+                expirationDate.setDate(dataBase.getDate() + 7);
+                if (new Date() > expirationDate) {
+                    expiradaBanco = true;
+                }
+            }
+
+            if (fechadaBanco || expiradaBanco) {
+                this.showError("Pauta Indisponível", "Esta pauta foi fechada ou expirou pelo prazo de 7 dias da LGPD e não pode mais ser acessada.");
+                return;
+            }
+
             this.pautaNome = pautaData.name || 'Pauta';
             this.pautaTipo = pautaData.type || 'agendamento';
-            this.pautaFechada = pautaData.fechada === true;
+            this.pautaFechada = false;
 
             const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
             const q = query(colabRef, where("email", "==", user.email));
@@ -123,7 +153,8 @@ export const AtendimentoExternoService = {
 
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
             if (snap.exists()) {
-                const fechou = snap.data().fechada === true;
+                const dados = snap.data();
+                const fechou = dados.fechada === true || dados.isClosed === true;
                 if (fechou !== this.pautaFechada) {
                     this.pautaFechada = fechou;
                     this.renderizarKanban();
@@ -174,7 +205,8 @@ export const AtendimentoExternoService = {
 
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
             if (snap.exists()) {
-                this.pautaFechada = snap.data().fechada === true;
+                const dados = snap.data();
+                this.pautaFechada = dados.fechada === true || dados.isClosed === true;
                 if (this.pautaFechada) this.renderizarSplitScreen(this.assistidoData, pautaData);
             }
         });
@@ -272,18 +304,20 @@ export const AtendimentoExternoService = {
         if (shell) shell.classList.add('hidden');
 
         const wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = `
-            <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
-                <div class="bg-red-600 p-6 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
-                    <h1 class="text-white font-black text-2xl uppercase tracking-widest text-center">Acesso Negado</h1>
-                </div>
-                <div class="p-8 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
-                    <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
-                    <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
-                    <p class="text-gray-500 font-semibold text-sm">${message}</p>
-                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-950 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
-                </div>
-            </div>`;
+        if (wrapper) {
+            wrapper.innerHTML = `
+                <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
+                    <div class="bg-red-600 p-6 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
+                        <h1 class="text-white font-black text-2xl uppercase tracking-widest text-center">Acesso Negado</h1>
+                    </div>
+                    <div class="p-8 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
+                        <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
+                        <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
+                        <p class="text-gray-500 font-semibold text-sm">${message}</p>
+                        <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-950 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
+                    </div>
+                </div>`;
+        }
     },
 
     atualizarBadgeHeader() {
@@ -303,7 +337,6 @@ export const AtendimentoExternoService = {
 
         badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
 
-        // Proteção contra loop infinito de atualizações no Firestore
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
             const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
@@ -424,7 +457,7 @@ export const AtendimentoExternoService = {
 
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
             const isMine = this._pertenceAMim(a) ||
-                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+                          (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const isEspera = a.status === 'aguardando';
             return !isMine && !isEspera && a.status !== 'faltoso';
         });
@@ -511,7 +544,6 @@ export const AtendimentoExternoService = {
         container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
     },
 
-    // CORRIGIDO: nome com underscore (as chamadas usam this._htmlCardKanban)
     _htmlCardKanban(assistido, modo) {
         let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
         const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
@@ -622,7 +654,6 @@ export const AtendimentoExternoService = {
             btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
         });
 
-        // Botão "Puxar para mim"
         document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => {
@@ -631,7 +662,6 @@ export const AtendimentoExternoService = {
             });
         });
 
-        // Autorizar / negar puxada
         document.querySelectorAll('.btn-autorizar-puxada:not([data-bound])').forEach(btn => {
             btn.dataset.bound = '1';
             btn.addEventListener('click', (e) => this._autorizarPuxada(e.currentTarget.dataset.assistidoId));
@@ -641,8 +671,6 @@ export const AtendimentoExternoService = {
             btn.addEventListener('click', (e) => this._negarPuxada(e.currentTarget.dataset.assistidoId));
         });
     },
-
-    // ─── SOLICITAÇÃO DE PUXADA COM TEXTO LIVRE ─────────────────────────────────
 
     _solicitarPuxarCaso(assistidoId, nomeAssistido) {
         const motivo = prompt(`Informe o motivo para puxar "${nomeAssistido}" para a sua mesa:`, "Atendimento prioritário / Urgência");
@@ -719,8 +747,6 @@ export const AtendimentoExternoService = {
             alert("Erro ao negar a puxada.");
         }
     },
-
-    // ─── OVERLAYS ─────────────────────────────────────────────────────────────
 
     _criarOverlay(id, titulo, larguraMax = 'max-w-3xl') {
         document.getElementById(id)?.remove();
@@ -900,8 +926,6 @@ export const AtendimentoExternoService = {
         this._setupAcoesCards();
         corpo.scrollTop = scrollTop;
     },
-
-    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL) ──────────────────
 
     renderizarSplitScreen(assistido, pautaData) {
         document.getElementById('view-dashboard').classList.add('hidden');
@@ -1124,8 +1148,8 @@ export const AtendimentoExternoService = {
                 });
                 html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
                        <div class="flex items-center justify-between gap-2 mb-4">
-                           <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                           <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
+                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
+                            <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
                        </div>
                        <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-950 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
                 grupos.forEach((docs, secao) => {
@@ -1343,8 +1367,6 @@ export const AtendimentoExternoService = {
         `;
     },
 
-    // ─── GERADOR DE LINKS DIRETOS PARA O VERDE ──────────────────────────────
-
     _gerarUrlVerde(idCaso) {
         const limpo = String(idCaso || '').trim();
         if (!/^\d+$/.test(limpo) || parseInt(limpo, 10) <= 0) return '';
@@ -1386,9 +1408,7 @@ export const AtendimentoExternoService = {
         if (!inputId) return;
 
         const processarValor = (rawVal) => {
-            // Extrai apenas os números da string (ex: "CNP 7039722" vira "7039722")
             const apenasNumeros = rawVal.replace(/\D/g, '');
-
             if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
                 inputId.value = apenasNumeros;
                 const url = this._gerarUrlVerde(apenasNumeros);
@@ -1400,11 +1420,7 @@ export const AtendimentoExternoService = {
             }
         };
 
-        inputId.addEventListener('input', (e) => {
-            processarValor(e.target.value);
-        });
-
-        // Colagem inteligente (Smart Paste)
+        inputId.addEventListener('input', (e) => { processarValor(e.target.value); });
         inputId.addEventListener('paste', (e) => {
             e.preventDefault();
             const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
