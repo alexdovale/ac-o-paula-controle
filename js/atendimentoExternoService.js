@@ -132,6 +132,7 @@ export const AtendimentoExternoService = {
         });
 
         let primeiraCarga = true;
+        let meusAnteriores = new Set();
         this.unsubscribeDashboard = onSnapshot(
             collection(db, "pautas", this.pautaId, "attendances"),
             (snap) => {
@@ -146,6 +147,16 @@ export const AtendimentoExternoService = {
                         }
                     });
                 }
+                const meusAgora = new Set(this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a)).map(a => a.id));
+                if (!primeiraCarga) {
+                    this.todosAtendimentosPauta.forEach(a => {
+                        if (meusAgora.has(a.id) && !meusAnteriores.has(a.id)) {
+                            if (typeof showNotification === 'function') showNotification(`Novo caso na sua mesa: ${a.name}`, "info");
+                            if (typeof playSound === 'function') playSound();
+                        }
+                    });
+                }
+                meusAnteriores = meusAgora;
                 primeiraCarga = false;
 
                 this.atualizarBadgeHeader();
@@ -310,6 +321,20 @@ export const AtendimentoExternoService = {
         }
     },
 
+    _ehDefensor() {
+        return this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
+    },
+
+    // Caso que está na mesa de quem usa a página: em atendimento com o usuário OU aguardando assinatura/avaliação dele (defensor)
+    _ehPendenteDoDefensor(a) {
+        return this._ehDefensor()
+            && ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
+            && a.defensorResponsavel === this.colaboradorNome;
+    },
+    _pertenceAMim(a) {
+        return (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || this._ehPendenteDoDefensor(a);
+    },
+
     // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
 
     _ajustarGrelhaKanban() {
@@ -401,24 +426,24 @@ export const AtendimentoExternoService = {
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
         
         // 2. MINHA MESA (Atendendo agora)
-        const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+        const mesa = this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a));
         
         // 3. MEUS CONCLUÍDOS (O que eu fiz)
         const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
             const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
-            return isDone && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
+            return isDone && !this._ehPendenteDoDefensor(a) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
         });
 
         // 4. PAUTA GERAL (Tudo o resto: atendendo por outros, concluído por outros, etc.)
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
-            const isMine = (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || 
+            const isMine = this._pertenceAMim(a) || 
                            (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const isEspera = a.status === 'aguardando';
             return !isMine && !isEspera && a.status !== 'faltoso';
         });
 
         espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
+        mesa.sort((a,b) => new Date(b.enviadoEm || b.inAttendanceTime || 0) - new Date(a.enviadoEm || a.inAttendanceTime || 0));
         meusConcluidos.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
         pautaGeral.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
 
@@ -502,15 +527,24 @@ export const AtendimentoExternoService = {
     },
 
     _htmlCardKanban(assistido, modo) {
-        const st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
+        let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
+        const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
+        const paraMim = this._ehPendenteDoDefensor(assistido);
+        if (paraMim) {
+            st = { ...st, txt: assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : (assistido.finalidadeEnvio === 'distribuir' ? 'Distribuir' : 'Assinar') };
+        }
+        const primeiroNome = (n) => escapeHTML(String(n || '').split(' ')[0]);
         const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
         const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
         
         const baseUrl = window.location.href.split('?')[0];
         const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
 
-        const donoLabel = assistido.assignedCollaborator?.name ? `Com ${escapeHTML(assistido.assignedCollaborator.name.split(' ')[0])}` : 
-                          (assistido.attendedBy ? `Por ${escapeHTML(assistido.attendedBy.split(' ')[0])}` : '');
+        let donoLabel = assistido.assignedCollaborator?.name ? `Com ${primeiroNome(assistido.assignedCollaborator.name)}` :
+                        (assistido.attendedBy ? `Por ${primeiroNome(assistido.attendedBy)}` : '');
+        if (ehPendente) {
+            donoLabel = paraMim ? (assistido.enviadoPor ? `De ${primeiroNome(assistido.enviadoPor)}` : '') : (assistido.defensorResponsavel ? `Com ${primeiroNome(assistido.defensorResponsavel)}` : 'Distribuição');
+        }
 
         let botoesHtml = '';
         if (this.pautaFechada) {
@@ -521,6 +555,8 @@ export const AtendimentoExternoService = {
         } else {
             if (modo === 'puxar') {
                 botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Atender</a>`;
+            } else if (modo === 'mesa' && ehPendente) {
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
             } else if (modo === 'mesa') {
                 botoesHtml = `
                     <div class="flex gap-2 mt-3">
@@ -528,7 +564,10 @@ export const AtendimentoExternoService = {
                         <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
                     </div>`;
             } else {
-                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
+                if (assistido.status === 'aguardandoNumero') {
+                    botoesHtml += `<a href="${linkIndividual}" class="block mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Registrar CNP</a>`;
+                }
+                botoesHtml += `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
             }
         }
 
@@ -640,7 +679,8 @@ export const AtendimentoExternoService = {
             ENVIADO_PARA_REVISAO: 'Enviado ao defensor', ENVIADO_PARA_CORRECAO: 'Enviado para avaliação',
             DEVOLVIDO_COM_ERRO: 'Devolvido para correção', TRANSFERENCIA_DE_CASO: 'Transferido',
             ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila',
-            DEVOLVIDO_PARA_CORRECAO: 'Devolvido para correção', APROVADO_E_DISTRIBUIDO: 'Distribuído'
+            DEVOLVIDO_PARA_CORRECAO: 'Devolvido para correção', APROVADO_E_DISTRIBUIDO: 'Distribuído',
+            DEVOLVIDO_PARA_DISTRIBUICAO: 'Devolvido à distribuição'
         };
         const hhmm = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const fmtData = (d) => d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -793,10 +833,104 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // Nome e seção de um documento marcado no checklist (id: doc-<acao>-<secao>-<indice>)
+    _infoDocumento(id, actionData) {
+        let nome = id.replace(/-/g, ' ').toUpperCase(), secao = 'Outros';
+        if (actionData && id.startsWith('doc-')) {
+            const parts = id.split('-');
+            const dIdx = parseInt(parts.pop());
+            const sIdx = parseInt(parts.pop());
+            const sec = actionData.sections[sIdx];
+            if (!isNaN(sIdx) && !isNaN(dIdx) && sec) {
+                secao = sec.title;
+                const docObj = sec.docs[dIdx];
+                if (docObj) nome = typeof docObj === 'string' ? docObj : docObj.text;
+            }
+        }
+        return { nome, secao };
+    },
+
+    _brl(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
+
+    _calcularGastos(g) {
+        const moradores = Math.max(1, parseInt(g?.quantidadeMoradores) || 1);
+        const num = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
+        const familia = [], crianca = [];
+        let totalFamilia = 0, totalCrianca = 0;
+        EXPENSE_CATEGORIES_COMUNS.forEach(c => { const v = num(g?.[c.id]); if (v > 0) { totalFamilia += v / moradores; familia.push({ label: c.label, total: v, cota: v / moradores }); } });
+        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const v = num(g?.[c.id]); if (v > 0) { totalCrianca += v; crianca.push({ label: c.label, total: v }); } });
+        return { moradores, familia, crianca, totalFamilia, totalCrianca, total: totalFamilia + totalCrianca };
+    },
+
+    // Mesmo PDF "checklist unificado" gerado na recepção, a partir do que está salvo
+    async _baixarChecklistPdf(assistido) {
+        const svc = PDFService?.generateChecklistPDF ? PDFService : window.PDFService;
+        if (!svc || typeof svc.generateChecklistPDF !== 'function') { alert("Módulo de PDF não carregado."); return; }
+
+        const chk = assistido.documentChecklist || {};
+        const actionData = (documentsData || {})[chk.action];
+        const ids = (chk.checkedIds || []).filter(id => !id.startsWith('reu-') && !id.startsWith('gasto-'));
+        const documentosTextos = ids.map(id => ({ id, text: this._infoDocumento(id, actionData).nome }));
+
+        const g = chk.expenseData;
+        const despesasTextos = [];
+        if (g?.checkExibirGastos) {
+            const c = this._calcularGastos(g);
+            if (c.total > 0) {
+                despesasTextos.push(`Quantidade de pessoas na residência: ${c.moradores}`);
+                c.familia.forEach(i => despesasTextos.push(`${i.label}: Total ${this._brl(i.total)} / Cota (1/${c.moradores}): ${this._brl(i.cota)}`));
+                c.crianca.forEach(i => despesasTextos.push(`${i.label}: ${this._brl(i.total)} (Integral)`));
+                despesasTextos.push(`NECESSIDADE MENSAL APURADA: ${this._brl(c.total)}`);
+            }
+        }
+
+        const checklistData = {
+            checkedIds: chk.checkedIds || [], docTypes: chk.docTypes || {}, reuData: chk.reuData || {},
+            expenseData: g || {}, socioData: chk.socioData || {},
+            demandasAdicionais: assistido.demandas?.descricoes || [], textosDespesas: despesasTextos
+        };
+
+        try {
+            showNotification("Gerando PDF do checklist...", "info");
+            const r = await svc.generateChecklistPDF(assistido.name || 'Assistido', actionData?.title || chk.action || '', checklistData, documentosTextos, despesasTextos);
+            if (r) showNotification("PDF emitido com sucesso!", "success");
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro na emissão do PDF", "error");
+        }
+    },
+
+    // Texto base da petição com as despesas (igual ao "Gerador de texto" da recepção)
+    _copiarTextoPeticao(assistido) {
+        const c = this._calcularGastos(assistido.documentChecklist?.expenseData);
+        if (c.total === 0) { showNotification("Os valores de despesa estão zerados.", "warning"); return; }
+        const nome = assistido.name || 'O requerente';
+        const pessoas = `${c.moradores} ${c.moradores === 1 ? 'pessoa' : 'pessoas'}`;
+        const txt = [
+            `Em relação às despesas mensais para a manutenção e subsistência de ${nome}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a ${this._brl(c.total)}.`,
+            '',
+            `O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${pessoas}), divididas da seguinte forma:`,
+            '',
+            `Cota-parte de despesas residenciais e alimentares (rateio de 1/${c.moradores}):`,
+            ...(c.familia.length ? c.familia.map(i => `• ${i.label} (total ${this._brl(i.total)}; cota: ${this._brl(i.cota)})`) : ['• Nenhuma despesa informada nesta categoria.']),
+            `Subtotal proporcional: ${this._brl(c.totalFamilia)}`,
+            '',
+            'Despesas exclusivas (100% da necessidade):',
+            ...(c.crianca.length ? c.crianca.map(i => `• ${i.label} (integral: ${this._brl(i.total)})`) : ['• Nenhuma despesa informada nesta categoria.']),
+            `Subtotal exclusivo: ${this._brl(c.totalCrianca)}`
+        ].join('\n');
+        navigator.clipboard.writeText(txt)
+            .then(() => showNotification("Texto copiado! Cole na petição.", "success"))
+            .catch(() => showNotification("Não foi possível copiar o texto.", "error"));
+    },
+
     _renderizarLadoEsquerdo(assistido, container = document.getElementById('aba-historico'), opcoes = {}) {
         const mostrarBotoes = opcoes.botoes !== false;
         if (!container) return;
         let html = '';
+        const fmtEnd = (rua, num, comp, bairro, cidade, uf, cep) => [
+            [rua, num].filter(Boolean).join(', '), comp, bairro, [cidade, uf].filter(Boolean).join('/'), cep ? `CEP ${cep}` : ''
+        ].filter(Boolean).join(' - ');
 
         // 1. AVISO DE TRANSFERÊNCIA (SE HOUVER)
         if (assistido.historicoTransferencia) {
@@ -826,6 +960,34 @@ export const AtendimentoExternoService = {
                 </button>
             </div>
         `;
+
+        // NOTA de quem enviou / motivo da devolução (o defensor precisa ver isso logo no topo)
+        const notaEnvio = assistido.notasRevisao || assistido.reviewMotivoDevolucao;
+        if (notaEnvio && ['aguardandoDistribuicao', 'aguardandoCorrecao', 'emAtendimento'].includes(assistido.status)) {
+            html += `
+                <div class="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm mb-6 relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400"></div>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Nota${assistido.enviadoPor ? ` de ${escapeHTML(assistido.enviadoPor)}` : ''}${assistido.finalidadeEnvio ? ` • ${assistido.finalidadeEnvio === 'distribuir' ? 'distribuir' : assistido.finalidadeEnvio === 'corrigir' ? 'corrigir' : 'assinar'}` : ''}</p>
+                    <p class="text-xs font-bold leading-relaxed text-slate-700">${escapeHTML(notaEnvio)}</p>
+                </div>`;
+        }
+
+        // IDENTIFICAÇÃO DO ASSISTIDO
+        const txtVal = (v) => Array.isArray(v) ? v.filter(Boolean).join(' | ') : (v == null ? '' : String(v));
+        const linhasId = [
+            ['Nome', assistido.name], ['CPF', assistido.cpf], ['Telefone', assistido.telefone || assistido.phone],
+            ['Agendamento', assistido.numeroAgendamento || assistido.numAgendamento], ['Assunto', assistido.subject],
+            ['Horário agendado', assistido.scheduledTime],
+            ['Chegada', assistido.arrivalTime ? new Date(assistido.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''],
+            ['Sala', assistido.room], ['Nº do processo', assistido.numeroProcesso]
+        ].filter(([, v]) => txtVal(v).trim() !== '');
+        if (linhasId.length) {
+            html += `
+                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} IDENTIFICAÇÃO</h4>
+                    <div class="space-y-1">${linhasId.map(([k, v]) => `<div class="flex justify-between items-center py-2 border-b border-slate-100 gap-3"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">${k}</span><span class="text-xs font-bold text-slate-700 text-right break-words">${escapeHTML(txtVal(v))}</span></div>`).join('')}</div>
+                </div>`;
+        }
 
         // 3. INJEÇÃO DO HISTÓRICO ORIGINAL DA RECEPÇÃO
         const chk = assistido.documentChecklist || {};
@@ -863,34 +1025,40 @@ export const AtendimentoExternoService = {
                 }
             }
 
-            // LISTA DE DOCUMENTOS
-            if (chk.checkedIds && chk.checkedIds.length > 0) {
-                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                         <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                         <ul class="space-y-2">`;
-                chk.checkedIds.forEach(id => {
-                    if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
-                    let docName = id.replace(/-/g, ' ').toUpperCase();
-                    if (actionData && id.startsWith('doc-')) {
-                        const parts = id.split('-');
-                        const dIdx = parseInt(parts.pop());
-                        const sIdx = parseInt(parts.pop());
-                        if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
-                            const docObj = actionData.sections[sIdx].docs[dIdx];
-                            if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
-                        }
-                    }
-                    const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-                    const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
-                    html += `
-                        <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center">
-                            <span class="font-bold text-slate-700 pr-2 flex items-center gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} ${docName}</span> 
-                            <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
-                        </li>`;
+            // LISTA DE DOCUMENTOS (agrupada por seção, com contagem e PDF do checklist)
+            const idsDocs = (chk.checkedIds || []).filter(id => !id.startsWith('reu-') && !id.startsWith('gasto-'));
+            if (idsDocs.length > 0) {
+                const totalPrevisto = actionData
+                    ? actionData.sections.reduce((t, sec) => t + sec.docs.filter(d => !(typeof d === 'object' && d.type === 'title')).length, 0)
+                    : 0;
+                const grupos = new Map();
+                idsDocs.forEach(id => {
+                    const info = this._infoDocumento(id, actionData);
+                    if (!grupos.has(info.secao)) grupos.set(info.secao, []);
+                    grupos.get(info.secao).push({ id, nome: info.nome });
                 });
-                html += `</ul></div>`;
+                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                         <div class="flex items-center justify-between gap-2 mb-4">
+                             <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
+                             <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
+                         </div>
+                         <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
+                grupos.forEach((docs, secao) => {
+                    html += `<p class="text-[10px] font-black text-sky-700 uppercase tracking-wider mt-3 mb-2">${escapeHTML(secao)}</p><ul class="space-y-2">`;
+                    docs.forEach(({ id, nome }) => {
+                        const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
+                        const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
+                        html += `
+                            <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center gap-2">
+                                <span class="font-bold text-slate-700 pr-2 flex items-start gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} <span>${escapeHTML(nome)}</span></span>
+                                <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
+                            </li>`;
+                    });
+                    html += `</ul>`;
+                });
+                html += `</div>`;
             }
-            
+
             // DEMANDAS ACUMULADAS
             if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
                 html += `
@@ -941,6 +1109,9 @@ export const AtendimentoExternoService = {
                             <button data-baixar-planilha class="mt-5 w-full bg-white border border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
                                 ${ico('fileText', 'w-4 h-4')} Baixar planilha PDF
                             </button>
+                            <button data-copiar-texto class="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
+                                ${ico('clipboard', 'w-4 h-4')} Copiar texto para a petição
+                            </button>
                         </div>
                     `;
                 }
@@ -953,15 +1124,15 @@ export const AtendimentoExternoService = {
                     <div class="bg-rose-50 p-5 rounded-2xl mb-6 border border-rose-200 shadow-sm">
                         <h4 class="text-[10px] font-black text-rose-800 uppercase tracking-widest mb-4 flex items-center gap-1.5"><span>${ico('user', 'w-3.5 h-3.5')}</span> POLO PASSIVO (RÉU)</h4>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs text-slate-700 bg-white p-4 rounded-xl border border-rose-100 shadow-sm">
-                            ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${reu.nome}</p>` : ''}
-                            ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${reu.cpf}</p>` : ''}
-                            ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${reu.telefone}</p>` : ''}
+                            ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${escapeHTML(reu.nome)}</p>` : ''}
+                            ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${escapeHTML(reu.cpf)}</p>` : ''}
+                            ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${escapeHTML(reu.telefone)}</p>` : ''}
                             ${reu.ocupacao ? `<p><b class="text-rose-900 font-black block mb-1">Ocupação:</b> ${escapeHTML(reu.ocupacao)}${reu.profissao ? ' — ' + escapeHTML(reu.profissao) : ''}</p>` : ''}
                             ${reu.estadoCivil ? `<p><b class="text-rose-900 font-black block mb-1">Estado civil:</b> ${escapeHTML(reu.estadoCivil)}</p>` : ''}
                             ${reu.ganhos ? `<p><b class="text-rose-900 font-black block mb-1">Ganhos:</b> ${escapeHTML(reu.ganhos)}${reu.fonteRenda ? ' (' + escapeHTML(reu.fonteRenda) + ')' : ''}</p>` : ''}
                             ${reu.referencia ? `<p class="sm:col-span-2"><b class="text-rose-900 font-black block mb-1">Ponto de referência:</b> ${escapeHTML(reu.referencia)}</p>` : ''}
-                            ${reu.cep ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
-                            ${reu.empresa ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
+                            ${(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
+                            ${(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
                         </div>
                     </div>
                 `;
@@ -996,6 +1167,9 @@ export const AtendimentoExternoService = {
                 else alert("Módulo de PDF não carregado.");
             };
         }
+
+        container.querySelector('[data-baixar-checklist]')?.addEventListener('click', () => this._baixarChecklistPdf(assistido));
+        container.querySelector('[data-copiar-texto]')?.addEventListener('click', () => this._copiarTextoPeticao(assistido));
 
         if (!mostrarBotoes) return;
 
@@ -1037,8 +1211,47 @@ export const AtendimentoExternoService = {
         `;
     },
 
+    async registrarCnpFinal() {
+        if (this.pautaFechada || this.isProcessing) return;
+        const cnp = document.getElementById('input-cnp-final')?.value.trim() || '';
+        if (!cnp) { alert("Informe o número do processo (CNP)."); return; }
+
+        this.isProcessing = true;
+        try {
+            const iso = new Date().toISOString();
+            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), {
+                status: 'atendido',
+                numeroProcesso: cnp,
+                finalizadoPeloColaborador: true,
+                distributionStatus: 'completed',
+                historicoAcoes: arrayUnion(this._registroHistorico(`CNP registrado: ${cnp}`, iso)),
+                history: arrayUnion({ action: 'APROVADO_E_DISTRIBUIDO', by: this.colaboradorNome || 'Sistema', msg: `Nº CNP: ${cnp}`, at: iso })
+            });
+            if (typeof showNotification === 'function') showNotification("CNP registrado. Caso concluído!", "success");
+            document.getElementById('btn-voltar-portal').click();
+        } catch (error) {
+            console.error(error);
+            alert(`Erro ao registrar o CNP: ${error.message}`);
+        } finally {
+            this.isProcessing = false;
+        }
+    },
+
     _renderizarPainelFinalizado(assistido) {
         const aba = document.getElementById('aba-encerramento');
+        if (assistido.status === 'aguardandoNumero') {
+            aba.innerHTML = `
+                <div class="p-6 bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm mt-4 mb-6">
+                    <h2 class="text-base font-black text-indigo-800 uppercase tracking-wider mb-2 text-center">Aguardando Nº do Processo</h2>
+                    <p class="text-xs font-bold text-indigo-700 leading-relaxed text-center mb-4">Aprovado por <b>${escapeHTML(assistido.attendedBy || 'Defensor')}</b>. Informe o CNP para concluir a distribuição.</p>
+                    <input type="text" id="input-cnp-final" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono" placeholder="Ex: 1045239">
+                    <button id="btn-registrar-cnp" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-md text-xs uppercase tracking-widest active:scale-95">Registrar CNP e Concluir</button>
+                </div>
+                <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+            `;
+            document.getElementById('btn-registrar-cnp').onclick = () => this.registrarCnpFinal();
+            return;
+        }
         aba.innerHTML = `
             <div class="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm mt-4 mb-6">
                 <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
@@ -1050,17 +1263,38 @@ export const AtendimentoExternoService = {
         `;
     },
 
+    // Cartão "Link de acesso manual • Verde" (painel do defensor)
+    _htmlCartaoVerde(assistido, isDefensor) {
+        if (!isDefensor) return '';
+        const cnp = assistido.numeroProcesso || '';
+        const link = assistido.linkVerdeManualmente || assistido.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(cnp || assistido.name || '')}`;
+        const href = /^https?:\/\//i.test(link) ? escapeHTML(link) : '#';
+        return `
+            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md mb-6">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Link de acesso manual • Verde</p>
+                <p class="text-xs font-medium text-slate-300 mb-3">Abra o procedimento no Verde para conferir a petição.</p>
+                ${cnp
+                    ? `<span class="inline-block font-mono font-bold text-[11px] bg-white text-slate-700 px-3 py-1.5 rounded-lg mb-3">Nº CNP: ${escapeHTML(cnp)}</span>`
+                    : `<span class="inline-block text-[10px] font-black uppercase tracking-wider bg-amber-900/40 text-amber-300 border border-amber-700 px-3 py-1.5 rounded-lg mb-3">Procedimento sem CNP cadastrado</span>`}
+                <div class="flex gap-2">
+                    ${cnp ? `<button type="button" data-copiar-cnp="${escapeHTML(cnp)}" class="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-4 py-3 rounded-xl active:scale-95">Copiar CNP</button>` : ''}
+                    <a href="${href}" target="_blank" rel="noopener" class="flex-1 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest py-3 rounded-xl shadow-sm active:scale-95">${ico('scale', 'w-4 h-4 inline-block')} Abrir link do Verde</a>
+                </div>
+            </div>`;
+    },
+
     _renderizarPainelAcoes(assistido, pautaData) {
         const aba = document.getElementById('aba-encerramento');
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const showDistribuicao = pautaData.useDistributionFlow && !isDefensor;
+        const temDefensorNaPauta = this.todosColaboradores.some(c => c.cargo?.toLowerCase().includes('defensor'));
+        const showDistribuicao = (pautaData.useDistributionFlow || temDefensorNaPauta) && !isDefensor;
 
-        let html = `
+        let html = this._htmlCartaoVerde(assistido, isDefensor) + `
             <div class="grid grid-cols-1 gap-3 mb-6">
                 <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 p-4 rounded-2xl text-left transition-all shadow-md group">
                     <span class="block text-emerald-600 mb-1">${ico('checkCircle', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">${isDefensor ? "Concluir / Assinar" : "Finalizar Protocolo"}</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encerrar o caso</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">${isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo"}</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encerrar atendimento definitivo</span>
                 </button>
         `;
 
@@ -1069,12 +1303,12 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-blue-50 hover:border-blue-300 group">
                     <span class="block text-blue-600 mb-1">${ico('send', 'w-7 h-7')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">Enviar ao Defensor</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encaminhar petição</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Assinar ou distribuir</span>
                 </button>
                 <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-amber-50 hover:border-amber-300 group">
                     <span class="block text-amber-600 mb-1">${ico('helpCircle', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Pedir Avaliação</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Dúvidas com defensor</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">Pedir Correção / Avaliação</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Defensor corrige ou avalia</span>
                 </button>
             `;
         }
@@ -1083,8 +1317,13 @@ export const AtendimentoExternoService = {
             html += `
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-orange-50 hover:border-orange-300 group">
                     <span class="block text-orange-600 mb-1">${ico('arrowLeft', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Devolver c/ Erro</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Retornar ao servidor</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">Devolver p/ Correção</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Retornar à mesa de origem</span>
+                </button>
+                <button id="btn-opt-devolver-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-cyan-50 hover:border-cyan-300 group">
+                    <span class="block text-cyan-600 mb-1">${ico('inbox', 'w-7 h-7')}</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">Devolver à Distribuição</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Voltar para a fila de distribuição</span>
                 </button>
             `;
         }
@@ -1097,7 +1336,7 @@ export const AtendimentoExternoService = {
                 </button>
                 <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-slate-100 hover:border-slate-300 group">
                     <span class="block text-slate-600 mb-1">${ico('pause', 'w-5 h-5')}</span>
-                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Pausar</span>
+                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Pausar Atendimento</span>
                 </button>
             </div>
         </div>`;
@@ -1117,12 +1356,23 @@ export const AtendimentoExternoService = {
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
                     <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 1045239">
                 </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('link', 'w-3.5 h-3.5')}</span> Link direto do procedimento no Verde (manual)</label>
+                    <input type="url" id="input-link-verde-manual" value="${escapeHTML(assistido.linkVerdeManualmente || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://verde.defensoria.rj.def.br/...">
+                </div>
             </div>
 
             <div id="config-distribuicao" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
                     <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Defensor(a)</label>
                     <select id="select-defensor-distribuicao" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Finalidade</label>
+                    <select id="select-finalidade-envio" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
+                        <option value="assinar">Assinar</option>
+                        <option value="distribuir">Distribuir</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Nota Interna</label>
@@ -1152,6 +1402,13 @@ export const AtendimentoExternoService = {
                 </div>
             </div>
 
+            <div id="config-devolver-dist" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1.5">Observação para a distribuição</label>
+                    <textarea id="notas-devolver-dist" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-cyan-500 resize-none"></textarea>
+                </div>
+            </div>
+
             <div id="config-transferencia" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
                     <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1.5">Transferir para</label>
@@ -1175,6 +1432,7 @@ export const AtendimentoExternoService = {
             'distribuicao': document.getElementById('config-distribuicao'),
             'correcao': document.getElementById('config-correcao'),
             'devolver': document.getElementById('config-devolver'),
+            'devolverDist': document.getElementById('config-devolver-dist'),
             'transferir': document.getElementById('config-transferencia'),
             'pausar': null
         };
@@ -1187,6 +1445,7 @@ export const AtendimentoExternoService = {
                 'distribuicao': 'bg-blue-50 border border-blue-300 ring-2 ring-blue-100 shadow-md',
                 'correcao': 'bg-amber-50 border border-amber-300 ring-2 ring-amber-100 shadow-md',
                 'devolver': 'bg-orange-50 border border-orange-300 ring-2 ring-orange-100 shadow-md',
+                'devolverDist': 'bg-cyan-50 border border-cyan-300 ring-2 ring-cyan-100 shadow-md',
                 'transferir': 'bg-indigo-50 border border-indigo-300 ring-2 ring-indigo-100 shadow-md',
                 'pausar': 'bg-slate-100 border border-slate-400 ring-2 ring-slate-200 shadow-md'
             };
@@ -1202,6 +1461,10 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-opt-dist')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'distribuicao'));
         document.getElementById('btn-opt-correcao')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'correcao'));
         document.getElementById('btn-opt-devolver')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolver'));
+        document.getElementById('btn-opt-devolver-dist')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolverDist'));
+        aba.querySelectorAll('[data-copiar-cnp]').forEach(b => b.onclick = () => {
+            navigator.clipboard?.writeText(b.dataset.copiarCnp).then(() => showNotification('Nº CNP copiado!', 'success')).catch(() => {});
+        });
         document.getElementById('btn-opt-transferir')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'transferir'));
         document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
 
@@ -1288,6 +1551,8 @@ export const AtendimentoExternoService = {
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
 
         const numProcessoSeguro = document.getElementById('input-numero-caso')?.value.trim() || '';
+        const linkBruto = document.getElementById('input-link-verde-manual')?.value.trim() || '';
+        const linkManualSalvo = linkBruto && !/^https?:\/\//i.test(linkBruto) ? `https://${linkBruto}` : linkBruto;
         const colabSeguro = this.colaboradorNome || 'Sistema'; 
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
@@ -1336,6 +1601,7 @@ export const AtendimentoExternoService = {
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null,
                     demandas: objetoDemandasFinal, 
                     historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
                     history: arrayUnion({
@@ -1352,6 +1618,8 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
+                const finalidade = document.getElementById('select-finalidade-envio')?.value === 'distribuir' ? 'distribuir' : 'assinar';
+                const verboFinalidade = finalidade === 'distribuir' ? 'distribuição' : 'assinatura';
                 if (!def) { 
                     alert("Obrigatório selecionar um Defensor."); 
                     this.isProcessing = false;
@@ -1368,14 +1636,18 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null,
+                    finalidadeEnvio: finalidade,
+                    enviadoEm: timestampIso,
+                    distributionStatus: 'pending',
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
-                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para assinatura do Defensor(a) ${def}`, timestampIso, colabSeguro)),
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para ${verboFinalidade} do Defensor(a) ${def}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
-                        msg: nota || `Enviado para assinatura do Defensor(a) ${def}`,
+                        msg: nota || `Enviado para ${verboFinalidade} do Defensor(a) ${def}`,
                         at: timestampIso
                     })
                 });
@@ -1402,6 +1674,10 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
+                    numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null,
+                    finalidadeEnvio: 'corrigir',
+                    enviadoEm: timestampIso,
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
@@ -1451,6 +1727,31 @@ export const AtendimentoExternoService = {
                 }
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O colega ${serv} deve corrigir o documento.`;
+            }
+            else if (this.fluxoSelecionado === 'devolverDist') {
+                const nota = document.getElementById('notas-devolver-dist')?.value || '';
+
+                await updateDoc(docRef, {
+                    status: 'aguardandoDistribuicao',
+                    distributionStatus: 'pending',
+                    defensorResponsavel: null,
+                    finalidadeEnvio: 'distribuir',
+                    enviadoEm: timestampIso,
+                    notasRevisao: nota,
+                    numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null,
+                    demandas: objetoDemandasFinal,
+                    historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a distribuição', timestampIso, colabSeguro)),
+                    history: arrayUnion({
+                        action: 'DEVOLVIDO_PARA_DISTRIBUICAO',
+                        by: colabSeguro,
+                        msg: nota || 'Devolvido pelo defensor para a fila de distribuição',
+                        at: timestampIso
+                    })
+                });
+
+                tituloSucesso = "Devolvido à Distribuição!";
+                subtituloSucesso = "O caso voltou para a fila de distribuição.";
             }
             else if (this.fluxoSelecionado === 'transferir') {
                 const colega = document.getElementById('select-transferir-colega')?.value || '';
