@@ -56,7 +56,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (Completa)");
+        console.log("Mesa Digital V4 Inicializada (Gerador Verde Integrado)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -1221,23 +1221,72 @@ export const AtendimentoExternoService = {
         `;
     },
 
+    // ─── GERADOR DE LINKS DIRETOS PARA O VERDE ──────────────────────────────
+
+    _gerarUrlVerde(idCaso) {
+        const limpo = String(idCaso || '').trim();
+        if (!/^\d+$/.test(limpo) || parseInt(limpo, 10) <= 0) return '';
+        return `https://verde.rj.def.br/verde/pages/caso/prontuario.xhtml?idCaso=${limpo}&vtPauta=true`;
+    },
+
     _htmlCartaoVerde(assistido, isDefensor) {
-        if (!isDefensor) return '';
-        const cnp = assistido.numeroProcesso || '';
-        const link = assistido.linkVerdeManualmente || assistido.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(cnp || assistido.name || '')}`;
-        const href = /^https?:\/\//i.test(link) ? escapeHTML(link) : '#';
+        const idCasoAtual = assistido.numeroProcesso || assistido.idCasoVerde || '';
+        const urlGerada = this._gerarUrlVerde(idCasoAtual);
+
         return `
             <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md mb-6">
-                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Link de acesso manual • Verde</p>
-                <p class="text-xs font-medium text-slate-300 mb-3">Abra o procedimento no Verde para conferir a petição.</p>
-                ${cnp
-                    ? `<span class="inline-block font-mono font-bold text-[11px] bg-white text-slate-700 px-3 py-1.5 rounded-lg mb-3">Nº CNP: ${escapeHTML(cnp)}</span>`
-                    : `<span class="inline-block text-[10px] font-black uppercase tracking-wider bg-amber-900/40 text-amber-300 border border-amber-700 px-3 py-1.5 rounded-lg mb-3">Procedimento sem CNP cadastrado</span>`}
-                <div class="flex gap-2">
-                    ${cnp ? `<button type="button" data-copiar-cnp="${escapeHTML(cnp)}" class="bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest px-4 py-3 rounded-xl active:scale-95">Copiar CNP</button>` : ''}
-                    <a href="${href}" target="_blank" rel="noopener" class="flex-1 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest py-3 rounded-xl shadow-sm active:scale-95">${ico('scale', 'w-4 h-4 inline-block')} Abrir link do Verde</a>
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Gerador de Link Direto • VERDE</p>
+                <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link de acesso:</p>
+                
+                <div class="mb-3">
+                    <input type="text" id="input-id-caso-verde" value="${escapeHTML(idCasoAtual)}" placeholder="Ex: 7039722" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div id="container-link-verde-gerado" class="${urlGerada ? '' : 'hidden'} space-y-2 mt-3 pt-3 border-t border-slate-800">
+                    <div class="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/50 break-all font-mono text-[10px] text-emerald-300 select-all" id="texto-url-gerada">
+                        ${urlGerada}
+                    </div>
+                    <div class="flex gap-2 pt-1">
+                        <button type="button" id="btn-copiar-link-verde" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-colors">Copiar Link</button>
+                        <a href="${urlGerada}" id="btn-abrir-link-verde" target="_blank" rel="noopener" class="flex-1 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl shadow-sm active:scale-95 transition-colors">Abrir no VERDE &nearr;</a>
+                    </div>
                 </div>
             </div>`;
+    },
+
+    _setupGeradorVerde(assistido) {
+        const inputId = document.getElementById('input-id-caso-verde');
+        const containerLink = document.getElementById('container-link-verde-gerado');
+        const textoUrl = document.getElementById('texto-url-gerada');
+        const btnAbrir = document.getElementById('btn-abrir-link-verde');
+        const btnCopiar = document.getElementById('btn-copiar-link-verde');
+
+        if (!inputId) return;
+
+        inputId.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            // Validação estrita: apenas números inteiros positivos
+            if (/^\d+$/.test(val) && parseInt(val, 10) > 0) {
+                const url = this._gerarUrlVerde(val);
+                if (textoUrl) textoUrl.textContent = url;
+                if (btnAbrir) btnAbrir.href = url;
+                if (containerLink) containerLink.classList.remove('hidden');
+            } else {
+                if (containerLink) containerLink.classList.add('hidden');
+            }
+        });
+
+        if (btnCopiar) {
+            btnCopiar.onclick = () => {
+                const url = textoUrl?.textContent?.trim();
+                if (url) {
+                    navigator.clipboard?.writeText(url).then(() => {
+                        if (typeof showNotification === 'function') showNotification("Link copiado para a área de transferência!", "success");
+                        else alert("Link copiado!");
+                    }).catch(() => {});
+                }
+            };
+        }
     },
 
     _renderizarPainelAcoes(assistido, pautaData) {
@@ -1311,11 +1360,7 @@ export const AtendimentoExternoService = {
             <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
-                    <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 1045239">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('link', 'w-3.5 h-3.5')}</span> Link direto do procedimento no Verde (manual)</label>
-                    <input type="url" id="input-link-verde-manual" value="${escapeHTML(assistido.linkVerdeManualmente || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://verde.defensoria.rj.def.br/...">
+                    <input type="text" id="input-numero-caso" value="${escapeHTML(assistido.numeroProcesso || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 7039722">
                 </div>
             </div>
 
@@ -1381,6 +1426,7 @@ export const AtendimentoExternoService = {
         aba.innerHTML = html;
         this.povoarSelectsDinamicos();
         this.atualizarListaDemandasInterfaceExterna();
+        this._setupGeradorVerde(assistido);
 
         this.fluxoSelecionado = 'direto';
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
@@ -1419,9 +1465,6 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-opt-correcao')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'correcao'));
         document.getElementById('btn-opt-devolver')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolver'));
         document.getElementById('btn-opt-devolver-dist')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolverDist'));
-        aba.querySelectorAll('[data-copiar-cnp]').forEach(b => b.onclick = () => {
-            navigator.clipboard?.writeText(b.dataset.copiarCnp).then(() => showNotification('Nº CNP copiado!', 'success')).catch(() => {});
-        });
         document.getElementById('btn-opt-transferir')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'transferir'));
         document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
 
@@ -1508,8 +1551,6 @@ export const AtendimentoExternoService = {
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
 
         const numProcessoSeguro = document.getElementById('input-numero-caso')?.value.trim() || '';
-        const linkBruto = document.getElementById('input-link-verde-manual')?.value.trim() || '';
-        const linkManualSalvo = linkBruto && !/^https?:\/\//i.test(linkBruto) ? `https://${linkBruto}` : linkBruto;
         const colabSeguro = this.colaboradorNome || 'Sistema'; 
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
@@ -1558,7 +1599,6 @@ export const AtendimentoExternoService = {
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
-                    linkVerdeManualmente: linkManualSalvo || null,
                     demandas: objetoDemandasFinal, 
                     historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
                     history: arrayUnion({
@@ -1593,7 +1633,6 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    linkVerdeManualmente: linkManualSalvo || null,
                     finalidadeEnvio: finalidade,
                     enviadoEm: timestampIso,
                     distributionStatus: 'pending',
@@ -1632,7 +1671,6 @@ export const AtendimentoExternoService = {
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    linkVerdeManualmente: linkManualSalvo || null,
                     finalidadeEnvio: 'corrigir',
                     enviadoEm: timestampIso,
                     enviadoPor: colabSeguro, 
@@ -1696,7 +1734,6 @@ export const AtendimentoExternoService = {
                     enviadoEm: timestampIso,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    linkVerdeManualmente: linkManualSalvo || null,
                     demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a distribuição', timestampIso, colabSeguro)),
                     history: arrayUnion({
