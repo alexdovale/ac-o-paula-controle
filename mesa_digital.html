@@ -30,41 +30,32 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
     </style>
 </head>
-<!-- pt-14 garante espaço para a barra fixa no topo, tanto no mobile quanto no desktop -->
 <body class="flex flex-col min-h-screen pt-14">
 
-    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL E RESPONSIVA) -->
-    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[999] flex justify-between items-center px-3 sm:px-6 py-2 shadow-md h-12">
+    <!-- MENU SUPERIOR FIXO (TOP BAR LIMPA E ALINHADA À ESQUERDA) -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[999] flex justify-between items-center px-4 sm:px-6 py-2 shadow-md h-12">
         
-        <!-- Esquerda: Logo e Links (Links ocultos no mobile para poupar espaço) -->
-        <div class="flex items-center gap-4 w-1/3">
-            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
-                <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                <span class="hidden sm:inline">SIGEP</span>
+        <!-- Esquerda: Logo e Título alinhados -->
+        <div class="flex items-center gap-3">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-6 w-auto drop-shadow-sm">
+            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest">
+                Mesa Digital
             </span>
-            <div class="hidden lg:flex items-center gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-2">
+            <div class="hidden lg:flex items-center gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-4 border-l border-slate-700 pl-4">
                 <a href="manual.html" target="_blank" class="hover:text-blue-400 transition-colors">Wiki</a>
                 <a href="termos.html" target="_blank" class="hover:text-blue-400 transition-colors">Termos</a>
                 <a href="politica.html" target="_blank" class="hover:text-blue-400 transition-colors">Privacidade</a>
             </div>
         </div>
 
-        <!-- Centro: Título do App -->
-        <div class="flex items-center justify-center gap-2 w-1/3 absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-6 w-auto drop-shadow-sm hidden sm:block">
-            <span class="text-white font-black text-[10px] sm:text-xs uppercase tracking-widest whitespace-nowrap">
-                Mesa Digital
-            </span>
-        </div>
-
-        <!-- Direita: Ouvidoria (Oculto no Mobile Extremo) e Sair -->
-        <div class="flex items-center justify-end w-1/3 gap-3">
+        <!-- Direita: Ouvidoria e Sair -->
+        <div class="flex items-center gap-3">
             <button onclick="document.getElementById('feedback-global-modal').classList.remove('hidden')" class="hidden md:flex hover:text-blue-400 transition-colors items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-[10px] text-slate-300 font-bold uppercase tracking-wider">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
                 Ouvidoria
             </button>
             <button id="logout-btn-nav" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors text-[10px] uppercase tracking-wider">
-                <span class="hidden sm:inline">Sair</span>
+                <span class="inline">Sair</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                     <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
@@ -78,7 +69,7 @@
         <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
     </div>
 
-    <!-- WRAPPER PRINCIPAL - GARANTE CENTRALIZAÇÃO E RESPONSIVIDADE -->
+    <!-- WRAPPER PRINCIPAL -->
     <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-start sm:justify-center w-full px-2 sm:px-6">
         
         <!-- TELA DE LOGIN -->
@@ -136,7 +127,8 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <input type="search" id="search-pautas-input" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-12 pr-4 py-3.5 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm sm:text-base transition-all font-semibold text-slate-700">
+                    <!-- INPUT COM AUTOCOMPLETE NEW-PASSWORD PARA IMPEDIR PREENCHIMENTO AUTOMÁTICO DE E-MAIL -->
+                    <input type="search" id="search-pautas-input" autocomplete="new-password" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-12 pr-4 py-3.5 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm sm:text-base transition-all font-semibold text-slate-700">
                 </div>
             </div>
             
@@ -182,7 +174,6 @@
                 <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 relative z-10 min-w-0">
-                    <!-- BOTÃO VOLTAR CLARO E RESPONSIVO -->
                     <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl transition-colors border border-white/20 shadow-inner flex items-center gap-2 font-bold text-xs uppercase tracking-widest active:scale-95" title="Voltar ao Portal de Pautas">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                         <span class="hidden sm:inline">Voltar às Pautas</span>
@@ -201,9 +192,8 @@
                 </div>
             </div>
 
-            <!-- VIEW DASHBOARD (MODELO KANBAN - OPÇÃO 1) -->
+            <!-- VIEW DASHBOARD (MODELO KANBAN) -->
             <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden bg-slate-50/80 p-3 sm:p-5">
-                <!-- Filtro Global do Kanban -->
                 <div class="mb-4 flex flex-col sm:flex-row items-center justify-between bg-white p-3 rounded-2xl border border-slate-200 shadow-sm shrink-0 gap-3">
                     <div class="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2 w-full sm:w-auto pl-2">
                         <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -213,11 +203,11 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
-                        <input type="search" id="kanban-search" placeholder="Pesquisar na mesa..." class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                        <input type="search" id="kanban-search" autocomplete="new-password" placeholder="Pesquisar na mesa..." class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
                     </div>
                 </div>
 
-                <!-- 3 Colunas Side-by-Side (Empilha no Mobile) -->
+                <!-- 3 Colunas Side-by-Side -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 pb-2">
                     
                     <!-- COLUNA 1: FILA DE ESPERA -->
@@ -226,12 +216,10 @@
                             <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📥 Fila de Espera</h3>
                             <span id="count-espera" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
                         </div>
-                        <div id="kanban-espera" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50">
-                            <!-- Cards aguardando injetados aqui -->
-                        </div>
+                        <div id="kanban-espera" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
                     </div>
 
-                    <!-- COLUNA 2: MINHA MESA (EM ATENDIMENTO) -->
+                    <!-- COLUNA 2: MINHA MESA -->
                     <div class="bg-white rounded-2xl shadow-sm border-2 border-blue-400 flex flex-col overflow-hidden ring-4 ring-blue-50 h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-blue-50 border-b border-blue-200 flex justify-between items-center shrink-0">
                             <h3 class="font-black text-blue-800 uppercase tracking-widest text-[11px] flex items-center gap-2">💻 Minha Mesa</h3>
@@ -245,25 +233,21 @@
                         </div>
                     </div>
 
-                    <!-- COLUNA 3: AUDITORIA / CONCLUÍDOS -->
+                    <!-- COLUNA 3: CONCLUÍDOS -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                             <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Concluídos</h3>
                             <span id="count-auditoria" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
                         </div>
-                        <div id="kanban-auditoria" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50">
-                            <!-- Cards concluídos/distribuição injetados aqui -->
-                        </div>
+                        <div id="kanban-auditoria" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
                     </div>
 
                 </div>
             </div>
 
-            <!-- VIEW ATENDIMENTO INDIVIDUAL (SPLIT-SCREEN - OPÇÃO A) -->
+            <!-- VIEW ATENDIMENTO INDIVIDUAL -->
             <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden bg-slate-100 p-3 sm:p-5">
                 <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 pb-2">
-                    
-                    <!-- METADE ESQUERDA: DADOS E HISTÓRICO -->
                     <div class="w-full lg:w-2/3 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-full max-h-[50vh] lg:max-h-full">
                         <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                             <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs flex items-center gap-2">
@@ -271,36 +255,55 @@
                                 Dossiê e Documentação
                             </h3>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar" id="aba-historico">
-                            <!-- Histórico, Perfil e Documentos injetados aqui via JS -->
-                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar" id="aba-historico"></div>
                     </div>
 
-                    <!-- METADE DIREITA: PAINEL DE AÇÕES FIXO -->
                     <div class="w-full lg:w-1/3 flex flex-col bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
-                            <h3 class="font-black text-white uppercase tracking-widest text-xs flex items-center gap-2">
-                                ⚡ Painel de Ações
-                            </h3>
+                            <h3 class="font-black text-white uppercase tracking-widest text-xs flex items-center gap-2">⚡ Painel de Ações</h3>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar bg-slate-50 relative" id="aba-encerramento">
-                            <!-- Botões de Concluir, Transferir, Devolver injetados aqui via JS -->
-                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar bg-slate-50 relative" id="aba-encerramento"></div>
                     </div>
-
                 </div>
             </div>
             
-            <!-- RODAPÉ DA MESA -->
             <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
                 <span>SIGEP • Mesa Unificada de Trabalho</span>
                 <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 shadow-sm text-slate-500">v3.0-2026</span>
             </div>
         </div>
 
-    </div><!-- Fim do Main Wrapper -->
+    </div>
 
-    <!-- SCRIPT DE LOGIN E ROTAS -->
+    <!-- MODAL DE OUVIDORIA -->
+    <div id="feedback-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-blue-600 px-6 py-5 flex justify-between items-center shrink-0">
+                <h3 class="text-white font-black text-xl flex items-center gap-2">Ouvidoria / Suporte</h3>
+                <button type="button" class="text-blue-200 hover:text-white text-3xl font-bold leading-none" onclick="document.getElementById('feedback-global-modal').classList.add('hidden')">&times;</button>
+            </div>
+            <form id="feedback-global-form" class="p-6 bg-slate-50 space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Tipo</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                            <input type="radio" name="fbg_tipo" value="Sugestão" required class="w-4 h-4 text-blue-600"> Sugestão
+                        </label>
+                        <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                            <input type="radio" name="fbg_tipo" value="Erro" required class="w-4 h-4 text-red-600"> Erro / Bug
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Mensagem</label>
+                    <textarea id="fbg_mensagem" required rows="4" placeholder="Descreva..." class="w-full p-4 bg-white border border-slate-200 rounded-xl text-sm outline-none resize-none"></textarea>
+                </div>
+                <button type="submit" id="btn-submit-global-feedback" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition text-sm">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE INICIALIZAÇÃO -->
     <script type="module">
         import { getAuth, signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -311,7 +314,6 @@
         const appFirebase = initializeApp(firebaseConfig);
         const db = getFirestore(appFirebase);
         const auth = getAuth(appFirebase);
-        
         window.PDFService = PDFService; 
 
         const UI = {
@@ -339,14 +341,10 @@
 
         function showUI(element) {
             Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
-            
             if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); 
-            
             if (element && element.classList) {
                 element.classList.remove('hidden');
-                if (element.id === 'shell-atendimento') {
-                    element.style.display = 'flex';
-                }
+                if (element.id === 'shell-atendimento') element.style.display = 'flex';
             }
         }
 
@@ -354,166 +352,48 @@
             if (!STATE.pautaId || !STATE.usuarioAuth) return false;
             try {
                 onSnapshot(doc(db, "pautas", STATE.pautaId), (snap) => {
-                    if (snap.exists()) {
-                        STATE.pautaFechada = snap.data().fechada === true;
-                        if (STATE.pautaFechada) {
-                            // Removido o seletor antigo .btn-chamar-proximo pois a UI agora é Kanban.
-                            // A segurança visual será tratada no JS do Kanban.
-                        }
-                    }
+                    if (snap.exists()) STATE.pautaFechada = snap.data().fechada === true;
                 });
-
                 const colabRef = collection(db, "pautas", STATE.pautaId, "collaborators");
-                const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
-                const snap = await getDocs(q);
-                
+                const snap = await getDocs(query(colabRef, where("email", "==", STATE.usuarioAuth.email)));
                 if (snap.empty) {
                     alert("Acesso Negado: Você não está vinculado a esta pauta.");
                     window.location.href = window.location.pathname;
                     return false;
                 }
-                
                 STATE.colaboradorId = snap.docs[0].id;
                 STATE.matricula = snap.docs[0].data().identificador;
-
-                if (STATE.matricula) {
-                    const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
-                    if (userGeralSnap.exists()) {
-                        const dadosUser = userGeralSnap.data();
-                        if (dadosUser.cadastroAtivo === false) {
-                            showUI(UI.modalSenha);
-                            return false; 
-                        }
-                    }
-                }
                 return true;
             } catch (err) {
-                console.error("Erro validando permissão:", err);
                 return false;
             }
         }
 
         async function carregarMinhasPautas() {
             showUI(UI.loading);
-            document.getElementById('loading-text').textContent = "Buscando suas pautas vinculadas...";
-            
             try {
-                const pautasRef = collection(db, "pautas");
-                const pautasSnap = await getDocs(pautasRef);
+                const pautasSnap = await getDocs(collection(db, "pautas"));
                 let pautasVinculadas = [];
-                
-                const dataLimite = new Date();
-                dataLimite.setDate(dataLimite.getDate() - 7);
-
                 for (let docSnap of pautasSnap.docs) {
                     const pautaData = docSnap.data();
-                    
                     if (pautaData.isDeleted || pautaData.status === 'inativa') continue;
-                    
-                    if (pautaData.createdAt) {
-                        const dataCriacao = new Date(pautaData.createdAt);
-                        const dataExpiracao = new Date(dataCriacao);
-                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        if (new Date() > dataExpiracao) continue; 
-                    }
-
-                    const colabRef = collection(db, "pautas", docSnap.id, "collaborators");
-                    const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
-                    const colabSnap = await getDocs(q);
-                    
+                    const colabSnap = await getDocs(query(collection(db, "pautas", docSnap.id, "collaborators"), where("email", "==", STATE.usuarioAuth.email)));
                     if (!colabSnap.empty) {
                         pautasVinculadas.push({ id: docSnap.id, ...pautaData, meuPapel: colabSnap.docs[0].data().cargo });
                     }
                 }
-
                 const container = document.getElementById('lista-pautas-vinculadas');
-                
                 if (pautasVinculadas.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
-                            <span class="text-6xl block mb-4 text-slate-300">📭</span>
-                            <p class="text-slate-700 font-bold text-lg uppercase tracking-wider">Nenhuma pauta encontrada</p>
-                            <p class="text-sm text-slate-500 mt-2 font-medium">Você não foi adicionado a nenhuma mesa de trabalho ativa nos últimos 7 dias.</p>
-                        </div>`;
+                    container.innerHTML = `<div class="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-200"><p class="text-slate-700 font-bold uppercase">Nenhuma pauta encontrada</p></div>`;
                 } else {
-                    pautasVinculadas.sort((a, b) => {
-                        if (a.fechada === b.fechada) {
-                            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                            return dateB - dateA; 
-                        }
-                        return a.fechada ? 1 : -1;
-                    });
-                    
-                    container.innerHTML = pautasVinculadas.map(p => {
-                        const isMutirao = p.type === 'mutirao' || p.type === 'acao_social';
-                        const isAcaoLivre = p.type === 'acao_livre';
-                        const modoTexto = isMutirao ? 'MUTIRÃO' : isAcaoLivre ? 'AÇÃO SOCIAL' : 'AGENDAMENTO';
-                        const corTextoTipo = (isMutirao || isAcaoLivre) ? 'text-amber-600 bg-amber-50' : 'text-blue-600 bg-blue-50';
-                        
-                        const dataCriacao = p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '--/--/----';
-                        
-                        let dataEliminacao = '--/--/----';
-                        if (p.createdAt) {
-                            const d = new Date(p.createdAt);
-                            d.setDate(d.getDate() + 7);
-                            dataEliminacao = d.toLocaleDateString('pt-BR');
-                        }
-
-                        const isDefensor = p.meuPapel && p.meuPapel.toLowerCase().includes('defensor');
-                        const badgeBadge = isDefensor 
-                            ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-emerald-200 shadow-sm inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg> Defensor(a)</span>` 
-                            : `<span class="bg-blue-100 text-blue-800 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-blue-200 shadow-sm inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> Vinculado</span>`;
-
-                        const overlayFechada = p.fechada ? `
-                            <div class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 rounded-3xl flex flex-col items-center justify-center border-2 border-red-500/20 transition-opacity">
-                                <span class="bg-red-600 text-white font-black px-5 py-2.5 rounded-xl shadow-lg uppercase tracking-widest text-xs mb-4 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Pauta Encerrada</span>
-                                <button onclick="window.location.href='?pautaId=${p.id}'" class="bg-white border-2 border-slate-300 text-slate-700 font-bold px-5 py-3 rounded-xl text-xs hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-wider active:scale-95 flex items-center gap-2">Consultar Auditoria</button>
-                            </div>
-                        ` : '';
-
-                        const linkAtivo = p.fechada ? '#' : `?pautaId=${p.id}`;
-                        const onClickAtivo = p.fechada ? '' : `onclick="window.location.href='${linkAtivo}'"`;
-
-                        return `
-                        <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200 relative flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all cursor-pointer min-h-[240px] group" ${onClickAtivo}>
-                            ${overlayFechada}
-                            <div>
-                                <div class="flex justify-between items-start mb-4">
-                                    <span class="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${corTextoTipo}">${modoTexto}</span>
-                                    <span class="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></span>
-                                </div>
-                                <h3 class="text-lg font-black text-slate-800 mb-3 leading-snug line-clamp-2 min-h-[50px] uppercase pr-2 group-hover:text-blue-700 transition-colors">${escapeHTML(p.name || 'Pauta Sem Nome')}</h3>
-                                <div class="mb-5">${badgeBadge}</div>
-                            </div>
-                            
-                            <div class="pt-5 border-t border-slate-100 flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400 mt-auto">
-                                <div>
-                                    <span class="block mb-1 opacity-70">CRIADA EM</span>
-                                    <span class="text-slate-600">${dataCriacao}</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="block mb-1 text-orange-500 opacity-90">ELIMINAÇÃO (7 DIAS)</span>
-                                    <span class="text-slate-600">${dataEliminacao}</span>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join('');
+                    container.innerHTML = pautasVinculadas.map(p => `
+                        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between hover:border-blue-300 transition-all cursor-pointer" onclick="window.location.href='?pautaId=${p.id}'">
+                            <h3 class="text-lg font-black text-slate-800 mb-2 uppercase">${escapeHTML(p.name)}</h3>
+                            <span class="text-xs font-bold text-blue-600">${p.meuPapel || 'Colaborador'}</span>
+                        </div>`).join('');
                 }
-                
-                document.getElementById('search-pautas-input')?.addEventListener('input', (e) => {
-                    const text = e.target.value.toLowerCase();
-                    document.querySelectorAll('#lista-pautas-vinculadas > div').forEach(card => {
-                        const title = card.querySelector('h3').textContent.toLowerCase();
-                        card.style.display = title.includes(text) ? '' : 'none';
-                    });
-                });
-
                 showUI(UI.selector);
             } catch (e) {
-                console.error("Erro ao carregar pautas:", e);
-                UI.errLogin.textContent = "Erro de conexão ao buscar pautas.";
                 auth.signOut();
                 showUI(UI.login);
             }
@@ -521,100 +401,13 @@
 
         async function tentarEntrar(email, password) {
             UI.errLogin.classList.add('hidden');
-            const btn = document.getElementById('btn-entrar');
-            const htmlOriginal = btn.innerHTML;
-            btn.innerHTML = 'Autenticando...';
-            btn.disabled = true;
-            
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                STATE.usuarioAuth = userCredential.user;
+                const cred = await signInWithEmailAndPassword(auth, email, password);
+                STATE.usuarioAuth = cred.user;
             } catch (error) {
                 UI.errLogin.textContent = "Email ou senha incorretos.";
                 UI.errLogin.classList.remove('hidden');
-                btn.innerHTML = htmlOriginal;
-                btn.disabled = false;
             }
-        }
-
-        document.getElementById('forgot-password-link').addEventListener('click', async (e) => {
-            e.preventDefault(); 
-            const emailInput = document.getElementById('login-email').value.trim();
-            UI.errLogin.classList.add('hidden');
-
-            if (!emailInput) {
-                UI.errLogin.textContent = "Preencha o seu e-mail cadastrado no campo acima para recuperar a senha.";
-                UI.errLogin.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                await sendPasswordResetEmail(auth, emailInput);
-                alert("E-mail de recuperação enviado! Verifique a sua caixa de entrada e spam.");
-            } catch (error) {
-                UI.errLogin.textContent = "Erro ao enviar e-mail. Verifique se o endereço está correto e cadastrado.";
-                UI.errLogin.classList.remove('hidden');
-            }
-        });
-
-        document.getElementById('troca-senha-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nova = document.getElementById('nova-senha').value;
-            const confirma = document.getElementById('confirma-senha').value;
-            const btn = document.getElementById('btn-salvar-senha');
-            
-            UI.errSenha.classList.add('hidden');
-            if (nova !== confirma) {
-                UI.errSenha.textContent = "As senhas não coincidem!";
-                UI.errSenha.classList.remove('hidden');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = "A salvar...";
-
-            try {
-                await updatePassword(STATE.usuarioAuth, nova);
-                if (STATE.matricula) {
-                    const { updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                    await updateDoc(doc(db, "colaboradores_gerais", STATE.matricula), {
-                        cadastroAtivo: true,
-                        updatedAt: new Date().toISOString()
-                    });
-                }
-                
-                UI.modalSenha.classList.add('hidden');
-                if (STATE.pautaId) iniciarMesaDeTrabalho();
-                else carregarMinhasPautas();
-                
-            } catch (error) {
-                console.error(error);
-                UI.errSenha.textContent = "Erro ao atualizar. Faça login novamente se a sessão expirou.";
-                UI.errSenha.classList.remove('hidden');
-                btn.disabled = false;
-                btn.textContent = "Salvar e Acessar";
-            }
-        });
-
-        async function boot() {
-            if (!parseURL()) {} 
-
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    STATE.usuarioAuth = user;
-                    showUI(UI.loading);
-
-                    if (STATE.pautaId) {
-                        if (await validarPermissaoPauta()) {
-                            iniciarMesaDeTrabalho();
-                        }
-                    } else {
-                        carregarMinhasPautas();
-                    }
-                } else {
-                    showUI(UI.login);
-                }
-            });
         }
 
         document.getElementById('login-form').addEventListener('submit', (e) => {
@@ -622,11 +415,9 @@
             tentarEntrar(document.getElementById('login-email').value, document.getElementById('login-password').value);
         });
 
-        function doLogout() {
-            auth.signOut().then(() => { window.location.href = window.location.pathname; });
-        }
-        document.getElementById('logout-btn-nav')?.addEventListener('click', doLogout);
-        document.getElementById('btn-logout-mesa')?.addEventListener('click', doLogout);
+        document.getElementById('logout-btn-nav')?.addEventListener('click', () => {
+            auth.signOut().then(() => window.location.href = window.location.pathname);
+        });
 
         document.getElementById('btn-voltar-portal').addEventListener('click', () => {
             window.location.href = window.location.pathname; 
@@ -641,7 +432,21 @@
             });
         }
 
-        boot();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                STATE.usuarioAuth = user;
+                showUI(UI.loading);
+                if (STATE.pautaId) {
+                    if (await validarPermissaoPauta()) iniciarMesaDeTrabalho();
+                } else {
+                    carregarMinhasPautas();
+                }
+            } else {
+                showUI(UI.login);
+            }
+        });
+
+        parseURL();
     </script>
 </body>
 </html>
