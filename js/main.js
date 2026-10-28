@@ -1249,7 +1249,6 @@ class SIGEPApp {
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
-        // CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
         const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
         const logicContent = document.getElementById('logic-explanation-padrao-content');
         if (toggleLogicBtn && logicContent) {
@@ -1397,33 +1396,36 @@ class SIGEPApp {
                 }
             }
             
+            // FILTRO DE ABAS (TODAS, MINHAS, ATIVAS, EXPIRADAS)
             switch (this.currentPautaFilter) {
-                case 'my': filteredPautas = filteredPautas.filter(p => p.owner === user.uid); break;
-                case 'shared': filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); break;
+                case 'my': 
+                    filteredPautas = filteredPautas.filter(p => p.owner === user.uid); 
+                    break;
+                case 'shared': 
+                    filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); 
+                    break;
                 case 'active':
-                    filteredPautas = filteredPautas.filter(p => {
-                        if (!p.createdAt) return false;
-                        const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
-                        return new Date() <= dExp && !p.isClosed && p.fechada !== true;
-                    }); break;
-                case 'expired':
-                    filteredPautas = filteredPautas.filter(p => {
-                        if (!p.createdAt) return false;
-                        const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
-                        return new Date() > dExp || p.isClosed || p.fechada === true;
-                    }); break;
-                default:
-                    // REGRA LGPD E ATIVAS: Remove automaticamente pautas fechadas (isClosed ou fechada === true) ou expiradas (7 dias)
+                    // REGRA LGPD: Aplica apenas na aba "Ativas" (pautas abertas e com menos de 7 dias)
                     filteredPautas = filteredPautas.filter(p => {
                         if (p.isClosed === true || p.fechada === true) return false;
-                        if (p.createdAt) {
-                            const dataCriacao = new Date(p.createdAt);
-                            const dataExpiracao = new Date(dataCriacao);
-                            dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                            if (new Date() > dataExpiracao) return false; // Expirada pelo prazo de 7 dias da LGPD
-                        }
-                        return true;
-                    });
+                        if (!p.createdAt) return false;
+                        const dExp = new Date(p.createdAt); 
+                        dExp.setDate(dExp.getDate() + 7);
+                        return new Date() <= dExp;
+                    }); 
+                    break;
+                case 'expired':
+                    // REGRA LGPD: Pautas com mais de 7 dias ou explicitamente fechadas
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (p.isClosed === true || p.fechada === true) return true;
+                        if (!p.createdAt) return false;
+                        const dExp = new Date(p.createdAt); 
+                        dExp.setDate(dExp.getDate() + 7);
+                        return new Date() > dExp;
+                    }); 
+                    break;
+                default:
+                    // 'all': Não filtra nada, mostra tudo (Histórico completo)
                     break;
             }
 
@@ -1457,7 +1459,7 @@ class SIGEPApp {
         }
     }
 
-    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL (IGUAL À RECEPÇÃO CENTRAL)
+    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL
     async abrirModalConfigTVPauta() {
         if (!this.currentPauta) return;
         const pautaId = this.currentPauta.id;
@@ -2132,142 +2134,6 @@ class SIGEPApp {
             showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
         };
     }
-
-    // ─── CENTRAL DE SOLICITAÇÕES DE PUXADA DE CASOS ───────────────────────────
-
-    // ─── OUVINTE DE SOLICITAÇÕES DE PUXADA ───────────────────────────────────
-
-    setupOuvinteSolicitacoesPuxada(pautaId) {
-        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
-        
-        const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
-        const q = query(attendancesRef, where("status", "==", "aguardandoAutorizacaoPuxada"));
-
-        this.unsubscribePuxadas = onSnapshot(q, (snapshot) => {
-            const solicitacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            this.atualizarBadgeNotificacaoPauta(solicitacoes);
-        });
-    }
-
-    atualizarBadgeNotificacaoPauta(solicitacoes) {
-        let badge = document.getElementById('badge-puxadas-pendentes');
-        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header');
-        
-        if (solicitacoes.length > 0) {
-            if (!badge && headerActions) {
-                badge = document.createElement('button');
-                badge.id = 'badge-puxadas-pendentes';
-                badge.className = 'mr-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-3 rounded-lg transition text-xs flex items-center gap-2 shadow-md animate-pulse shrink-0';
-                badge.onclick = () => this.abrirModalGestaoPuxadas(solicitacoes);
-                headerActions.prepend(badge);
-            }
-            if (badge) {
-                badge.innerHTML = `🔔 Pedidos de Puxada <span class="bg-white text-amber-700 px-2 py-0.5 rounded-full text-xs font-black">${solicitacoes.length}</span>`;
-            }
-        } else if (badge) {
-            badge.remove();
-        }
-    }
-
-    abrirModalGestaoPuxadas(solicitacoes) {
-        let modal = document.getElementById('modal-gestao-puxadas');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'modal-gestao-puxadas';
-            modal.className = 'fixed inset-0 bg-slate-900/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm';
-            document.body.appendChild(modal);
-        }
-
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
-                    <h3 class="font-black text-sm uppercase tracking-wider">Solicitações de Atendimento Pendentes (${solicitacoes.length})</h3>
-                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-                </div>
-                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50 flex-1 custom-scrollbar">
-                    ${solicitacoes.map(item => {
-                        // Formata os dados de exibição do card original
-                        const urgenciaBadge = item.priority === 'URGENTE' ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Urgente</span>` : '';
-                        const horarioAgendado = item.scheduledTime ? `Agendado: <b>${escapeHTML(item.scheduledTime)}</b>` : '';
-                        const chegada = item.arrivalTime ? `Chegada: <b>${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>` : '';
-
-                        return `
-                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                                <div class="flex justify-between items-start gap-2">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
-                                            ${urgenciaBadge}
-                                        </div>
-                                        <p class="text-xs text-slate-500 font-bold">Assunto: ${escapeHTML(item.subject || 'Sem assunto')}</p>
-                                    </div>
-                                    <span class="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0">Solicitante: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
-                                </div>
-
-                                <div class="flex flex-wrap gap-3 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                    ${horarioAgendado ? `<span>${horarioAgendado}</span>` : ''}
-                                    ${chegada ? `<span>• ${chegada}</span>` : ''}
-                                    ${item.room ? `<span>• Sala/Local: <b>${escapeHTML(item.room)}</b></span>` : ''}
-                                </div>
-
-                                <p class="text-xs text-slate-600 bg-amber-50/60 p-3 rounded-xl border border-amber-100 italic">
-                                    <b>Motivo informado:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem motivo')}"
-                                </p>
-
-                                <div class="flex gap-2 pt-2">
-                                    <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
-                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Abrir Atendimento</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>`;
-    }
-    
-    saveColumnPreferences() {
-        const preferences = {
-            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
-            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
-        };
-        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
-        this.applyColumnPreferences(preferences);
-    }
-
-    loadColumnPreferences() {
-        const savedPreferences = localStorage.getItem('sigap_column_preferences');
-        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
-
-        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const chkDistribuicao = document.getElementById('toggle-distribuicao');
-        const chkFaltosos = document.getElementById('toggle-faltosos');
-        
-        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
-        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
-        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
-        
-        this.applyColumnPreferences(preferences);
-    }
-
-    applyColumnPreferences(preferences) {
-        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
-        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
-
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const distribuicaoColumn = document.getElementById('distribuicao-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
-        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
-        
-        if (faltososColumn) {
-            const pautaColumn = document.getElementById('pauta-column');
-            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
-                 faltososColumn.classList.remove('hidden');
-            }
-        }
-    }
 }
 
 // ============================================================
@@ -2344,6 +2210,25 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
         alert("Erro ao autorizar atendimento.");
     }
 };
+
+window.recusarPuxada = async function(assistidoId) {
+    const pautaId = window.app?.currentPauta?.id;
+    if (!pautaId) return;
+    
+    try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        await updateDoc(docRef, {
+            status: 'aguardando', // Devolve para a fila normal
+            solicitacaoPuxada: null,
+            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
+        });
+        if (window.showNotification) window.showNotification("Solicitação recusada e caso devolvido à fila.", "info");
+    } catch(e) {
+        console.error(e);
+    }
+};
+
 window.app = new SIGEPApp();
 
 window.renderEstruturaAtual = renderEstruturaAtual;
