@@ -2134,6 +2134,50 @@ class SIGEPApp {
             showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
         };
     }
+
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
+
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
+
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if (chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if (chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if (chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
+
+    applyColumnPreferences(preferences) {
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
+
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
+        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
+        
+        if (faltososColumn) {
+            const pautaColumn = document.getElementById('pauta-column');
+            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            }
+        }
+    }
 }
 
 // ============================================================
@@ -2169,63 +2213,42 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
             window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        // 3. DEFINE AS VARIÁVEIS GLOBAIS DO ASSISTIDO NA APLICAÇÃO
+        // 3. Define as variáveis globais
         window.assistedIdToHandle = assistidoId;
         window.assistedNameToHandle = nomeAssistido;
 
-        // 4. ABRE DIRETAMENTE O MODAL "Definir Local e Delegar" (Sem recarregar a página!)
-        // Se a função nativa do PautaService estiver disponível para abrir este modal:
-        if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
+        // 4. Abre diretamente o modal "Definir Local e Delegar"
+        if (typeof window.app?.PautaService?.abrirModalDefinirLocal === 'function') {
+            window.app.PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
+        } else if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
             PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
         } else {
-            // Caso contrário, procura o modal HTML correspondente na tela atual e exibe-o
-            const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('definir-local-modal') || document.getElementById('attendant-modal');
+            const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('modal-chamada-tv-global') || document.getElementById('definir-local-modal');
             if (modalDefinirLocal) {
                 modalDefinirLocal.classList.remove('hidden');
             } else {
-                // Se o modal não estiver presente nesta view, chama o botão de atendimento do próprio card na pauta
                 const card = document.querySelector(`[data-assistido-id="${assistidoId}"]`);
                 const btnAtender = card?.querySelector('.btn-atender, button[data-action="atender"]');
-                if (btnAtender) {
-                    btnAtender.click();
-                }
+                if (btnAtender) btnAtender.click();
             }
         }
 
-        // 5. PRÉ-PREENCHE O COLABORADOR SOLICITANTE NO CAMPO DE DELEGAÇÃO
+        // 5. Pré-seleciona o colaborador solicitante no select do modal
         setTimeout(() => {
-            const selectCollab = document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador') || document.querySelector('select[name="colaborador"]');
+            const selectCollab = document.getElementById('tv-chamada-colaborador') || document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador');
             if (selectCollab) {
                 for (let opt of selectCollab.options) {
-                    if (opt.value === nomeColaborador || opt.textContent.includes(nomeColaborador)) {
+                    if (opt.value === nomeColaborador || (opt.dataset && opt.dataset.nome === nomeColaborador) || opt.textContent.includes(nomeColaborador)) {
                         selectCollab.value = opt.value;
                         break;
                     }
                 }
             }
-        }, 200);
+        }, 150);
 
     } catch (e) {
         console.error("Erro ao autorizar puxada:", e);
         alert("Erro ao autorizar atendimento.");
-    }
-};
-
-window.recusarPuxada = async function(assistidoId) {
-    const pautaId = window.app?.currentPauta?.id;
-    if (!pautaId) return;
-    
-    try {
-        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        await updateDoc(docRef, {
-            status: 'aguardando', // Devolve para a fila normal
-            solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
-        });
-        if (window.showNotification) window.showNotification("Solicitação recusada e caso devolvido à fila.", "info");
-    } catch(e) {
-        console.error(e);
     }
 };
 
