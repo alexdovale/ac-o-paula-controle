@@ -2266,7 +2266,7 @@ class SIGEPApp {
                     </button>
                 </div>
             </div>`;
-
+    }
         
     saveColumnPreferences() {
         const preferences = {
