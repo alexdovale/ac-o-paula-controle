@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual do Usuário - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- Estrutura: layout de Wiki com sidebar fixa e área de conteúdo com ScrollSpy.
-         Ícones: SVG inline (padrão do sistema), sem emojis.
+    <!-- Estrutura: layout de Wiki com sidebar fixa, área de conteúdo com ScrollSpy e Mockups Visuais fiéis ao sistema.
+         Ícones: SVG inline (padrão Lucide do sistema).
          Destaques: regras críticas (LGPD, ordem da pauta, senha para fechar) ficam em caixas coloridas. -->
 
     <style>
@@ -35,6 +35,16 @@
         .warning-box { background-color: #fefce8; border-left: 4px solid #eab308; padding: 1rem; color: #854d0e; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
         .alert-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; color: #991b1b; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
         .success-box { background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 1rem; color: #166534; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+
+        /* Container de Pré-visualização de Tela (Mockup SIGEP) */
+        .sigep-preview-window { border: 1px solid #cbd5e1; border-radius: 1rem; overflow: hidden; margin-top: 1.25rem; margin-bottom: 2rem; box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08); background-color: #f8fafc; }
+        .sigep-preview-bar { background-color: #0f172a; padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; }
+        .sigep-preview-dots { display: flex; gap: 0.375rem; align-items: center; }
+        .sigep-preview-dot { width: 0.625rem; height: 0.625rem; border-radius: 9999px; }
+        .sigep-preview-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; }
+        .sigep-preview-body { padding: 1.25rem; }
+        .sigep-preview-body p { margin-bottom: 0; }
+        .sigep-preview-body ul { margin-left: 0; margin-bottom: 0; list-style: none; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
@@ -151,6 +161,87 @@
                         <li><strong>Unidades Vinculadas:</strong> Uma única recepção pode estar associada a várias unidades operacionais simultaneamente, permitindo que a equipe de apoio visualize e dê check-in nos assistidos de todas as pautas daquelas unidades em uma tela unificada.</li>
                         <li><strong>Lotação de Equipe e TV Própria:</strong> Apenas os servidores autorizados e lotados naquela recepção operam o hub, que também conta com um link exclusivo de Smart TV para chamar os assistidos daquele andar ou setor.</li>
                     </ul>
+
+                    <!-- MOCKUP VISUAL 1: RECEPÇÃO CENTRAL -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Unidades de Apoio e Recepções</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Recepção Central</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100/70">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Card Recepção 1 -->
+                                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative flex flex-col">
+                                    <div class="absolute top-4 right-4">
+                                        <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Central</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 flex items-center justify-center shrink-0">
+                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0 pr-12">
+                                            <h4 class="font-bold text-slate-800 text-sm truncate">Recepção Térreo - Sede</h4>
+                                            <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">1º Andar / Global</p>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4 bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-2.5 text-xs">
+                                        <div>
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Unidades Vinculadas</span>
+                                            <div class="text-slate-700 font-medium">4 unidade(s) associada(s)</div>
+                                        </div>
+                                        <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membros Autorizados</span>
+                                            <span class="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full text-[10px]">6</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-100">
+                                        <div class="bg-slate-900 text-white font-semibold py-2 rounded-xl text-xs col-span-2 flex items-center justify-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Gerenciar Lotação de Equipe
+                                        </div>
+                                        <div class="bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl text-xs inline-flex items-center justify-center gap-1.5">Editar</div>
+                                        <div class="bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl text-xs inline-flex items-center justify-center gap-1">TV</div>
+                                    </div>
+                                </div>
+                                <!-- Card Recepção 2 -->
+                                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative flex flex-col">
+                                    <div class="absolute top-4 right-4">
+                                        <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border bg-slate-50 text-slate-600 border-slate-200">Específica</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 flex items-center justify-center shrink-0">
+                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0 pr-12">
+                                            <h4 class="font-bold text-slate-800 text-sm truncate">Recepção Família e Infância</h4>
+                                            <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">3º Andar</p>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4 bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-2.5 text-xs">
+                                        <div>
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Unidades Vinculadas</span>
+                                            <div class="text-slate-700 font-medium">2 unidade(s) associada(s)</div>
+                                        </div>
+                                        <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membros Autorizados</span>
+                                            <span class="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full text-[10px]">3</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-100">
+                                        <div class="bg-slate-900 text-white font-semibold py-2 rounded-xl text-xs col-span-2 flex items-center justify-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Gerenciar Lotação de Equipe
+                                        </div>
+                                        <div class="bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl text-xs inline-flex items-center justify-center gap-1.5">Editar</div>
+                                        <div class="bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl text-xs inline-flex items-center justify-center gap-1">TV</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- SEÇÃO 2.1 e 2.2: CRIAR E ORDENAR -->
@@ -211,6 +302,45 @@
                 <section id="menus" class="mb-16 pt-8 border-t border-slate-100">
                     <h3 class="sub-title">2.5. Menus Superiores (Ações e Colunas)</h3>
                     <p>No topo direito do painel de qualquer pauta, existem botões essenciais para gerenciar a dinâmica do dia:</p>
+
+                    <!-- MOCKUP VISUAL 2: BARRA SUPERIOR DA PAUTA E ALERTAS -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Cabeçalho da Pauta — Etiquetas em Tempo Real</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Topo da Pauta</span>
+                        </div>
+                        <div class="sigep-preview-body bg-white flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-black text-slate-800 text-base">1ª DP de Família - Caxias</span>
+                                    <span class="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">Tolerância: 15 min</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">Modo Normal • Fila de Distribuição Ativa</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-300 text-[11px] font-black shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> 3 LIVRE(S)
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 border border-red-300 text-[11px] font-black shadow-sm">
+                                    ⏸ 1 PAUSA(S)
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-black shadow-sm animate-pulse">
+                                    🔔 1 PUXADA(S)
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold shadow-sm">
+                                    Ações ▾
+                                </span>
+                                <span class="p-1.5 rounded-lg bg-slate-100 text-slate-600 border border-slate-200">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
 
                     <h4 class="font-bold text-gray-800 mt-4 mb-2">A. Avisos rápidos ao lado do menu</h4>
                     <p>Etiquetas coloridas aparecem sozinhas, em tempo real, conforme a situação da equipe:</p>
@@ -293,6 +423,49 @@
                         <li><strong>Prioridade Urgente:</strong> ao marcar um assistido como urgente, o sistema pede o motivo (por exemplo, idoso, gestante ou PCD) e registra a justificativa.</li>
                     </ul>
 
+                    <!-- MOCKUP VISUAL 3: PLANILHA DE GASTOS E COPIAR TEXTO -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Resumo de Triagem — Planilha de Gastos Automática</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Triagem / Histórico</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-50">
+                            <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-200 shadow-sm max-w-xl mx-auto">
+                                <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    💰 PLANILHA DE GASTOS
+                                </h4>
+                                <p class="text-[10px] font-bold text-emerald-700/70 mb-3">3 pessoas na residência</p>
+                                <p class="text-[10px] font-black text-emerald-700 uppercase mt-2">Cota da família (rateio 1/3)</p>
+                                <div class="flex justify-between items-center gap-3 text-xs py-2 border-b border-emerald-100/50">
+                                    <span class="text-emerald-800 font-bold">Alimentação<span class="block text-[10px] font-medium text-emerald-600/80">total R$ 900,00</span></span>
+                                    <span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100">R$ 300,00</span>
+                                </div>
+                                <p class="text-[10px] font-black text-sky-700 uppercase mt-3">Exclusivos da criança</p>
+                                <div class="flex justify-between items-center gap-3 text-xs py-2 border-b border-emerald-100/50">
+                                    <span class="text-emerald-800 font-bold">Farmácia / Medicamentos<span class="block text-[10px] font-medium text-emerald-600/80">integral</span></span>
+                                    <span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100">R$ 180,00</span>
+                                </div>
+                                <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-4 text-sm items-center">
+                                    <span class="uppercase tracking-widest">Necessidade mensal</span>
+                                    <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">R$ 480,00</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
+                                    <div class="bg-white border border-emerald-300 text-emerald-700 font-black py-2.5 rounded-xl text-[11px] text-center uppercase tracking-widest shadow-sm">
+                                        📄 Baixar planilha PDF
+                                    </div>
+                                    <div class="bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[11px] text-center uppercase tracking-widest shadow-sm">
+                                        📋 Copiar texto p/ petição
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="note-box">
                         <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Download de PDFs Emitidos:</strong> Sempre que uma Planilha de Gastos for gerada ou um checklist for salvo com sucesso, o SIGEP disponibiliza um botão de Download diretamente no Card do assistido ou no menu "Ver Detalhes". Isso permite baixar o PDF limpo e anexá-lo no Verde em segundos!
                     </div>
@@ -351,6 +524,103 @@
                         <li><strong>Histórico Rápido e Linha do Tempo:</strong> Clicar sobre qualquer cartão do Kanban abre imediatamente o <em>Histórico Rápido</em> do caso (com todo o checklist, perfil socioeconômico e botões de PDF) e o acesso à <em>Linha do Tempo Completa</em> com cada evento cronológico e seu autor.</li>
                     </ul>
 
+                    <!-- MOCKUP VISUAL 4: KANBAN 4 COLUNAS DA MESA DIGITAL -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Mesa Digital V5 — Cabeçalho e Kanban de 4 Colunas</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider">☕ Pausar / Ausente</span>
+                                <span class="bg-white text-emerald-700 border border-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> LIVRE
+                                </span>
+                            </div>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <!-- Coluna 1: Espera -->
+                                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col">
+                                    <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                        <span class="font-black text-slate-700 uppercase tracking-widest text-[10px]">⏳ Fila de Espera</span>
+                                        <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-lg text-[10px] font-black">1</span>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-red-500">
+                                            <div class="flex justify-between items-start mb-1">
+                                                <span class="font-black text-slate-800 text-xs">Maria das Graças</span>
+                                                <span class="text-red-500 text-xs font-bold">!</span>
+                                            </div>
+                                            <div class="text-[10px] font-bold text-slate-500 mb-2">• Alimentos / Guarda</div>
+                                            <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                <span class="text-[8px] font-black px-1.5 py-0.5 rounded border text-amber-700 border-amber-200 bg-amber-50 uppercase">Espera</span>
+                                            </div>
+                                            <div class="mt-2 bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest py-2 rounded-lg text-center">Puxar para mim</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Coluna 2: Minha Mesa -->
+                                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col">
+                                    <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                        <span class="font-black text-slate-700 uppercase tracking-widest text-[10px]">💻 Minha Mesa</span>
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg text-[10px] font-black">1</span>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                            <span class="font-black text-slate-800 text-xs block mb-1">Carlos Eduardo Silva</span>
+                                            <div class="text-[10px] font-bold text-slate-500 mb-1.5">• Divórcio Consensual</div>
+                                            <div class="text-[8px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded mb-2 inline-block">CNP/VERDE: 7039722</div>
+                                            <div class="flex gap-1.5 mt-1">
+                                                <div class="flex-1 bg-emerald-600 text-white font-black text-[9px] uppercase py-2 rounded-lg text-center">Abrir</div>
+                                                <div class="flex-1 bg-white border border-slate-200 text-slate-600 font-black text-[9px] uppercase py-2 rounded-lg text-center">Devolver</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Coluna 3: Meus Concluídos -->
+                                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col">
+                                    <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                        <span class="font-black text-slate-700 uppercase tracking-widest text-[10px]">✅ Meus Concluídos</span>
+                                        <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-lg text-[10px] font-black">1</span>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                            <span class="font-black text-slate-800 text-xs block mb-1">Ana Paula Souza</span>
+                                            <div class="text-[10px] font-bold text-slate-500 mb-2">• Alvará Judicial</div>
+                                            <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                <span class="text-[8px] font-black px-1.5 py-0.5 rounded border text-emerald-700 border-emerald-200 bg-emerald-50 uppercase">Concluído</span>
+                                            </div>
+                                            <div class="mt-2 bg-slate-800 text-white font-black text-[9px] uppercase tracking-widest py-1.5 rounded-lg text-center">Histórico Rápido</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Coluna 4: Pauta Geral -->
+                                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col">
+                                    <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                        <span class="font-black text-slate-700 uppercase tracking-widest text-[10px]">📋 Pauta Geral</span>
+                                        <div class="flex items-center gap-1">
+                                            <span class="bg-slate-800 text-white font-black text-[8px] uppercase px-2 py-1 rounded">Ver completa</span>
+                                            <span class="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-black">4</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                            <span class="font-black text-slate-800 text-xs block mb-1">Roberto Almeida</span>
+                                            <div class="text-[10px] font-bold text-slate-500 mb-2">• Execução de Alimentos</div>
+                                            <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                <span class="text-[8px] font-black px-1.5 py-0.5 rounded border text-cyan-700 border-cyan-200 bg-cyan-50 uppercase">No Defensor</span>
+                                                <span class="text-[8px] font-bold text-slate-400 uppercase">Com Dr. André</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <h3 class="sub-title">7.2. Gerador de Link Direto VERDE / CNP Compartilhado</h3>
                     <p>Dentro da tela de atendimento individual, no topo do painel de ações, encontra-se o cartão escuro do <strong>Gerador de Link Direto • VERDE</strong>:</p>
                     <ul>
@@ -371,6 +641,69 @@
                         <li><strong>Enviar ao Defensor e Pedir Correção / Avaliação:</strong> Permite selecionar o Defensor destinatário, a finalidade (<em>Assinar, Distribuir ou Corrigir</em>) e redigir uma nota interna. Se o e-mail estiver configurado, o sistema dispara um aviso com token seguro de delegação.</li>
                         <li><strong>Ações Exclusivas do Defensor:</strong> Além de concluir e distribuir, o Defensor possui os botões <strong>"Devolver p/ Correção"</strong> (retornando o caso diretamente para a mesa do servidor de origem com orientações) e <strong>"Devolver à Distribuição"</strong>.</li>
                     </ul>
+
+                    <!-- MOCKUP VISUAL 5: GERADOR VERDE + SUBFLUXOS ATENDIDO/REAGENDAR/CANCELAR -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Painel de Ações da Mesa Digital — Gerador VERDE e Finalização</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Atendimento Individual</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                            <!-- Lado 1: Cartão Escuro Gerador VERDE -->
+                            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Gerador de Link Direto • VERDE</span>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase">Compartilhado na Pauta</span>
+                                </div>
+                                <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link e salvar para o Defensor e equipe:</p>
+                                <div class="flex gap-2 mb-3">
+                                    <div class="flex-1 p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white">7039722</div>
+                                    <div class="bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider px-3.5 py-2.5 rounded-xl flex items-center">Salvar ID</div>
+                                </div>
+                                <div class="space-y-2 pt-3 border-t border-slate-800">
+                                    <div class="p-2 bg-slate-800/80 rounded-xl border border-slate-700/50 break-all font-mono text-[10px] text-emerald-300">
+                                        https://verde.rj.def.br/verde/pages/caso/prontuario.xhtml?idCaso=7039722&amp;vtPauta=true
+                                    </div>
+                                    <div class="flex gap-2 pt-1">
+                                        <div class="flex-1 text-center bg-white/10 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-xl">Copiar Link</div>
+                                        <div class="flex-1 text-center bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-xl">Abrir no VERDE &nearr;</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lado 2: Caixa de Resultado da Finalização -->
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                <div>
+                                    <span class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Resultado da Finalização</span>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="py-2 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-black text-[10px] uppercase text-center">
+                                            ✅ Atendido
+                                        </div>
+                                        <div class="py-2 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-black text-[10px] uppercase text-center">
+                                            📅 Reagendar
+                                        </div>
+                                        <div class="py-2 px-2 rounded-xl border border-rose-500 bg-rose-50 text-rose-800 font-black text-[10px] uppercase text-center shadow-sm">
+                                            ❌ Cancelar
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1.5">Motivo do Cancelamento (Obrigatório)</span>
+                                    <div class="w-full p-2.5 border border-amber-300 rounded-xl text-xs bg-amber-50/40 text-slate-700 font-medium">
+                                        Assistido informou que já constituiu advogado particular e desistiu do atendimento.
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-900 text-white font-black py-3 rounded-xl shadow text-[11px] uppercase tracking-widest text-center">
+                                    EXECUTAR AÇÃO &rarr;
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <h3 class="sub-title">7.4. Botão de Pausa Rápida no Cabeçalho da Mesa Digital</h3>
                     <p>No topo direito da Mesa Digital, ao lado do indicador de status (<code>LIVRE</code> / <code>OCUPADO</code> / <code>PAUSADO</code>), o colaborador possui o botão <strong>"Pausar / Ausente"</strong>:</p>
@@ -549,6 +882,100 @@
                     <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 12. Administração, Sistema de Abas e Permissões</h2>
                     <p>O <strong>Painel do Administrador</strong> é restrito aos gestores da plataforma e foi estruturado em um <strong>Sistema de Abas Inteligentes com carregamento sob demanda</strong>. Além de reduzir drasticamente o consumo de leituras no banco de dados (filtrando consultas por órgão/tenant), todas as listagens contam com <strong>barra de pesquisa em tempo real</strong> e <strong>seletor de paginação flexível (exibindo 15, 20 ou 30 registros por página)</strong>.</p>
 
+                    <!-- MOCKUP VISUAL 6: PAINEL ADMIN EM 7 ABAS, MATRIZ DE PERMISSÕES, LATÊNCIA E PAGINAÇÃO -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Painel Administrativo — Abas, Matriz, Paginação (15/20/30) e Latência</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Admin</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100 space-y-4">
+                            <!-- Barra de 7 Abas -->
+                            <div class="flex overflow-x-auto border-b border-slate-200 bg-white rounded-t-xl px-3 gap-1 text-[10px] font-black uppercase tracking-wider">
+                                <span class="py-2.5 px-3 text-slate-400">Usuários</span>
+                                <span class="py-2.5 px-3 text-slate-900 border-b-2 border-slate-900">Permissões por Perfil</span>
+                                <span class="py-2.5 px-3 text-slate-400">Unidades &amp; Recepções</span>
+                                <span class="py-2.5 px-3 text-slate-400">Auditoria &amp; Logs</span>
+                                <span class="py-2.5 px-3 text-slate-400">Dashboard / BI</span>
+                                <span class="py-2.5 px-3 text-slate-400">Segurança &amp; IPs</span>
+                                <span class="py-2.5 px-3 text-slate-400">Ouvidoria &amp; Erros</span>
+                            </div>
+
+                            <!-- Prévia da Matriz de Permissões -->
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-xs">Permissões por perfil</h4>
+                                        <p class="text-[10px] text-slate-500">Padrão de cada perfil. Exceções individuais têm prioridade.</p>
+                                    </div>
+                                    <div class="flex gap-1.5">
+                                        <span class="bg-white text-slate-700 font-semibold px-2.5 py-1.5 rounded-lg text-[10px] border border-slate-200">Restaurar padrão</span>
+                                        <span class="bg-slate-900 text-white font-semibold px-3 py-1.5 rounded-lg text-[10px]">✓ Salvar permissões</span>
+                                    </div>
+                                </div>
+                                <table class="w-full text-xs">
+                                    <thead class="text-[9px] uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th class="text-left px-4 py-2 font-bold">Recurso</th>
+                                            <th class="px-2 py-2 font-bold text-center">Usuário</th>
+                                            <th class="px-2 py-2 font-bold text-center">Apoio</th>
+                                            <th class="px-2 py-2 font-bold text-center">Administrador</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr>
+                                            <td class="px-4 py-2.5">
+                                                <span class="font-bold text-slate-800 text-xs block">Criar pauta</span>
+                                                <span class="text-[10px] text-slate-400">Botão de nova pauta e criação em lote.</span>
+                                            </td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-emerald-500 relative align-middle"><span class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-slate-300 relative align-middle"><span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-emerald-500 relative align-middle"><span class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-2.5">
+                                                <span class="font-bold text-slate-800 text-xs block">Zerar pauta</span>
+                                                <span class="text-[10px] text-slate-400">Apagar todos os atendimentos.</span>
+                                            </td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-emerald-500 relative align-middle"><span class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-slate-300 relative align-middle"><span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                            <td class="text-center"><span class="inline-block w-9 h-5 rounded-full bg-emerald-500 relative align-middle"><span class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-white shadow"></span></span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Barra Inferior Demonstrando KPI de Latência + Paginação 15/20/30 -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-[9px] font-black text-slate-400 uppercase block">Verificador de Status do Servidor</span>
+                                        <span class="text-sm font-black text-emerald-600 flex items-center gap-1.5 mt-0.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Online (38ms)
+                                        </span>
+                                    </div>
+                                    <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">Aba Segurança &amp; IPs</span>
+                                </div>
+                                <div class="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5 text-xs">
+                                        <span class="text-slate-500 font-medium">Exibir:</span>
+                                        <span class="border border-slate-300 rounded-lg px-2 py-0.5 font-bold text-slate-800 bg-slate-50">15 ▾</span>
+                                        <span class="text-[10px] text-slate-400">(15 / 20 / 30)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 text-[11px] font-semibold">
+                                        <span class="px-2 py-1 rounded bg-slate-100 text-slate-400">‹ Ant.</span>
+                                        <span class="px-1.5 text-slate-600">Pág. 1 de 4</span>
+                                        <span class="px-2 py-1 rounded bg-slate-100 text-slate-700">Próx. ›</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <h3 class="sub-title">12.1. As 7 Abas do Painel Administrativo</h3>
                     <ul class="space-y-3">
                         <li><strong>1. Aba Usuários:</strong> Divide-se entre <em>Cadastros Pendentes de Aprovação</em> (onde o administrador define o cargo inicial antes de aprovar ou rejeitar) e <em>Usuários Ativos no Sistema</em>. Em cada usuário ativo é possível alterar o perfil (Usuário, Apoio, Administrador, Superadmin, Superadmin Global), <strong>Suspender ou Reativar a conta</strong> com um clique, remover definitivamente, vincular a múltiplas <strong>Unidades de Lotação</strong> e abrir o modal de <strong>Permissões Granulares + 2FA</strong>.</li>
@@ -569,7 +996,7 @@
                     <p>Ao clicar no botão preto <strong>"Permissões"</strong> na linha de qualquer servidor na Aba Usuários, abre-se o controle individual daquela pessoa:</p>
                     <ul>
                         <li><strong>Prioridade sobre o Perfil:</strong> O administrador pode marcar ou desmarcar individualmente o que aquele servidor específico pode ver ou executar (incluindo botões de "Marcar Todos", "Desmarcar Todos" e <strong>"Seguir o perfil"</strong> para limpar exceções e voltar ao padrão da matriz).</li>
-                        <li><strong>Autenticação em Duas Etapas (2FA):</strong> Na seção 6 do modal, é possível <strong>Exigir Autenticação 2FA (App Autenticador)</strong> para aquela conta ou clicar em <strong>"Resetar / Desativar 2FA"</strong> caso o servidor tenha trocado ou perdido o telemóvel, permitindo que ele reconfigure o vínculo no próximo acesso.</li>
+                        <li><strong>Autenticação em Duas Etapas (2FA):</strong> Na seção 6 do modal, é possível <strong>Exigir Autenticação 2FA (App Autenticador)</strong> para aquela conta ou clicar em <strong>"Resetar / Desativar 2FA"</strong> caso o servidor tenha trocado ou perdido o celular, permitindo que ele reconfigure o vínculo no próximo acesso.</li>
                     </ul>
 
                     <div class="warning-box">
@@ -626,7 +1053,12 @@
         </main>
     </div>
 
-    <!-- JavaScript Navigation Logic -->
+    <!-- Modal Lightbox para ampliar qualquer imagem futura com a classe .zoomable -->
+    <div id="wiki-lightbox" class="fixed inset-0 bg-slate-900/80 z-50 hidden items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out" onclick="this.classList.add('hidden'); this.classList.remove('flex');">
+        <img id="wiki-lightbox-img" src="" alt="Visualização ampliada" class="max-w-full max-h-[90vh] rounded-2xl shadow-2xl border border-slate-700">
+    </div>
+
+    <!-- JavaScript Navigation & Lightbox Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const sections = document.querySelectorAll('section');
@@ -639,7 +1071,6 @@
                 
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
-                    // Offset ajustado para acionar um pouco antes ao rolar para baixo
                     if (contentArea.scrollTop >= (sectionTop - 200)) {
                         current = section.getAttribute('id');
                     }
@@ -666,6 +1097,18 @@
                              });
                         }
                     }, 50);
+                });
+            });
+
+            // Lightbox automático caso adicione imagens com class="zoomable"
+            document.querySelectorAll('img.zoomable').forEach(img => {
+                img.classList.add('cursor-zoom-in');
+                img.addEventListener('click', () => {
+                    const lb = document.getElementById('wiki-lightbox');
+                    const lbImg = document.getElementById('wiki-lightbox-img');
+                    lbImg.src = img.src;
+                    lb.classList.remove('hidden');
+                    lb.classList.add('flex');
                 });
             });
         });
