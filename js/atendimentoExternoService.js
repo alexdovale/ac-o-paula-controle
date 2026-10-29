@@ -1,5 +1,4 @@
-
-// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD E PAUSA DE COLABORADOR)
+// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD, MODAL DE PUXADA E PAUSA RÁPIDA)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -237,64 +236,189 @@ export const AtendimentoExternoService = {
         this._injetarBotaoPausaHeader();
     },
 
-    // ─── BOTÃO DE PAUSA RÁPIDA NA HEADER DA MESA DIGITAL ──────────────────────
+    // ─── BOTÃO E MODAIS DE PAUSA NA HEADER DA MESA DIGITAL ──────────────────────
 
     _injetarBotaoPausaHeader() {
         const headerRight = document.querySelector('#header-bg > div:last-child');
-        if (!headerRight || document.getElementById('btn-pausa-mesa-digital')) return;
+        if (!headerRight) return;
+
+        document.getElementById('btn-pausa-mesa-digital')?.remove();
 
         const estaPausado = this.colaboradorAtual?.status === 'pausado';
 
         const btnPausa = document.createElement('button');
         btnPausa.id = 'btn-pausa-mesa-digital';
         btnPausa.type = 'button';
-        btnPausa.className = estaPausado
-            ? 'bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3.5 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 transition-colors animate-pulse shrink-0 cursor-pointer'
-            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] font-black px-3.5 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer';
 
-        btnPausa.innerHTML = estaPausado ? `⏸️ Pausado (${escapeHTML(this.colaboradorAtual?.motivoPausa || 'Ausente')})` : `☕ Pausar / Ausente`;
-        btnPausa.title = "Alternar estado de pausa para ir ao banheiro ou almoço";
-
-        btnPausa.onclick = async () => {
-            if (estaPausado) {
-                // Retornar ao trabalho (disponível)
-                try {
-                    await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
-                        status: 'disponivel',
-                        motivoPausa: null
-                    });
-                    this.colaboradorAtual.status = 'disponivel';
-                    this.colaboradorAtual.motivoPausa = null;
-                    if (typeof showNotification === 'function') showNotification("Retornou ao trabalho com farofa com alho!", "success");
-                    this._injetarBotaoPausaHeader();
-                    this.atualizarBadgeHeader();
-                } catch (e) {
-                    console.error(e);
-                }
-            } else {
-                // Pausar
-                const motivo = prompt("Farofa com alho ativada! Qual o motivo da sua pausa? (Ex: Banheiro, Almoço)", "Almoço / Ausência momentânea");
-                if (motivo === null) return;
-                const razao = motivo.trim() === "" ? "Ausente momentaneamente" : motivo.trim();
-
-                try {
-                    await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
-                        status: 'pausado',
-                        motivoPausa: razao,
-                        currentAttendance: null
-                    });
-                    this.colaboradorAtual.status = 'pausado';
-                    this.colaboradorAtual.motivoPausa = razao;
-                    if (typeof showNotification === 'function') showNotification(`Pausa registrada: ${razao}`, "warning");
-                    this._injetarBotaoPausaHeader();
-                    this.atualizarBadgeHeader();
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-        };
+        if (estaPausado) {
+            btnPausa.className = 'bg-amber-500 hover:bg-amber-600 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all animate-pulse shrink-0 cursor-pointer active:scale-95';
+            btnPausa.innerHTML = `<span>⏸️</span> <span>Pausado</span><span class="hidden md:inline font-normal lowercase italic text-amber-100">(${escapeHTML(this.colaboradorAtual?.motivoPausa || 'ausente')})</span> • <span class="underline">Deseja retornar?</span>`;
+            btnPausa.onclick = () => this._abrirModalConfirmarRetorno();
+        } else {
+            btnPausa.className = 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95';
+            btnPausa.innerHTML = `<span>☕</span> <span>Pausar / Ausente</span>`;
+            btnPausa.onclick = () => this._abrirModalDefinirPausa();
+        }
 
         headerRight.prepend(btnPausa);
+    },
+
+    _abrirModalDefinirPausa() {
+        document.getElementById('modal-definir-pausa')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-definir-pausa';
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[99999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-fade-in';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm shadow-sm">☕</span>
+                        <div>
+                            <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Registrar Pausa</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Informe sua ausência temporária</p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-modal-pausa" class="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition">✕</button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Motivos Rápidos</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button type="button" class="btn-preset-pausa text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Almoço">
+                                🍽️ Almoço
+                            </button>
+                            <button type="button" class="btn-preset-pausa text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Banheiro / Café">
+                                ☕ Banheiro / Café
+                            </button>
+                            <button type="button" class="btn-preset-pausa sm:col-span-2 text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento Externo / Diligência">
+                                🏃 Atendimento Externo / Diligência
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="input-motivo-pausa" class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">Ou digite outro motivo</label>
+                        <input type="text" id="input-motivo-pausa" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-medium" placeholder="Ex: Ligação com assistido, Reunião de equipe...">
+                    </div>
+                </div>
+
+                <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end">
+                    <button type="button" id="btn-cancelar-pausa" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="button" id="btn-confirmar-pausa" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition shadow-sm active:scale-95">Ativar Pausa</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const input = modal.querySelector('#input-motivo-pausa');
+        modal.querySelector('#btn-fechar-modal-pausa').onclick = () => modal.remove();
+        modal.querySelector('#btn-cancelar-pausa').onclick = () => modal.remove();
+
+        modal.querySelectorAll('.btn-preset-pausa').forEach(btn => {
+            btn.onclick = () => {
+                input.value = btn.dataset.motivo;
+                modal.querySelectorAll('.btn-preset-pausa').forEach(b => b.classList.remove('border-amber-500', 'bg-amber-50'));
+                btn.classList.add('border-amber-500', 'bg-amber-50');
+            };
+        });
+
+        modal.querySelector('#btn-confirmar-pausa').onclick = async () => {
+            const motivo = input.value.trim() || 'Ausência momentânea';
+            modal.remove();
+            await this._executarPausa(motivo);
+        };
+    },
+
+    async _executarPausa(motivo) {
+        if (!this.colaboradorAtual?.id) return;
+        try {
+            await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                status: 'pausado',
+                motivoPausa: motivo,
+                currentAttendance: null
+            });
+
+            this.colaboradorAtual.status = 'pausado';
+            this.colaboradorAtual.motivoPausa = motivo;
+            this.colaboradorAtual.currentAttendance = null;
+
+            if (typeof showNotification === 'function') {
+                showNotification(`Pausa ativada: ${motivo}`, "warning");
+            }
+
+            this._injetarBotaoPausaHeader();
+            this.atualizarBadgeHeader();
+        } catch (e) {
+            console.error("Erro ao registrar pausa:", e);
+            alert("Erro ao registrar pausa no sistema.");
+        }
+    },
+
+    _abrirModalConfirmarRetorno() {
+        document.getElementById('modal-confirmar-retorno')?.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-confirmar-retorno';
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[99999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-fade-in';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="font-black text-sm text-slate-800 uppercase tracking-wide">Retornar ao Trabalho</h3>
+                    <button id="btn-fechar-modal-retorno" class="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition">✕</button>
+                </div>
+
+                <div class="p-5 text-center">
+                    <span class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center text-xl mb-3">✅</span>
+                    <p class="text-sm font-bold text-slate-800 leading-snug">Você está pausado no momento.</p>
+                    <p class="text-xs text-slate-500 mt-1">Deseja finalizar sua pausa e retornar ao status disponível?</p>
+                </div>
+
+                <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2.5">
+                    <button type="button" id="btn-nao-retornar" class="w-full py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition active:scale-95">Não, continuar pausado</button>
+                    <button type="button" id="btn-sim-retornar" class="w-full py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition uppercase tracking-wider shadow-sm active:scale-95">Sim, Retornar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelector('#btn-fechar-modal-retorno').onclick = () => modal.remove();
+        modal.querySelector('#btn-nao-retornar').onclick = () => modal.remove();
+
+        modal.querySelector('#btn-sim-retornar').onclick = async () => {
+            modal.remove();
+            await this._executarRetorno();
+        };
+    },
+
+    async _executarRetorno() {
+        if (!this.colaboradorAtual?.id) return;
+        try {
+            await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                status: 'disponivel',
+                motivoPausa: null
+            });
+
+            this.colaboradorAtual.status = 'disponivel';
+            this.colaboradorAtual.motivoPausa = null;
+
+            if (typeof showNotification === 'function') {
+                showNotification("Você retornou ao trabalho!", "success");
+            }
+
+            this._injetarBotaoPausaHeader();
+            this.atualizarBadgeHeader();
+        } catch (e) {
+            console.error("Erro ao retornar ao trabalho:", e);
+            alert("Erro ao atualizar status.");
+        }
     },
 
     _assinaturaDados(a) {
@@ -741,33 +865,102 @@ export const AtendimentoExternoService = {
         });
     },
 
+    // ─── MODAL RENDERIZADO PARA PUXAR CASO ────────────────────────────────────
+
     _solicitarPuxarCaso(assistidoId, nomeAssistido) {
-        const motivo = prompt(`Informe o motivo para puxar "${nomeAssistido}" para a sua mesa:`, "Atendimento prioritário / Urgência");
-        if (motivo === null) return;
+        document.getElementById('modal-solicitar-puxada')?.remove();
 
-        const timestampIso = new Date().toISOString();
-        const colabNome = this.colaboradorNome || 'Colaborador';
+        const modal = document.createElement('div');
+        modal.id = 'modal-solicitar-puxada';
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[99999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-fade-in';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
-        updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
-            status: 'aguardandoAutorizacaoPuxada',
-            solicitacaoPuxada: {
-                solicitante: colabNome,
-                solicitanteId: this.colaboradorId || '',
-                solicitanteEmail: this.colaboradorAtual?.email || '',
-                motivo: motivo || 'Sem justificativa informada',
-                solicitadoEm: timestampIso
-            },
-            historicoAcoes: arrayUnion(this._registroHistorico(`Solicitou puxar caso para si (Motivo: ${motivo || 'não informado'})`, timestampIso, colabNome))
-        }).then(() => {
-            if (typeof showNotification === 'function') {
-                showNotification("Solicitação enviada para a pauta!", "success");
-            } else {
-                alert("Solicitação enviada com sucesso!");
-            }
-        }).catch(err => {
-            console.error(err);
-            alert("Erro ao solicitar puxada de caso.");
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm font-bold">📥</span>
+                        <div>
+                            <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Puxar Atendimento</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate max-w-[220px] sm:max-w-xs">${escapeHTML(nomeAssistido)}</p>
+                        </div>
+                    </div>
+                    <button id="btn-fechar-modal-puxada" class="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition">✕</button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Motivos Rápidos</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button type="button" class="btn-preset-puxada text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento prioritário / Urgência">
+                                🚨 Urgência / Prioridade
+                            </button>
+                            <button type="button" class="btn-preset-puxada text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Assistido presente no guichê">
+                                📍 Presente no guichê
+                            </button>
+                            <button type="button" class="btn-preset-puxada sm:col-span-2 text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Retorno / Continuidade de caso">
+                                🔄 Continuidade de atendimento
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="input-motivo-puxada" class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">Justificativa da Solicitação</label>
+                        <input type="text" id="input-motivo-puxada" value="Atendimento prioritário / Urgência" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium" placeholder="Informe a justificativa...">
+                    </div>
+                </div>
+
+                <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end">
+                    <button type="button" id="btn-cancelar-puxada" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="button" id="btn-confirmar-puxada" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition shadow-sm active:scale-95 flex items-center gap-1.5">
+                        Confirmar e Puxar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const input = modal.querySelector('#input-motivo-puxada');
+        modal.querySelector('#btn-fechar-modal-puxada').onclick = () => modal.remove();
+        modal.querySelector('#btn-cancelar-puxada').onclick = () => modal.remove();
+
+        modal.querySelectorAll('.btn-preset-puxada').forEach(btn => {
+            btn.onclick = () => {
+                input.value = btn.dataset.motivo;
+                modal.querySelectorAll('.btn-preset-puxada').forEach(b => b.classList.remove('border-blue-500', 'bg-blue-50'));
+                btn.classList.add('border-blue-500', 'bg-blue-50');
+            };
         });
+
+        modal.querySelector('#btn-confirmar-puxada').onclick = async () => {
+            const motivo = input.value.trim() || 'Atendimento prioritário / Urgência';
+            modal.remove();
+
+            const timestampIso = new Date().toISOString();
+            const colabNome = this.colaboradorNome || 'Colaborador';
+
+            try {
+                await updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
+                    status: 'aguardandoAutorizacaoPuxada',
+                    solicitacaoPuxada: {
+                        solicitante: colabNome,
+                        solicitanteId: this.colaboradorId || '',
+                        solicitanteEmail: this.colaboradorAtual?.email || '',
+                        motivo: motivo,
+                        solicitadoEm: timestampIso
+                    },
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Solicitou puxar caso para si (Motivo: ${motivo})`, timestampIso, colabNome))
+                });
+
+                if (typeof showNotification === 'function') {
+                    showNotification("Solicitação enviada para a pauta!", "success");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao solicitar puxada de caso.");
+            }
+        };
     },
 
     async _autorizarPuxada(assistidoId) {
@@ -2060,4 +2253,3 @@ export const AtendimentoExternoService = {
 
 export default AtendimentoExternoService;
 window.AtendimentoExternoService = AtendimentoExternoService;
-
