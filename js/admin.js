@@ -1997,6 +1997,10 @@ export const setupAdminEvents = (app) => {
     // Carrega os feedbacks na tela de admin
     carregarFeedbacksSistema(app.db);
 
+    // ── ATIVA O PAINEL DE MONITORAMENTO E IPs ──
+    carregarPainelMonitoramentoSeguranca(app.db);
+    // ──────────────────────────────────────────
+
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.abrirModalMaster === 'function') {
             window.ImportadorOrgaosService.abrirModalMaster(app);
