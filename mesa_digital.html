@@ -298,6 +298,23 @@
             </form>
         </div>
     </div>
+    
+        <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+      if (window.Sentry) {
+        Sentry.init({
+          dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488",
+          environment: location.hostname === 'localhost' ? 'development' : 'production',
+          release: "sigep@1.0.0",
+          ignoreErrors: [
+            'ResizeObserver loop limit exceeded',
+            'ResizeObserver loop completed with undelivered notifications.'
+          ],
+          initialScope: { tags: { app: 'mesa-digital' } }
+        });
+      }
+    </script>
+
 
     <!-- SCRIPT DE INICIALIZAÇÃO -->
     <script type="module">
