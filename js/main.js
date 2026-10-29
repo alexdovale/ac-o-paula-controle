@@ -1736,8 +1736,7 @@ class SIGEPApp {
                 }
             }
             if (badge) {
-                // No mobile mostra compacto "⏸️ 2", no desktop mostra "⏸️ 2 PAUSA(S)"
-                badge.innerHTML = `<span>⏸️</span> <span class="font-extrabold text-red-600">${pausados.length}</span><span class="hidden sm:inline font-black tracking-wider text-[10px] uppercase">PAUSA(S)</span>`;
+                badge.innerHTML = `<span class="text-sm">${ico('pause', 'w-4 h-4')}</span> <span class="font-extrabold text-red-600">${pausados.length}</span><span class="hidden sm:inline font-black tracking-wider text-[10px] uppercase">PAUSA(S)</span>`;
             }
         } else if (badge) {
             badge.remove();
@@ -1757,7 +1756,7 @@ class SIGEPApp {
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border border-slate-200" onclick="event.stopPropagation()">
                 <div class="px-5 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center shrink-0">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm">⏸️</span>
+                        <span class="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm">${ico('pause', 'w-5 h-5')}</span>
                         <div>
                             <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Equipe em Pausa</h3>
                             <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mt-0.5">${pausados.length} ausente(s) no momento</p>
@@ -1932,8 +1931,6 @@ class SIGEPApp {
         document.getElementById('badge-pausados-topo')?.remove();
         document.getElementById('badge-puxadas-pendentes')?.remove();
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-        document.querySelectorAll('[id^="btn-colabs-pausados-"]').forEach(btn => btn.remove());
-
         this.currentPauta = null;
         this.allAssisted  = [];
         this.colaboradores = [];
@@ -2004,7 +2001,6 @@ class SIGEPApp {
 
         const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
         
-        const colabsPausados = colabsAtivos.filter(c => c.status === 'pausado');
 
         const colabsLivres = colabsAtivos.filter(c => {
             if (c.status === 'pausado') return false;
@@ -2020,13 +2016,10 @@ class SIGEPApp {
         if (!headerActions) return;
 
         const btnLivreId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-        const btnPausadoId = `btn-colabs-pausados-${this.currentPauta.id}`;
 
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnLivreId) btn.remove(); });
-        document.querySelectorAll('[id^="btn-colabs-pausados-"]').forEach(btn => { if (btn.id !== btnPausadoId) btn.remove(); });
 
         let btnEnvelope = document.getElementById(btnLivreId);
-        let btnPausado = document.getElementById(btnPausadoId);
 
         if (colabsLivres.length > 0) {
             if (!btnEnvelope) {
@@ -2043,23 +2036,6 @@ class SIGEPApp {
             btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
         } else {
             if (btnEnvelope) btnEnvelope.remove();
-        }
-
-        if (colabsPausados.length > 0) {
-            if (!btnPausado) {
-                btnPausado = document.createElement('button');
-                btnPausado.id = btnPausadoId;
-                btnPausado.onclick = () => {
-                    const descricoes = colabsPausados.map(c => `• ${c.nome}: "${c.motivoPausa || 'Ausente momentaneamente'}"`).join('\n');
-                    showNotification(`Farofa com alho no status crítico! Equipe pausada:\n\n${descricoes}`);
-                };
-                headerActions.insertBefore(btnPausado, headerActions.firstChild);
-            }
-            btnPausado.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-black rounded-lg transition-colors border border-red-300 shadow-sm cursor-pointer shrink-0';
-            btnPausado.title = `${colabsPausados.length} Colaborador(es) Pausado(s)`;
-            btnPausado.innerHTML = `<span class="text-sm">⏸️</span> <span class="text-xs tracking-wider text-red-600 font-extrabold">${colabsPausados.length} <span class="text-red-700">PAUSA(S)</span></span>`;
-        } else {
-            if (btnPausado) btnPausado.remove();
         }
     }
 
