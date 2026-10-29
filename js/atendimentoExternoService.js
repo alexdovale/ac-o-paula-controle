@@ -2203,7 +2203,7 @@ export const AtendimentoExternoService = {
 
                     await updateDoc(docRef, {
                         ...atualizacaoDeResponsavel,
-                        status: ehReagendar ? 'atendido' : 'cancelado',
+                        status: 'atendido',
                         attendedBy: colabSeguro,
                         enviadoPor: enviadoPorColaborador,
                         trabalhosPorUsuario: mapaProdutividadeBI,
