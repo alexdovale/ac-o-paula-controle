@@ -73,20 +73,20 @@
                 <a href="#recepcao-central" class="wiki-link">1.2 Recepção Central e Hubs</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão de Pautas</p>
-                <a href="#criar-pauta" class="wiki-link">2.1 Criar e Ordenar Pauta</a>
+                <a href="#criar-pauta" class="wiki-link">2.1 Criar e Ordenar Pauta (7 Modos)</a>
                 <a href="#integracao" class="wiki-link">2.2 Integração Verde & CSV</a>
-                <a href="#menus" class="wiki-link">2.3 Menus e Colunas</a>
+                <a href="#menus" class="wiki-link">2.3 Menus, Equipe e Pop-out</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Atendimento Operacional</p>
-                <a href="#kanban" class="wiki-link">3. O Fluxo de Colunas (Kanban)</a>
+                <a href="#kanban" class="wiki-link">3. O Fluxo de Colunas & Cards</a>
                 <a href="#painel-individual" class="wiki-link">4. Painel de Triagem & Detalhes</a>
                 <a href="#meu-painel" class="wiki-link">5. "Meu Painel" Pessoal</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Módulos Avançados</p>
-                <a href="#captacao-externa" class="wiki-link">6. Captação Externa (Autocadastro)</a>
+                <a href="#captacao-externa" class="wiki-link">6. Captação Externa & Câmera IA</a>
                 <a href="#mesa-digital" class="wiki-link">7. Mesa Digital V5 & Puxadas</a>
                 <a href="#monitor-equipe" class="wiki-link">8. Monitor da Equipe e Pausas</a>
-                <a href="#painel-tv" class="wiki-link">9. Painel da TV e Totem</a>
+                <a href="#painel-tv" class="wiki-link">9. Painel da TV, Chamada e Totem</a>
                 <a href="#coletas" class="wiki-link">10. Coletas Estatísticas e BI</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão e Governança</p>
@@ -114,13 +114,13 @@
                 <!-- SEÇÃO 1: PERFIS -->
                 <section id="perfis" class="mb-16 pt-8">
                     <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> 1. Perfis de Usuário e Acessos</h2>
-                    <p>O SIGEP é inteligente e adapta a sua interface, botões e permissões de acordo com o cargo do usuário logado. Existem 4 níveis principais de acesso no sistema:</p>
+                    <p>O SIGEP é inteligente e adapta a sua interface, botões e permissões de acordo com o cargo do usuário logado. No primeiro acesso, o sistema apresenta o <strong>Modal de Aceite LGPD e Termos de Uso</strong> obrigatório. Existem 4 níveis principais de acesso no sistema:</p>
                     
                     <ul class="space-y-4">
                         <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Administrador / Superadmin / Superadmin Global:</strong> Tem controle total da plataforma. Pode aprovar, suspender, reativar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs), Ouvidoria, Monitoramento de IPs e Estatísticas globais. O administrador enxerga todas as pautas do seu órgão; o <em>Superadmin Global</em> enxerga as pautas de todos os órgãos e gerencia o acesso corporativo de Clientes (Tenants).</li>
                         <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Defensor(a):</strong> Possui um fluxo focado em produtividade e aprovação. Tem acesso exclusivo ao "Meu Painel Judicial" e à visão de Defensor na Mesa Digital, onde visualiza apenas os processos que já passaram pela triagem da equipe e estão prontos para revisão, avaliação, assinatura, distribuição ou devolução para correção.</li>
                         <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas, geração de link direto do Verde) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor). Só enxerga as pautas das quais é dono ou membro.</li>
-                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Apoio (Recepção):</strong> Focado estritamente no controle de entrada. Pode registrar a chegada dos assistidos (check-in), marcar faltas e fazer encaminhamentos básicos. Por medidas de segurança e preservação da pauta, <strong>o sistema bloqueia</strong> este perfil de realizar ações críticas, como importar planilhas em lote (CSV) ou puxar dados oficiais do Verde.</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Apoio (Recepção):</strong> Focado estritamente no controle de entrada. Pode registrar a chegada dos assistidos (check-in), definir prioridades legais, alterar salas em pautas Multi-Salas e marcar faltas. Por medidas de segurança e preservação da pauta, <strong>o sistema bloqueia</strong> este perfil de realizar ações administrativas, como importar planilhas em lote (CSV), editar dados sensíveis, reverter atendidos ou remover assistidos da pauta.</li>
                     </ul>
 
                     <div class="note-box">
@@ -130,8 +130,8 @@
 
                 <!-- SEÇÃO 1.1: MODOS -->
                 <section id="modos" class="mb-16 pt-8 border-t border-slate-100">
-                    <h3 class="sub-title"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span> 1.1. Modo Normal, Modo Evento e Unidades</h3>
-                    <p>Depois do login, o SIGEP pergunta em qual <strong>modo</strong> você vai trabalhar. A lista de pautas mostra apenas as pautas do modo escolhido.</p>
+                    <h3 class="sub-title"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span> 1.1. Modo Normal, Modo Evento e Filtros de Pautas</h3>
+                    <p>Depois do login, o SIGEP pergunta em qual <strong>modo</strong> você vai trabalhar. A lista de pautas mostra apenas as pautas do modo escolhido, exibindo em cada cartão o criador, quantidade de membros, data de criação e a <strong>data exata de eliminação (7 dias LGPD)</strong>.</p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div class="bg-blue-50 p-4 rounded border border-blue-200 shadow-sm">
@@ -146,9 +146,8 @@
 
                     <ul>
                         <li><strong>Indicador de modo:</strong> uma etiqueta azul (Normal) ou roxa (Evento) aparece por alguns segundos no canto da tela sempre que você abre a lista de pautas.</li>
-                        <li><strong>Trocar unidade:</strong> disponível apenas no Modo Normal, na tela de pautas.</li>
-                        <li><strong>Trocar modo:</strong> volta para a tela de escolha entre Normal e Evento, encerrando a pauta que estiver aberta.</li>
-                        <li><strong>Filtros da lista:</strong> é possível filtrar por minhas pautas, compartilhadas comigo, ativas ou expiradas, e buscar pelo nome.</li>
+                        <li><strong>Filtro de Exibição Inteligente:</strong> Na tela de seleção de pautas, você pode filtrar por: <em>Mostrar Todas as Pautas</em>, <em>Pautas ativas (com prazo)</em>, <em>Pautas expiradas</em>, <em>Criadas por mim</em>, <em>Compartilhadas comigo</em>, <em>Filtrar por Origem / Unidade</em> ou <em>Filtrar por Período (Data Inicial e Data Final) / Tipo de Evento</em>.</li>
+                        <li><strong>Consulta de Pautas Expiradas:</strong> Ao clicar em uma pauta já expirada pelo prazo de 7 dias, o SIGEP exibe o modal <strong>"Pauta Fechada / Expirada"</strong>, impedindo edições mas permitindo abrir o módulo de <strong>Estatísticas e PDFs</strong> caso os dados consolidados estejam disponíveis.</li>
                     </ul>
                 </section>
 
@@ -250,27 +249,63 @@
                     <p>A "Pauta" é o ambiente de trabalho diário. Ela representa um dia de atendimento, um mutirão, ou a rotina de uma vara/núcleo específico.</p>
 
                     <h3 class="sub-title">2.1. Criando uma Nova Pauta</h3>
-                    <p>Ao clicar no botão verde <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho:</p>
+                    <p>Ao clicar no botão verde <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho em 3 passos (Tipo → Ordem de Atendimento → Fluxo de Delegação/Distribuição):</p>
                     <ul>
-                        <li><strong>Tipo de Pauta:</strong> <em>Agendado</em> (hora marcada), <em>Avulso</em> (ordem de chegada), <em>Híbrido</em> (mostra as duas abas, Agendamento e Avulso) ou <em>Multi-Salas</em> (encaminha o assistido para salas virtuais/físicas específicas).</li>
-                        <li><strong>Fluxo de Delegação:</strong> Se ativado, permite que os casos sejam repassados entre estagiários e servidores de forma rastreável.</li>
-                        <li><strong>Fila de Distribuição:</strong> Se ativada, cria uma etapa final obrigatória de envio ao Defensor(a) para protocolo.</li>
-                        <li><strong>Tolerância de atraso:</strong> define quantos minutos de atraso o assistido agendado pode ter sem perder o horário (padrão de 15 minutos). O valor aparece em uma etiqueta no topo da pauta.</li>
+                        <li><strong>Tipo de Pauta:</strong> <em>Atendimento Agendado</em> (hora marcada), <em>Atendimento Avulso</em> (ordem de chegada) ou <em>Multi-Salas</em> (permite cadastrar salas ou locais personalizados, como "Vara de Família", "Sala 1", agrupando a fila de espera em gavetas recolhíveis com busca própria por sala).</li>
+                        <li><strong>Fluxo de Delegação:</strong> Se ativado, utiliza a coluna "Em Atendimento" para atribuir casos a colaboradores específicos. Se desativado ("Não, finalizar diretamente"), pula a coluna Em Atendimento.</li>
+                        <li><strong>Fila de Distribuição:</strong> Se ativada, cria a etapa de envio ao Defensor(a) para assinatura, avaliação ou protocolo.</li>
+                        <li><strong>Tolerância de Atraso:</strong> Define quantos minutos de atraso o assistido agendado pode ter antes de virar encaixe (padrão de 15 minutos). O valor aparece em uma etiqueta amarela <code>Tolerância de Atraso: X Minutos</code> no topo da pauta.</li>
                     </ul>
 
-                    <h3 class="sub-title">2.2. Definindo a Ordem de Atendimento</h3>
-                    <p>Ainda durante a criação (ou nas "Configurações" da pauta), escolha como o SIGEP organizará a fila de espera:</p>
-                    
-                    <div class="success-box">
-                        <strong class="flex items-center gap-2 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Padrão do Sistema (Recomendado)</strong>
-                        <p class="mt-2 text-green-900">A fila é organizada <strong>pelo horário agendado</strong>, e não por ordem alfabética. O sistema respeita estritamente o horário da marcação, mas prioriza automaticamente as urgências legais (Idosos 80+, Gestantes, PCD). Se duas pessoas do mesmo horário chegarem juntas, o sistema desempata colocando na frente quem fez o "Check-in" primeiro na recepção.</p>
-                        <p class="mt-2 text-green-900">Quem atrasa <strong>além da tolerância</strong> perde o horário original e passa a valer pelo horário real de chegada, ficando atrás dos pontuais.</p>
+                    <h3 class="sub-title">2.2. As 7 Modalidades de Ordem de Atendimento</h3>
+                    <p>Durante a criação (ou em <strong>Ações → Editar Configurações</strong>), você escolhe entre <strong>7 algoritmos inteligentes</strong> para organizar a fila de "Aguardando" (todos respeitando a prioridade absoluta de <strong>Urgências Legais</strong> no topo):</p>
+
+                    <!-- MOCKUP VISUAL 2: MODAL DAS 7 REGRAS DE ORDEM DE ATENDIMENTO -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Modal de Configuração — 7 Modos de Ordem de Atendimento</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Ordem da Fila</span>
+                        </div>
+                        <div class="sigep-preview-body bg-white space-y-2.5 max-w-xl mx-auto">
+                            <div class="flex items-center p-3 border rounded-lg border-l-4 border-l-orange-500 bg-orange-50/20">
+                                <span class="h-4 w-4 rounded-full border-4 border-orange-600 shrink-0"></span>
+                                <div class="ml-3">
+                                    <span class="font-bold text-slate-800 text-xs block">1. Flexível c/ Alertas (Pisca-Alerta)</span>
+                                    <span class="text-[11px] text-slate-500">Avisa atrasos visualmente. Garante a prioridade absoluta de quem é pontual.</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center p-3 border rounded-lg border-l-4 border-l-blue-500 bg-blue-50/30">
+                                <span class="h-4 w-4 rounded-full border-4 border-blue-600 shrink-0"></span>
+                                <div class="ml-3">
+                                    <span class="font-bold text-slate-800 text-xs block">2. Agendamento Flexível (Encaixe) — Padrão</span>
+                                    <span class="text-[11px] text-slate-500">Pontuais não perdem a vez. Atrasados além da tolerância viram encaixe pela hora de chegada.</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div class="p-2.5 border rounded-lg bg-slate-50">
+                                    <span class="font-bold text-slate-800 text-xs block">3. Proporcional (3x1)</span>
+                                    <span class="text-[10px] text-slate-500">A cada 3 pontuais atendidos, chama 1 atrasado automaticamente.</span>
+                                </div>
+                                <div class="p-2.5 border rounded-lg bg-slate-50">
+                                    <span class="font-bold text-slate-800 text-xs block">4. Proteção de Turno</span>
+                                    <span class="text-[10px] text-slate-500">Garante que os agendados da manhã sejam atendidos antes do turno da tarde (13h).</span>
+                                </div>
+                                <div class="p-2.5 border rounded-lg bg-slate-50">
+                                    <span class="font-bold text-slate-800 text-xs block">5. Perdão por Tempo (Aging)</span>
+                                    <span class="text-[10px] text-slate-500">Atrasados que já esperam há mais de 60 minutos sobem para o topo da fila.</span>
+                                </div>
+                                <div class="p-2.5 border rounded-lg bg-slate-50">
+                                    <span class="font-bold text-slate-800 text-xs block">6. Ordem de Chegada / 7. Manual</span>
+                                    <span class="text-[10px] text-slate-500">Ordem estrita de check-in ou livre arrastar e soltar (Drag &amp; Drop).</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <ul>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Ordem de Chegada:</strong> Ignora os horários de agendamento. A fila será estritamente organizada por quem chega e registra a presença na recepção primeiro. Útil para mutirões abertos.</li>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> Ordem Manual (Arrastar e Soltar):</strong> Desliga a inteligência do sistema e passa o controle para você. Permite clicar no cartão do assistido e <strong>arrastá-lo livremente</strong> para cima ou para baixo.</li>
-                    </ul>
                 </section>
 
                 <!-- SEÇÃO 2.3 e 2.4: INTEGRAÇÃO -->
@@ -294,16 +329,16 @@
                     </ol>
 
                     <div class="note-box">
-                        <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Prompt Prático para IA:</strong> O sistema tem um botão "Como formatar pauta?". Nele, você pode copiar um texto pronto, colar no ChatGPT junto com o seu PDF da pauta, e a IA devolverá o texto perfeitamente formatado com os <code>;</code> para importar no SIGEP.
+                        <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Prompt Prático para IA:</strong> O sistema tem um botão "Como formatar pauta?". Nele, você pode copiar um texto pronto, colar no ChatGPT/Gemini junto com o seu PDF da pauta, e a IA devolverá o texto perfeitamente formatado com os <code>;</code> para importar no SIGEP.
                     </div>
                 </section>
 
                 <!-- SEÇÃO 2.5: MENUS -->
                 <section id="menus" class="mb-16 pt-8 border-t border-slate-100">
-                    <h3 class="sub-title">2.5. Menus Superiores (Ações e Colunas)</h3>
+                    <h3 class="sub-title">2.5. Menus Superiores, Lista de Presença e Desencaixar Coluna (Pop-out)</h3>
                     <p>No topo direito do painel de qualquer pauta, existem botões essenciais para gerenciar a dinâmica do dia:</p>
 
-                    <!-- MOCKUP VISUAL 2: BARRA SUPERIOR DA PAUTA E ALERTAS -->
+                    <!-- MOCKUP VISUAL 3: BARRA SUPERIOR DA PAUTA E ALERTAS -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
@@ -318,7 +353,7 @@
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="font-black text-slate-800 text-base">1ª DP de Família - Caxias</span>
-                                    <span class="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">Tolerância: 15 min</span>
+                                    <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">⏱ Tolerância de Atraso: 15 Minutos</span>
                                 </div>
                                 <p class="text-[11px] text-slate-400">Modo Normal • Fila de Distribuição Ativa</p>
                             </div>
@@ -350,59 +385,174 @@
                         <li><span class="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">PUXADA(S)</span> pedidos de puxada de fila aguardando autorização (veja a seção 7).</li>
                     </ul>
                     
-                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Ações (Botão Verde)</h4>
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Ações (Botão Verde) e Lista de Presença da Equipe</h4>
                     <ul>
-                        <li><strong>Monitor da Equipe:</strong> painel em tempo real com o que cada pessoa está fazendo (seção 8).</li>
-                        <li><strong>Monitor da Pauta (Global):</strong> acompanhamento geral e histórico completo da pauta.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> <strong>Compartilhamento Externo:</strong> liga ou desliga o acesso público (Público/Privado) e gera o link de acompanhamento. A opção <em>ocultar nomes</em> mascara os nomes dos assistidos na página pública.</li>
-                        <li><strong>Totem:</strong> abre a tela do Totem desta pauta em uma nova aba.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg> <strong>Ver Estatísticas:</strong> Permite ver os dados estatísticos da pauta individualmente e <strong>emitir um PDF gerencial</strong>.</li>
-                        <li><strong>Editar Nome da Pauta</strong> e <svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <strong>Editar Configurações:</strong> ligar/desligar a fila de distribuição, mudar a regra de Ordem e ativar ou desativar o uso do Painel da TV nesta pauta.</li>
-                        <li><strong>Compartilhar Pauta (Membros):</strong> adiciona ou remove usuários que podem acessar a pauta. O dono da pauta não pode ser removido.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> <strong>Colaboradores:</strong> Gerencia a "Lista de Presença" da equipe e a <strong>Ata de Ação Social</strong>.</li>
-                        <li><strong>Anotações:</strong> bloco de notas da pauta.</li>
-                        <li><strong>Painel da TV / Fila:</strong> grupo com <em>Meu Local (Guichê)</em> e <em>Configurar Painel TV</em> (seção 9). Só aparece se o Painel da TV estiver ativado na pauta.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <strong>Fechar / Reabrir Pauta:</strong> protege a pauta contra alterações. <strong>Só o dono da pauta pode fazer isso, e é preciso digitar a própria senha.</strong></li>
-                        <li><strong>Zerar Pauta:</strong> apaga todos os assistidos da pauta, mas mantém a pauta criada. Pede confirmação.</li>
+                        <li><strong>Monitor da Equipe e Monitor da Pauta (Global):</strong> acompanhamento em tempo real da equipe e histórico completo da pauta.</li>
+                        <li><strong>Compartilhamento Externo:</strong> liga ou desliga o acesso público (Público/Privado), gera o link de acompanhamento e permite marcar a caixa <em>"Ocultar Sobrenomes (Privacidade/LGPD)"</em>.</li>
+                        <li><strong>Colaboradores (Lista de Presença da Equipe):</strong> Cadastra Defensores, Servidores, CRC, Residentes e Estagiários na Equipe (1 a 4), permitindo <strong>Buscar no Banco pela Matrícula/ID</strong>, informar WhatsApp/E-mail, registrar meio de transporte (<em>Meios Próprios</em> ou <em>Com a Empresa</em>), marcar presença e emitir o PDF da Equipe ou a <strong>Ata de Ação Social</strong>.</li>
+                        <li><strong>Fechar / Reabrir Pauta e Zerar Pauta:</strong> Ambos exigem a confirmação da <strong>senha de login</strong> do dono da pauta para evitar acidentes.</li>
                     </ul>
 
-                    <div class="alert-box">
-                        <strong>Excluir uma pauta é definitivo.</strong> Só o dono ou um administrador pode excluir. O sistema apaga a pauta e todos os atendimentos dela, e não há como desfazer.
+                    <!-- MOCKUP VISUAL 4: MODAL LISTA DE PRESENÇA DA EQUIPE E ATA SOCIAL -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Modal Lista de Presença da Equipe — Busca por Matrícula e Ata Social</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Colaboradores</span>
+                        </div>
+                        <div class="sigep-preview-body bg-white space-y-4">
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
+                                    <div class="p-2 border rounded-lg text-xs bg-white font-semibold text-slate-700">Dra. Cristina — Defensor(a)</div>
+                                    <div class="p-2 border rounded-lg text-xs bg-white font-semibold text-slate-700">Equipe 1</div>
+                                    <div class="flex rounded-lg border border-gray-300 overflow-hidden bg-white">
+                                        <span class="flex-1 p-2 text-xs text-slate-600 font-mono">MAT-99482</span>
+                                        <span class="px-3 py-2 bg-gray-100 text-[11px] font-bold text-gray-700 border-l">Buscar no Banco</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
+                                    <div class="flex items-center gap-3 text-xs text-slate-600 font-medium">
+                                        <span class="text-[10px] font-black text-gray-500 uppercase">Transp:</span>
+                                        <span>🔘 Próprio</span>
+                                        <span>⚪ Empresa</span>
+                                    </div>
+                                    <span class="bg-green-600 text-white font-bold py-1.5 px-4 rounded-lg text-xs uppercase">Salvar Membro</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap justify-between items-center gap-2 bg-violet-50 p-2.5 rounded-xl border border-violet-100 text-[10px] font-bold text-violet-800 uppercase">
+                                <div class="flex gap-3">
+                                    <span>Total: <b>8</b></span>
+                                    <span>Próprio: <b>5</b></span>
+                                    <span>Empresa: <b>3</b></span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="bg-red-600 text-white px-3 py-1 rounded-lg">Emitir PDF</span>
+                                    <span class="bg-green-700 text-white px-3 py-1 rounded-lg">Gerar Ata Social</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <h4 class="font-bold text-gray-800 mt-4 mb-2">C. O Menu de Exibição (Engrenagem <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> )</h4>
-                    <p>Permite ligar ou desligar as colunas do seu painel <em>Kanban</em> (Em Atendimento, Distribuição, Faltosos), ajudando a limpar visualmente a tela em celulares ou telas pequenas. A sua escolha fica salva neste navegador. Em pautas <strong>Multi-Salas</strong>, o botão <strong>Gerenciar Salas</strong> permite renomear as salas: os assistidos já alocados acompanham o novo nome.</p>
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">C. Desencaixar Coluna (Pop-out para 2º Monitor)</h4>
+                    <p>No cabeçalho de cada coluna do Kanban (ao lado do contador numérico), existe o botão azul de <strong>Desencaixar Coluna (Pop-out)</strong>:</p>
+                    <ul>
+                        <li>Ao clicar nele, o SIGEP abre uma janela independente apenas com aquela fila (ideal para arrastar para um segundo monitor na recepção ou coordenação), sincronizada em tempo real.</li>
+                        <li>Clicar em qualquer botão de ação dentro da janela desencaixada (como <em>Atender</em>, <em>Marcar Chegada</em> ou <em>Ver Detalhes</em>) aciona automaticamente o modal correspondente na janela principal.</li>
+                    </ul>
                 </section>
 
-                <!-- SEÇÃO 3: KANBAN -->
+                <!-- SEÇÃO 3: KANBAN E ANATOMIA DO CARD -->
                 <section id="kanban" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> 3. O Fluxo de Colunas (Kanban)</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> 3. O Fluxo de Colunas (Kanban) e Anatomia do Card</h2>
                     <p>O painel principal funciona como uma esteira de produção. Cada coluna representa o estado físico ou processual do assistido.</p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-8">
                         <div class="bg-gray-50 p-4 rounded border border-gray-200 shadow-sm">
                             <span class="font-bold text-gray-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg> Pauta</span>
-                            <p class="text-sm mt-2 text-gray-600">Agendados do dia. Quando chegam, clica-se em <strong>"Marcar Chegada"</strong>.</p>
+                            <p class="text-sm mt-2 text-gray-600">Agendados do dia. Quando chegam, clica-se em <strong>"Marcar Chegada"</strong> (ou <strong>"Faltou"</strong>).</p>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded border border-yellow-200 shadow-sm">
                             <span class="font-bold text-yellow-800 text-lg"><svg class="w-5 h-5 animate-spin shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Aguardando</span>
-                            <p class="text-sm mt-2 text-yellow-900">A fila de espera real da recepção. Siga a ordem automática do sistema.</p>
+                            <p class="text-sm mt-2 text-yellow-900">A fila de espera real da recepção. Conta com o botão <strong>"Chamar Próximo"</strong> no topo e cronômetro individual de espera em cada cartão.</p>
                         </div>
                         <div class="bg-blue-50 p-4 rounded border border-blue-200 shadow-sm">
                             <span class="font-bold text-blue-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Em Atendimento</span>
-                            <p class="text-sm mt-2 text-blue-900">Mostra quem já foi chamado e qual servidor está atendendo no momento.</p>
+                            <p class="text-sm mt-2 text-blue-900">Mostra quem já foi chamado, o horário de início e qual colaborador está atendendo no momento.</p>
                         </div>
                         <div class="bg-cyan-50 p-4 rounded border border-cyan-200 shadow-sm">
-                            <span class="font-bold text-cyan-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Distribuição</span>
-                            <p class="text-sm mt-2 text-cyan-900">Casos triados que aguardam assinatura, distribuição ou avaliação do Defensor para protocolo.</p>
+                            <span class="font-bold text-cyan-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Distribuição / Assinatura</span>
+                            <p class="text-sm mt-2 text-cyan-900">Agrupa os casos por Defensor responsável, com botão para copiar o link do painel do Defensor e botão <strong>"Chamar na TV (Assinatura/Retirada)"</strong>.</p>
                         </div>
                         <div class="bg-green-50 p-4 rounded border border-green-200 shadow-sm">
                             <span class="font-bold text-green-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Atendidos</span>
-                            <p class="text-sm mt-2 text-green-900">Arquivo de concluídos do dia. Inclui os atendimentos protocolados, bem como os reagendados e cancelados na Mesa Digital (com seus respectivos motivos salvos para relatório e auditoria).</p>
+                            <p class="text-sm mt-2 text-green-900">Arquivo de concluídos do dia. Possui botão de check (✔) no canto superior esquerdo para marcar que a presença/atendimento já foi lançado no Verde, além do botão inteligente <strong>"Voltar para [Etapa Anterior]"</strong>.</p>
                         </div>
                         <div class="bg-red-50 p-4 rounded border border-red-200 shadow-sm">
                             <span class="font-bold text-red-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg> Faltosos</span>
-                            <p class="text-sm mt-2 text-red-900">Pessoas que não compareceram no dia.</p>
+                            <p class="text-sm mt-2 text-red-900">Pessoas que não compareceram. Também possui botão de check (✔) para indicar que a falta já foi lançada no Verde e botão <strong>"Reativar Assistido"</strong>.</p>
+                        </div>
+                    </div>
+
+                    <h3 class="sub-title">3.1. Anatomia do Cartão, Cronômetro de Espera e Menu Rápido (•••)</h3>
+                    <p>Cada cartão na coluna <strong>Aguardando</strong> traz indicadores visuais automáticos e um menu de ações rápidas no canto superior direito:</p>
+                    <ul>
+                        <li><strong>Cronômetro de Espera em Tempo Real:</strong> Ao lado do horário de chegada, um relógio calcula há quantos minutos o assistido está esperando. Até 29 minutos fica cinza; <strong>a partir de 30 minutos fica amarelo em negrito</strong>; e <strong>a partir de 60 minutos fica vermelho com ícone pulsante</strong>.</li>
+                        <li><strong>Menu Rápido (<code>•••</code>):</strong> Ao clicar nos três pontinhos no topo direito do cartão, você pode:
+                            <ul class="mt-1">
+                                <li><em>Rechamar na TV (Alarme):</em> dispara novamente o aviso sonoro e visual na TV sem alterar o status.</li>
+                                <li><em>Digitalizar Arquivo:</em> abre a captura e envio de documentos digitalizados.</li>
+                                <li><em>Pausar / Pendência (Retorno Rápido):</em> coloca o cartão em estado de pausa roxo (<code>⏸</code>) com o motivo na tela (ex.: "Foi tirar xerox", "Aguardando 2ª parte chegar").</li>
+                                <li><em>Ações Rápidas (Reagendar, Agendar, Consulta, Outros):</em> rotula e encaminha rapidamente atendimentos de balcão.</li>
+                                <li><em>Status da Triagem:</em> atualiza a etiqueta de andamento documental na recepção (<em>Pendente, Assistido Orientado, Preenchendo Dados, Documentação Recebida, Falta Digitalizar, Digitalizado, Inserido no Verde/CNP</em>).</li>
+                                <li><em>Marcar Extra-Pauta / Retirar da Pauta:</em> adiciona o selo <code>EXTRA-PAUTA</code> ou retira o assistido por desistência/erro sem contá-lo como faltoso.</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <!-- MOCKUP VISUAL 5: CARD DO KANBAN + MENU RÁPIDO (...) + MODAL DE PRIORIDADE LEGAL -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Card da Fila de Aguardando + Menu Rápido (•••) + Prioridade Legal</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Card &amp; Prioridade</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            <!-- Card Aguardando Realista -->
+                            <div class="relative bg-white p-4 rounded-xl shadow-md border-l-4 border-l-red-500 border border-slate-200">
+                                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white">1</div>
+                                <div class="absolute top-2 right-2 bg-slate-100 rounded-lg p-1 border border-slate-200 text-slate-600 font-bold text-xs">•••</div>
+
+                                <div class="text-center pt-5">
+                                    <div class="mb-1 text-[10px] font-black text-red-600 uppercase">⚠️ IDOSO (80+)</div>
+                                    <div class="mb-1.5 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block uppercase">🏷 Extra-Pauta</div>
+                                    <p class="font-bold text-base text-slate-800 uppercase mb-1">Sebastião Ferreira dos Santos</p>
+                                    <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">Medicamentos / Saúde</strong></p>
+
+                                    <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-[11px] shadow-sm mb-2">
+                                        <span>Agendado: <b>09:00</b></span>
+                                        <span class="w-px h-3 bg-blue-200"></span>
+                                        <span>Chegou: <b>09:04</b></span>
+                                        <span class="text-red-600 font-bold pl-2 border-l border-blue-200 animate-pulse">⏱ 1h 05m</span>
+                                    </div>
+
+                                    <div class="flex justify-center mt-1 mb-2">
+                                        <span class="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase">📁 Documentação Recebida</span>
+                                    </div>
+
+                                    <div class="mt-3 grid grid-cols-2 gap-2">
+                                        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm text-center">Atender</div>
+                                        <div class="bg-orange-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm text-center">Urgência</div>
+                                        <div class="col-span-2 bg-slate-100 text-slate-700 font-bold py-1.5 rounded-lg text-[10px] uppercase border border-slate-200">Voltar para Pauta</div>
+                                    </div>
+                                    <span class="text-indigo-600 text-[11px] font-bold mt-2 underline block">Ver Detalhes do Caso</span>
+                                </div>
+                            </div>
+
+                            <!-- Modal de Prioridade Legal (8 Categorias) -->
+                            <div class="bg-white p-5 rounded-xl shadow-md border-t-8 border-red-600 border border-slate-200">
+                                <h4 class="text-base font-bold text-gray-800 mb-1">Prioridade Legal</h4>
+                                <p class="text-xs text-gray-500 mb-3">Selecione uma ou mais categorias:</p>
+                                <div class="grid grid-cols-2 gap-1.5 mb-3 text-[11px] font-semibold text-slate-700">
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">👤 Idoso (60+)</div>
+                                    <div class="border border-red-300 bg-red-50 text-red-800 rounded-lg py-2 px-2.5 font-bold">🏅 Idoso (80+)</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">♿ Deficiência (PCD)</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">🧩 Autismo (TEA)</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">🤰 Gestante</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">👶 Criança de Colo</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">⚖️ Obesidade</div>
+                                    <div class="border border-gray-200 rounded-lg py-2 px-2.5 bg-slate-50">💓 Urgência Médica</div>
+                                </div>
+                                <div class="p-2 border border-gray-200 rounded-lg text-[11px] text-gray-400 bg-slate-50 mb-3">Outros / Observações: Ex: Advogado com prazo...</div>
+                                <div class="bg-red-600 text-white font-bold py-2 rounded-lg text-xs text-center uppercase shadow">Confirmar Prioridade</div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -410,20 +560,19 @@
                 <!-- SEÇÃO 4: PAINEL INDIVIDUAL -->
                 <section id="painel-individual" class="mb-16 pt-8 border-t border-slate-100">
                     <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> 4. Painel de Triagem & Detalhes</h2>
-                    <p>Quando um colaborador clica em <strong>"Atender"</strong>, ele entra em um ambiente seguro, focado apenas naquele assistido.</p>
+                    <p>Quando um colaborador clica em <strong>"Atender"</strong> ou <strong>"Ver Detalhes do Caso"</strong>, ele acessa todas as ferramentas de instrução documental daquele assistido.</p>
 
                     <h3 class="sub-title">4.1. Triagem Inteligente, PDFs e o Botão "Ver Detalhes"</h3>
                     <p>O SIGEP guia o estagiário/servidor no fluxo jurídico de ponta a ponta:</p>
                     
                     <ul>
                         <li><strong>Assuntos Inteligentes:</strong> Ao digitar um assunto (Ex: <em>Alimentos</em>), o SIGEP exibe uma <strong>descrição explicativa</strong> com os requisitos da ação.</li>
-                        <li><strong>Checklist Documental:</strong> Exibe os documentos exatos exigidos. O servidor marca o que foi entregue e se o documento é físico ou digital.</li>
+                        <li><strong>Checklist Documental Dinâmico:</strong> Exibe os documentos exatos exigidos conforme a ação e a ocupação socioeconômica do assistido. O servidor marca o que foi entregue e se o documento é físico ou digital.</li>
                         <li><strong>Planilha de Gastos (Automática) e Texto para Petição:</strong> Indispensável para ações de família. Insira a quantidade de moradores na residência, as despesas comuns da família (calculadas por cota-parte automática) e as despesas exclusivas da criança (100% integral). O SIGEP calcula a <strong>Necessidade Mensal Apurada</strong> e oferece um botão para <strong>Copiar Texto Pronto para a Petição Inicial</strong>, já redigido em linguagem jurídica formal.</li>
                         <li><strong>Perfil Socioeconômico e Dados do Réu:</strong> Campos estruturados para ocupação, profissão, estado civil, renda/fonte de renda do assistido e qualificação completa da parte contrária (polo passivo), incluindo CPF, telefone, endereço residencial, ponto de referência e endereço comercial/empresa.</li>
-                        <li><strong>Prioridade Urgente:</strong> ao marcar um assistido como urgente, o sistema pede o motivo (por exemplo, idoso, gestante ou PCD) e registra a justificativa.</li>
                     </ul>
 
-                    <!-- MOCKUP VISUAL 3: PLANILHA DE GASTOS E COPIAR TEXTO -->
+                    <!-- MOCKUP VISUAL 6: PLANILHA DE GASTOS E COPIAR TEXTO -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
@@ -469,21 +618,6 @@
                     <div class="note-box">
                         <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Download de PDFs Emitidos:</strong> Sempre que uma Planilha de Gastos for gerada ou um checklist for salvo com sucesso, o SIGEP disponibiliza um botão de Download diretamente no Card do assistido ou no menu "Ver Detalhes". Isso permite baixar o PDF limpo e anexá-lo no Verde em segundos!
                     </div>
-
-                    <div class="bg-slate-100 p-4 rounded-lg mb-6 border border-slate-300">
-                        <strong class="text-slate-800 text-lg flex items-center gap-2"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> O Botão "Ver Detalhes"</strong>
-                        <p class="mt-2 text-sm text-slate-700">Presente nos cartões do painel principal, este botão permite dar uma "espiada" rápida no processo. Ao clicar, abre um resumo mostrando quais documentos já foram marcados, o total da Planilha de Gastos e atalhos rápidos para baixar os PDFs gerados, sem precisar abrir o modo de edição.</p>
-                    </div>
-
-                    <h3 class="sub-title">4.2. Aba Encerramento/Fluxo (Destino Final)</h3>
-                    <p>Após a triagem, o colaborador decide o destino do processo:</p>
-                    <ul>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Finalizar Atendimento:</strong> Resolve o caso e move para "Atendidos".</li>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Fila de Distribuição:</strong> Envia o caso para a mesa do Defensor. O servidor escolhe o nome, a finalidade (Assinar, Distribuir ou Corrigir) e adiciona notas de revisão.</li>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Transferir Colega:</strong> O caso é complexo? Transfira para um colega mais sénior atuar.</li>
-                        <li><strong>Ações rápidas (Atendido, Reagendar ou Cancelar):</strong> permite concluir o atendimento direto informando o resultado final (exigindo motivo obrigatório em casos de reagendamento ou cancelamento).</li>
-                        <li><strong>Editar atendente:</strong> permite corrigir qual colaborador ficou responsável pelo caso.</li>
-                    </ul>
                 </section>
 
                 <!-- SEÇÃO 5: MEU PAINEL -->
@@ -499,14 +633,75 @@
                     </ul>
                 </section>
 
-                <!-- SEÇÃO 6: CAPTAÇÃO EXTERNA -->
+                <!-- SEÇÃO 6: CAPTAÇÃO EXTERNA E CÂMERA INTELIGENTE -->
                 <section id="captacao-externa" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> 6. Captação Externa (Autocadastro)</h2>
-                    <p>O módulo de <strong>Captação Externa</strong> permite que o assistido preencha seus dados de forma remota antes do atendimento presencial.</p>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> 6. Captação Externa (Autocadastro, QR Code e Câmera Inteligente)</h2>
+                    <p>O módulo de <strong>Captação Externa (Triagem Digital - <code>captacao.html</code>)</strong> permite que o próprio assistido preencha seus dados, marque seus documentos e fotografe seu RG/CPF pelo celular enquanto aguarda na recepção ou mesmo antes de sair de casa.</p>
                     <ul>
-                        <li><strong>Geração do Link:</strong> Disponível nas opções da pauta para compartilhar um link seguro de cadastro direto com o cidadão.</li>
-                        <li><strong>Agilização:</strong> Os dados informados chegam validados para a equipe, reduzindo o tempo de triagem no balcão.</li>
+                        <li><strong>Modal de Captação Direta (QR Code, WhatsApp e SMS):</strong> Dentro do modal de Detalhes/Checklist do assistido, clique no botão azul <strong>"🔗 Captação"</strong>. O sistema gera um <strong>QR Code na tela</strong> (para o assistido ler com a câmera do celular) e permite digitar o celular dele para enviar o link direto por <strong>WhatsApp</strong> ou <strong>SMS</strong> com um clique.</li>
+                        <li><strong>Divulgação Progressiva Inteligente:</strong> Quando o assistido seleciona sua <em>Ocupação / Vínculo Empregatício</em> (CLT, Aposentado/BPC, Autônomo/Informal ou Desempregado), o formulário filtra e exibe automaticamente apenas os comprovantes de renda específicos daquele perfil.</li>
+                        <li><strong>Câmera Inteligente com Sensor de Luz e Foco:</strong> Na seção 4 do formulário, o assistido abre a câmera pelo navegador. O sistema analisa o brilho da imagem em tempo real: se estiver escuro, avisa <code>⚠️ Muito escuro! Procure mais luz</code>; se houver reflexo, avisa <code>⚠️ Muito claro / Reflexo</code>; e somente quando a imagem está nítida libera o botão verde pulsante <strong>"✨ CAPTURAR FOTO PERFEITA"</strong>.</li>
+                        <li><strong>Busca Automática de CEP (ViaCEP) e Opção "Não Sei Informar":</strong> Ao digitar o CEP residencial ou comercial do Réu e clicar em <em>Buscar</em>, o sistema preenche Rua, Bairro, Cidade e UF sozinho. Caso o assistido desconheça dados socioeconômicos do Réu, há caixas rápidas de <em>"Não sei informar"</em>.</li>
+                        <li><strong>Autobloqueio de Segurança (LGPD):</strong> Assim que o assistido clica em <strong>"Enviar Dados"</strong>, o formulário salva tudo na pauta com o status <code>pre_triagem_concluida</code> e <strong>limpa/bloqueia imediatamente todos os campos sensíveis na tela do celular</strong> (<code>🔒 Dado protegido</code>), impedindo que terceiros vejam ou alterem os dados caso o link seja reaberto.</li>
                     </ul>
+
+                    <!-- MOCKUP VISUAL 7: MODAL QR CODE CAPTAÇÃO + TELA DO CELULAR COM CÂMERA INTELIGENTE -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Captação Direta (QR Code / WhatsApp) + Câmera Inteligente no Celular</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Triagem Digital</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                            <!-- Modal QR Code -->
+                            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 text-center max-w-xs mx-auto w-full">
+                                <h4 class="text-base font-black text-slate-800 mb-1">Captação Direta</h4>
+                                <p class="text-[11px] text-slate-500 mb-3">Peça para o assistido ler o QR Code ou envie o link:</p>
+                                <div class="w-32 h-32 mx-auto mb-3 bg-slate-900 rounded-xl p-3 flex items-center justify-center border-4 border-slate-100">
+                                    <div class="grid grid-cols-3 gap-1.5 w-full h-full">
+                                        <span class="bg-white rounded-sm"></span><span class="bg-emerald-400 rounded-sm"></span><span class="bg-white rounded-sm"></span>
+                                        <span class="bg-emerald-400 rounded-sm"></span><span class="bg-white rounded-sm"></span><span class="bg-emerald-400 rounded-sm"></span>
+                                        <span class="bg-white rounded-sm"></span><span class="bg-emerald-400 rounded-sm"></span><span class="bg-white rounded-sm"></span>
+                                    </div>
+                                </div>
+                                <div class="text-left mb-2.5">
+                                    <span class="block text-[9px] font-bold text-gray-500 uppercase mb-1">WhatsApp / Celular do Assistido:</span>
+                                    <div class="w-full p-2 border border-gray-300 rounded-lg text-xs bg-gray-50 font-mono">(21) 99876-5432</div>
+                                </div>
+                                <div class="bg-slate-700 text-white py-2 rounded-lg text-[11px] font-bold mb-2">📋 COPIAR LINK</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="bg-green-500 text-white py-2 rounded-lg text-[11px] font-bold">WhatsApp</div>
+                                    <div class="bg-blue-500 text-white py-2 rounded-lg text-[11px] font-bold">SMS</div>
+                                </div>
+                            </div>
+
+                            <!-- Tela do Celular com Câmera Inteligente -->
+                            <div class="bg-white p-4 rounded-2xl shadow-md border border-slate-200 max-w-sm mx-auto w-full space-y-3">
+                                <div class="flex items-center justify-between border-b pb-2">
+                                    <span class="text-[11px] font-black text-indigo-600 uppercase">📸 4. FOTO DO DOCUMENTO (RG / CPF)</span>
+                                    <span class="text-[9px] bg-green-100 text-green-800 font-black px-2 py-0.5 rounded-full">APP WEB</span>
+                                </div>
+                                <div class="relative w-full h-40 bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
+                                    <div class="text-slate-600 text-xs font-mono">[ Pré-visualização do Documento ]</div>
+                                    <div class="absolute inset-3 border-2 border-dashed border-white/70 rounded-lg flex items-end justify-center p-2">
+                                        <span class="bg-emerald-600/95 text-white text-[9px] font-black px-2.5 py-1 rounded uppercase tracking-wider shadow">
+                                            ✨ Perfeito! Pode fotografar
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl shadow text-xs uppercase tracking-widest text-center">
+                                    ✨ CAPTURAR FOTO PERFEITA
+                                </div>
+                                <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black p-2 rounded-lg text-center uppercase">
+                                    ✅ Foto Anexada com Sucesso
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- SEÇÃO 7: MESA DIGITAL V5 E PUXADAS -->
@@ -524,7 +719,7 @@
                         <li><strong>Histórico Rápido e Linha do Tempo:</strong> Clicar sobre qualquer cartão do Kanban abre imediatamente o <em>Histórico Rápido</em> do caso (com todo o checklist, perfil socioeconômico e botões de PDF) e o acesso à <em>Linha do Tempo Completa</em> com cada evento cronológico e seu autor.</li>
                     </ul>
 
-                    <!-- MOCKUP VISUAL 4: KANBAN 4 COLUNAS DA MESA DIGITAL -->
+                    <!-- MOCKUP VISUAL 8: KANBAN 4 COLUNAS DA MESA DIGITAL -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
@@ -642,7 +837,7 @@
                         <li><strong>Ações Exclusivas do Defensor:</strong> Além de concluir e distribuir, o Defensor possui os botões <strong>"Devolver p/ Correção"</strong> (retornando o caso diretamente para a mesa do servidor de origem com orientações) e <strong>"Devolver à Distribuição"</strong>.</li>
                     </ul>
 
-                    <!-- MOCKUP VISUAL 5: GERADOR VERDE + SUBFLUXOS ATENDIDO/REAGENDAR/CANCELAR -->
+                    <!-- MOCKUP VISUAL 9: GERADOR VERDE + SUBFLUXOS ATENDIDO/REAGENDAR/CANCELAR -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
@@ -783,13 +978,66 @@
 
                 <!-- SEÇÃO 9: PAINEL DA TV -->
                 <section id="painel-tv" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></svg></span> 9. Painel da TV e Totem</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></svg></span> 9. Painel da TV, Modal de Chamada e Totem</h2>
                     <p>O <strong>Painel da TV</strong> exibe, em uma Smart TV ou monitor da recepção, quem está sendo chamado, sem precisar de login.</p>
 
-                    <h3 class="sub-title">9.1. Meu Local (Guichê)</h3>
-                    <p>Em <strong>Menu de Ações → Painel da TV / Fila → Meu Local (Guichê)</strong>, cada colaborador informa de onde está chamando (por exemplo, "Guichê 1" ou "Sala 3"). Esse local é usado para chamar os assistidos na TV automaticamente. A informação fica salva neste navegador, para cada pauta.</p>
+                    <h3 class="sub-title">9.1. Modal "Definir Local e Delegar" (Chamada na TV)</h3>
+                    <p>Quando o Painel da TV está ativo na pauta e você clica em <strong>"Atender"</strong> ou <strong>"Chamar Próximo"</strong>, o SIGEP abre o modal inteligente <strong>Definir Local e Delegar</strong>:</p>
+                    <ul>
+                        <li><strong>Tipo de Local + Número/Nome:</strong> Escolha entre <em>Sala, Recepção, Vara, Guichê, Mesa, Balcão</em> ou <em>Outro...</em> (digitando um rótulo livre, como "Gabinete") e informe o número/identificador. O sistema memoriza sua última escolha neste computador.</li>
+                        <li><strong>Preview em Tempo Real:</strong> Uma caixa azul central mostra exatamente como o local aparecerá no telão da TV (ex.: <code>Guichê 02</code> ou <code>Sala DD</code>).</li>
+                        <li><strong>Atribuição Conjunta ao Colaborador:</strong> No mesmo modal, você já pode selecionar a qual colaborador (ordenados primeiro pelos que estão <em>livres</em>) o atendimento será delegado. Ao clicar em <strong>"📢 Chamar na TV"</strong>, o sistema delega o caso, envia o e-mail (se cadastrado) e dispara o chamado sonoro na Smart TV simultaneamente.</li>
+                    </ul>
 
-                    <h3 class="sub-title">9.2. Configurar Painel TV</h3>
+                    <!-- MOCKUP VISUAL 10: MODAL DEFINIR LOCAL E DELEGAR (CHAMADA TV) -->
+                    <div class="sigep-preview-window">
+                        <div class="sigep-preview-bar">
+                            <div class="sigep-preview-dots">
+                                <span class="sigep-preview-dot bg-red-500"></span>
+                                <span class="sigep-preview-dot bg-amber-400"></span>
+                                <span class="sigep-preview-dot bg-emerald-500"></span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Modal Definir Local e Delegar — Chamada Direta na Smart TV</span>
+                            </div>
+                            <span class="sigep-preview-label">Visual do Sistema • Chamada TV</span>
+                        </div>
+                        <div class="sigep-preview-body bg-slate-100">
+                            <div class="bg-white max-w-md mx-auto rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                                <div class="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                                    <div>
+                                        <h4 class="font-extrabold text-sm text-slate-800">Definir Local e Delegar</h4>
+                                        <p class="text-xs font-semibold text-blue-600 uppercase">MARIA JOAQUINA DE AMARAL</p>
+                                    </div>
+                                    <span class="text-slate-400 font-bold">✕</span>
+                                </div>
+                                <div class="p-5 space-y-4">
+                                    <div class="grid grid-cols-5 gap-2.5">
+                                        <div class="col-span-2">
+                                            <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo de Local</span>
+                                            <div class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700">Guichê ▾</div>
+                                        </div>
+                                        <div class="col-span-3">
+                                            <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Número / Nome</span>
+                                            <div class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800">03 - Triagem</div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                                        <span class="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-0.5">Aparecerá na TV assim:</span>
+                                        <span class="text-lg font-black text-blue-700">Guichê 03 - Triagem</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atribuir a um colaborador (Opcional)</span>
+                                        <div class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700">Lucas Mendes — Estagiário(a) (livre) ▾</div>
+                                    </div>
+                                </div>
+                                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+                                    <div class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold text-xs py-2.5 rounded-xl text-center">Cancelar</div>
+                                    <div class="flex-[1.5] bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl text-center shadow">📢 Chamar na TV</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="sub-title">9.2. Configurar Painel TV e Proteção por Senha/PIN</h3>
                     <p>Em <strong>Menu de Ações → Configurar Painel TV</strong> você escolhe:</p>
                     <ul>
                         <li><strong>Modo de visualização:</strong>
@@ -800,20 +1048,16 @@
                             </ul>
                         </li>
                         <li><strong>Aviso Sonoro:</strong> ativado ou silencioso.</li>
-                        <li><strong>Logo do Painel Público:</strong> envie uma imagem PNG, JPG, WebP ou SVG (até 5 MB). O sistema reduz a imagem automaticamente. "Usar Padrão" volta para a logo do SIGEP.</li>
-                        <li><strong>PIN de acesso (opcional):</strong> protege o painel com um PIN. Deixar o campo vazio mantém o PIN atual. Para abrir o painel a qualquer pessoa, marque <em>Remover PIN</em>.</li>
+                        <li><strong>Logo do Painel Público:</strong> envie uma imagem PNG, JPG, WebP ou SVG (até 5 MB). O sistema reduz a imagem automaticamente e exibe sem bordas/fundo. "Usar Padrão" volta para a logo do SIGEP.</li>
+                        <li><strong>PIN / Token de Acesso (Painel Protegido):</strong> protege o painel com uma senha/PIN. Ao tentar abrir o painel da TV em uma pauta protegida, o SIGEP exibe o modal <strong>"Painel Protegido"</strong> exigindo o PIN antes de liberar a tela.</li>
                     </ul>
-                    <p>O sistema gera o <strong>link da Smart TV</strong>. Você pode <em>Copiar Link</em> ou <em>Salvar e Abrir TV</em>. Basta colar o link no navegador da TV.</p>
 
                     <div class="warning-box">
                         <strong>Som na TV:</strong> os navegadores podem bloquear o som até que alguém clique na tela. Depois de abrir o painel na TV, clique uma vez na página para liberar o aviso sonoro.
                     </div>
 
-                    <h3 class="sub-title">9.3. Ativar ou Desativar o Painel da TV</h3>
-                    <p>Se a sua pauta não usa TV, desligue a opção <strong>Utilizar Painel da TV</strong> em <em>Editar Configurações</em>. O grupo "Painel da TV / Fila" some do Menu de Ações e as chamadas deixam de ser enviadas.</p>
-
-                    <h3 class="sub-title">9.4. Totem</h3>
-                    <p>A opção <strong>Totem</strong> do Menu de Ações abre a tela do Totem desta pauta em uma nova aba, pronta para ser deixada em um tablet ou computador na recepção.</p>
+                    <h3 class="sub-title">9.3. Ativar ou Desativar o Painel da TV e Totem</h3>
+                    <p>Se a sua pauta não usa TV, desligue a opção <strong>Utilizar Painel da TV</strong> em <em>Editar Configurações</em>. Já a opção <strong>Totem</strong> do Menu de Ações abre a tela de autoatendimento desta pauta em uma nova aba, pronta para ser deixada em um tablet ou computador na recepção.</p>
                 </section>
 
                 <!-- SEÇÃO 10: COLETAS -->
@@ -882,7 +1126,7 @@
                     <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 12. Administração, Sistema de Abas e Permissões</h2>
                     <p>O <strong>Painel do Administrador</strong> é restrito aos gestores da plataforma e foi estruturado em um <strong>Sistema de Abas Inteligentes com carregamento sob demanda</strong>. Além de reduzir drasticamente o consumo de leituras no banco de dados (filtrando consultas por órgão/tenant), todas as listagens contam com <strong>barra de pesquisa em tempo real</strong> e <strong>seletor de paginação flexível (exibindo 15, 20 ou 30 registros por página)</strong>.</p>
 
-                    <!-- MOCKUP VISUAL 6: PAINEL ADMIN EM 7 ABAS, MATRIZ DE PERMISSÕES, LATÊNCIA E PAGINAÇÃO -->
+                    <!-- MOCKUP VISUAL 11: PAINEL ADMIN EM 7 ABAS, MATRIZ DE PERMISSÕES, LATÊNCIA E PAGINAÇÃO -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
@@ -1016,7 +1260,7 @@
                     </div>
                     <ul class="mt-4">
                         <li><strong>Sons:</strong> ligue ou desligue o som de cada tipo. Por padrão, todos tocam (inclusive ao receber novos assistidos na fila ou na sua Mesa Digital).</li>
-                        <li><strong>Avisos na tela:</strong> ligue ou desligue a exibição de cada tipo de notificação.</li>
+                        <li><strong>Avisos na tela (Toasts):</strong> ligue ou desligue a exibição de cada tipo de notificação. Quando um assistido entra na fila de espera, o alerta informativo na tela traz botões de ação rápida para <strong>"Chamar Próximo"</strong> ou <strong>"Ver Detalhes"</strong> diretamente pela notificação.</li>
                         <li>As preferências ficam salvas na sua conta e valem em qualquer computador.</li>
                     </ul>
                     <div class="note-box">
