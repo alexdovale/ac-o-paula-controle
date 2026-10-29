@@ -7,14 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Chosen Palette: Institutional Trust (Slate, Green, Blue, Yellow, Red) -->
-    <!-- Application Structure Plan: The SPA uses a classic "Documentation/Wiki" layout with a fixed sidebar navigation and a scrolling main content area. A ScrollSpy JavaScript function updates the active state in the sidebar as the user reads. The content is broken down into logical operational steps: Profiles -> Pauta Creation -> Kanban Flow -> Individual Attendance -> Dashboard -> Reports/LGPD -> Technology. This allows for quick, targeted onboarding for different user types without needing multiple pages. -->
-    <!-- Visualization & Content Choices: 
-         - Formatting: Used custom CSS classes (.note-box, .warning-box, .wiki-link, .section-title) combined with Tailwind to maintain visual consistency and readability for long-form text.
-         - Icons: Used Unicode emojis instead of SVG to maintain the "NO SVG" constraint while keeping the text highly scannable.
-         - Highlights: Critical system rules (like LGPD data retention and Pauta ordering) are placed inside highlighted boxes to ensure users do not miss them. 
-    -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- Estrutura: layout de Wiki com sidebar fixa e área de conteúdo com ScrollSpy.
+         Ícones: SVG inline (padrão do sistema), sem emojis.
+         Destaques: regras críticas (LGPD, ordem da pauta, senha para fechar) ficam em caixas coloridas. -->
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
@@ -64,6 +59,7 @@
             <nav class="space-y-1">
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Visão Geral</p>
                 <a href="#perfis" class="wiki-link">1. Perfis de Usuário e Acessos</a>
+                <a href="#modos" class="wiki-link">1.1 Modo Normal, Evento e Unidades</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão de Pautas</p>
                 <a href="#criar-pauta" class="wiki-link">2.1 Criar e Ordenar Pauta</a>
@@ -78,13 +74,18 @@
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Módulos Avançados</p>
                 <a href="#captacao-externa" class="wiki-link">6. Captação Externa (Autocadastro)</a>
                 <a href="#mesa-digital" class="wiki-link">7. Mesa Digital & Puxadas</a>
+                <a href="#monitor-equipe" class="wiki-link">8. Monitor da Equipe e Pausas</a>
+                <a href="#painel-tv" class="wiki-link">9. Painel da TV e Totem</a>
+                <a href="#coletas" class="wiki-link">10. Coletas Estatísticas e BI</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão e Governança</p>
-                <a href="#central-pdf" class="wiki-link">8.1 Central de PDFs e Relatórios</a>
-                <a href="#lgpd" class="wiki-link">8.2 Privacidade e LGPD</a>
+                <a href="#central-pdf" class="wiki-link">11.1 Central de PDFs e Relatórios</a>
+                <a href="#lgpd" class="wiki-link">11.2 Privacidade e LGPD</a>
+                <a href="#admin" class="wiki-link">12. Administração e Permissões</a>
                 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Sistema</p>
-                <a href="#tecnologia" class="wiki-link">9. Monitoramento e Sentry</a>
+                <a href="#perfil-sons" class="wiki-link">13. Meu Perfil, Sons e Avisos</a>
+                <a href="#tecnologia" class="wiki-link">14. Conexão, Offline e Sentry</a>
             </nav>
         </aside>
 
@@ -105,10 +106,38 @@
                     <p>O SIGEP é inteligente e adapta a sua interface, botões e permissões de acordo com o cargo do usuário logado. Existem 4 níveis principais de acesso no sistema:</p>
                     
                     <ul class="space-y-4">
-                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Administrador / Superadmin:</strong> Tem controle total da plataforma. Pode aprovar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs) e Estatísticas globais.</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Administrador / Superadmin:</strong> Tem controle total da plataforma. Pode aprovar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs) e Estatísticas globais. O administrador enxerga todas as pautas do seu órgão; o <em>Superadmin Global</em> enxerga as pautas de todos os órgãos.</li>
                         <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Defensor(a):</strong> Possui um fluxo focado em produtividade e aprovação. Tem acesso exclusivo ao "Meu Painel Judicial", uma caixa de entrada onde visualiza apenas os processos que já passaram pela triagem da equipe e estão prontos para revisão, assinatura ou protocolo.</li>
-                        <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor).</li>
+                        <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor). Só enxerga as pautas das quais é dono ou membro.</li>
                         <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Apoio (Recepção):</strong> Focado estritamente no controle de entrada. Pode registrar a chegada dos assistidos (check-in), marcar faltas e fazer encaminhamentos básicos. Por medidas de segurança e preservação da pauta, <strong>o sistema bloqueia</strong> este perfil de realizar ações críticas, como importar planilhas em lote (CSV) ou puxar dados oficiais do Verde.</li>
+                    </ul>
+
+                    <div class="note-box">
+                        <strong>Permissões configuráveis:</strong> o administrador pode ajustar o que cada perfil enxerga e executa no painel de Permissões (veja a seção 12). Por isso, alguns botões podem aparecer ou sumir conforme a configuração do seu órgão.
+                    </div>
+                </section>
+
+                <!-- SEÇÃO 1.1: MODOS -->
+                <section id="modos" class="mb-16 pt-8 border-t border-slate-100">
+                    <h3 class="sub-title"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span> 1.1. Modo Normal, Modo Evento e Unidades</h3>
+                    <p>Depois do login, o SIGEP pergunta em qual <strong>modo</strong> você vai trabalhar. A lista de pautas mostra apenas as pautas do modo escolhido.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="bg-blue-50 p-4 rounded border border-blue-200 shadow-sm">
+                            <span class="font-bold text-blue-800 text-lg">Modo Normal</span>
+                            <p class="text-sm mt-2 text-blue-900">Rotina diária de atendimento. Ao escolher este modo, você seleciona a <strong>unidade</strong> de trabalho: uma unidade específica ou "Todas as minhas unidades". Administradores também podem escolher qualquer unidade do sistema.</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded border border-purple-200 shadow-sm">
+                            <span class="font-bold text-purple-800 text-lg">Modo Evento</span>
+                            <p class="text-sm mt-2 text-purple-900">Para atividades especiais. Ao criar uma pauta neste modo, você escolhe o tipo: <strong>Mutirão</strong>, <strong>Plantão</strong> ou <strong>Ação Social</strong>.</p>
+                        </div>
+                    </div>
+
+                    <ul>
+                        <li><strong>Indicador de modo:</strong> uma etiqueta azul (Normal) ou roxa (Evento) aparece por alguns segundos no canto da tela sempre que você abre a lista de pautas.</li>
+                        <li><strong>Trocar unidade:</strong> disponível apenas no Modo Normal, na tela de pautas.</li>
+                        <li><strong>Trocar modo:</strong> volta para a tela de escolha entre Normal e Evento, encerrando a pauta que estiver aberta.</li>
+                        <li><strong>Filtros da lista:</strong> é possível filtrar por minhas pautas, compartilhadas comigo, ativas ou expiradas, e buscar pelo nome.</li>
                     </ul>
                 </section>
 
@@ -120,9 +149,10 @@
                     <h3 class="sub-title">2.1. Criando uma Nova Pauta</h3>
                     <p>Ao clicar no botão verde <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho:</p>
                     <ul>
-                        <li><strong>Tipo de Pauta:</strong> <em>Agendado</em> (hora marcada), <em>Avulso</em> (ordem de chegada) ou <em>Multi-Salas</em> (encaminha o assistido para salas virtuais/físicas específicas).</li>
+                        <li><strong>Tipo de Pauta:</strong> <em>Agendado</em> (hora marcada), <em>Avulso</em> (ordem de chegada), <em>Híbrido</em> (mostra as duas abas, Agendamento e Avulso) ou <em>Multi-Salas</em> (encaminha o assistido para salas virtuais/físicas específicas).</li>
                         <li><strong>Fluxo de Delegação:</strong> Se ativado, permite que os casos sejam repassados entre estagiários e servidores de forma rastreável.</li>
                         <li><strong>Fila de Distribuição:</strong> Se ativada, cria uma etapa final obrigatória de envio ao Defensor(a) para protocolo.</li>
+                        <li><strong>Tolerância de atraso:</strong> define quantos minutos de atraso o assistido agendado pode ter sem perder o horário (padrão de 15 minutos). O valor aparece em uma etiqueta no topo da pauta.</li>
                     </ul>
 
                     <h3 class="sub-title">2.2. Definindo a Ordem de Atendimento</h3>
@@ -131,6 +161,7 @@
                     <div class="success-box">
                         <strong class="flex items-center gap-2 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Padrão do Sistema (Recomendado)</strong>
                         <p class="mt-2 text-green-900">A fila é organizada <strong>pelo horário agendado</strong>, e não por ordem alfabética. O sistema respeita estritamente o horário da marcação, mas prioriza automaticamente as urgências legais (Idosos 80+, Gestantes, PCD). Se duas pessoas do mesmo horário chegarem juntas, o sistema desempata colocando na frente quem fez o "Check-in" primeiro na recepção.</p>
+                        <p class="mt-2 text-green-900">Quem atrasa <strong>além da tolerância</strong> perde o horário original e passa a valer pelo horário real de chegada, ficando atrás dos pontuais.</p>
                     </div>
                     
                     <ul>
@@ -167,19 +198,37 @@
                 <!-- SEÇÃO 2.5: MENUS -->
                 <section id="menus" class="mb-16 pt-8 border-t border-slate-100">
                     <h3 class="sub-title">2.5. Menus Superiores (Ações e Colunas)</h3>
-                    <p>No topo direito do painel de qualquer pauta, existem dois botões essenciais para gerenciar a dinâmica do dia:</p>
-                    
-                    <h4 class="font-bold text-gray-800 mt-4 mb-2">A. O Menu de Ações (Botão Verde)</h4>
+                    <p>No topo direito do painel de qualquer pauta, existem botões essenciais para gerenciar a dinâmica do dia:</p>
+
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">A. Avisos rápidos ao lado do menu</h4>
+                    <p>Etiquetas coloridas aparecem sozinhas, em tempo real, conforme a situação da equipe:</p>
                     <ul>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> <strong>Compartilhamento Externo:</strong> Gera um link público de acompanhamento.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg> <strong>Ver Estatísticas:</strong> Permite ver os dados estatísticos da pauta individualmente e <strong>emitir um PDF gerencial</strong> (funciona mesmo para pautas antigas já encerradas).</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <strong>Editar Configurações:</strong> Permite ligar/desligar a fila de distribuição ou mudar a regra de Ordem.</li>
+                        <li><span class="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold">LIVRE(S)</span> colaboradores presentes e sem nenhum caso em mãos. Clique para ver a lista.</li>
+                        <li><span class="inline-block px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-300 text-xs font-bold">PAUSA(S)</span> colaboradores em pausa. Clique para ver nomes e motivos (veja a seção 8).</li>
+                        <li><span class="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">PUXADA(S)</span> pedidos de puxada de fila aguardando autorização (veja a seção 7).</li>
+                    </ul>
+                    
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Ações (Botão Verde)</h4>
+                    <ul>
+                        <li><strong>Monitor da Equipe:</strong> painel em tempo real com o que cada pessoa está fazendo (seção 8).</li>
+                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> <strong>Compartilhamento Externo:</strong> liga ou desliga o acesso público (Público/Privado) e gera o link de acompanhamento. A opção <em>ocultar nomes</em> mascara os nomes dos assistidos na página pública.</li>
+                        <li><strong>Totem:</strong> abre a tela do Totem desta pauta em uma nova aba.</li>
+                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg> <strong>Ver Estatísticas:</strong> Permite ver os dados estatísticos da pauta individualmente e <strong>emitir um PDF gerencial</strong>.</li>
+                        <li><strong>Editar Nome da Pauta</strong> e <svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <strong>Editar Configurações:</strong> ligar/desligar a fila de distribuição, mudar a regra de Ordem e ativar ou desativar o uso do Painel da TV nesta pauta.</li>
+                        <li><strong>Compartilhar Pauta (Membros):</strong> adiciona ou remove usuários que podem acessar a pauta. O dono da pauta não pode ser removido.</li>
                         <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> <strong>Colaboradores:</strong> Gerencia a "Lista de Presença" da equipe e a <strong>Ata de Ação Social</strong>.</li>
-                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <strong>Fechar Pauta / Zerar Pauta:</strong> Protege ou limpa a pauta (Requer senha).</li>
+                        <li><strong>Anotações:</strong> bloco de notas da pauta.</li>
+                        <li><strong>Painel da TV / Fila:</strong> grupo com <em>Meu Local (Guichê)</em> e <em>Configurar Painel TV</em> (seção 9). Só aparece se o Painel da TV estiver ativado na pauta.</li>
+                        <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <strong>Fechar / Reabrir Pauta:</strong> protege a pauta contra alterações. <strong>Só o dono da pauta pode fazer isso, e é preciso digitar a própria senha.</strong></li>
+                        <li><strong>Zerar Pauta:</strong> apaga todos os assistidos da pauta, mas mantém a pauta criada. Pede confirmação.</li>
                     </ul>
 
-                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Exibição (Engrenagem <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> )</h4>
-                    <p>Permite ligar ou desligar as colunas do seu painel <em>Kanban</em> (Em Atendimento, Distribuição, Faltosos), ajudando a limpar visualmente a tela em celulares ou telas pequenas.</p>
+                    <div class="alert-box">
+                        <strong>Excluir uma pauta é definitivo.</strong> Só o dono ou um administrador pode excluir. O sistema apaga a pauta e todos os atendimentos dela, e não há como desfazer.
+                    </div>
+
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">C. O Menu de Exibição (Engrenagem <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> )</h4>
+                    <p>Permite ligar ou desligar as colunas do seu painel <em>Kanban</em> (Em Atendimento, Distribuição, Faltosos), ajudando a limpar visualmente a tela em celulares ou telas pequenas. A sua escolha fica salva neste navegador. Em pautas <strong>Multi-Salas</strong>, o botão <strong>Gerenciar Salas</strong> permite renomear as salas: os assistidos já alocados acompanham o novo nome.</p>
                 </section>
 
                 <!-- SEÇÃO 3: KANBAN -->
@@ -225,8 +274,10 @@
                     
                     <ul>
                         <li><strong>Assuntos Inteligentes:</strong> Ao digitar um assunto (Ex: <em>Alimentos</em>), o SIGEP exibe uma <strong>descrição explicativa</strong> com os requisitos da ação.</li>
-                        <li><strong>Checklist Documental:</strong> Exibe os documentos exatos exigidos. O servidor marca o que foi entregue.</li>
+                        <li><strong>Checklist Documental:</strong> Exibe os documentos exatos exigidos. O servidor marca o que foi entregue e se o documento é físico ou digital.</li>
                         <li><strong>Planilha de Gastos (Automática):</strong> Indispensável para ações de família. Insira as despesas e o SIGEP calcula o valor total automaticamente.</li>
+                        <li><strong>Dados do Réu:</strong> campos para qualificação da outra parte (endereço residencial e comercial), que seguem para os documentos gerados.</li>
+                        <li><strong>Prioridade Urgente:</strong> ao marcar um assistido como urgente, o sistema pede o motivo (por exemplo, idoso, gestante ou PCD) e registra a justificativa.</li>
                     </ul>
 
                     <div class="note-box">
@@ -244,6 +295,8 @@
                         <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Finalizar Atendimento:</strong> Resolve o caso e move para "Atendidos".</li>
                         <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Fila de Distribuição:</strong> Envia o caso para a mesa do Defensor. O servidor escolhe o nome e adiciona notas de revisão.</li>
                         <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Transferir Colega:</strong> O caso é complexo? Transfira para um colega mais sénior atuar.</li>
+                        <li><strong>Ações rápidas:</strong> para casos simples (reagendar, agendar, consulta, outros) é possível concluir o atendimento direto, sem passar pelo fluxo completo.</li>
+                        <li><strong>Editar atendente:</strong> permite corrigir qual colaborador ficou responsável pelo caso.</li>
                     </ul>
                 </section>
 
@@ -256,13 +309,13 @@
                         <li><strong>Como acessar:</strong> Clique no botão "Meu Painel" dentro do atendimento, ou em "Ver Dashboard" na tela inicial.</li>
                         <li><strong>Se você for Defensor(a):</strong> Verá a aba <em>Aguardando Assinatura</em>, com os processos que os servidores distribuíram diretamente para o seu nome assinar.</li>
                         <li><strong>Se você for Servidor/Estagiário:</strong> Verá a aba <em>Meus Casos</em>, que é sua caixa de entrada com os atendimentos que você puxou para si ou que lhe transferiram.</li>
-                        <li><strong>Fluxo Ágil:</strong> Ao clicar em "Abrir e Assinar" no seu painel, você revisa, finaliza, e clica em <strong>"⬅️ Voltar ao Meu Painel"</strong>, retornando à sua fila privada imediatamente.</li>
+                        <li><strong>Fluxo Ágil:</strong> Ao clicar em "Abrir e Assinar" no seu painel, você revisa, finaliza, e clica em <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> Voltar ao Meu Painel</strong>, retornando à sua fila privada imediatamente.</li>
                     </ul>
                 </section>
 
-                <!-- SEÇÃO 6: MÓDULOS AVANÇADOS -->
+                <!-- SEÇÃO 6: CAPTAÇÃO EXTERNA -->
                 <section id="captacao-externa" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span>🌐</span> 6. Captação Externa (Autocadastro)</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> 6. Captação Externa (Autocadastro)</h2>
                     <p>O módulo de <strong>Captação Externa</strong> permite que o assistido preencha seus dados de forma remota antes do atendimento presencial.</p>
                     <ul>
                         <li><strong>Geração do Link:</strong> Disponível nas opções da pauta para compartilhar um link seguro de cadastro direto com o cidadão.</li>
@@ -270,21 +323,134 @@
                     </ul>
                 </section>
 
+                <!-- SEÇÃO 7: MESA DIGITAL E PUXADAS -->
                 <section id="mesa-digital" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span>⚡</span> 7. Mesa Digital & Gestão de Puxadas</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span> 7. Mesa Digital & Gestão de Puxadas</h2>
                     <p>A <strong>Mesa Digital</strong> centraliza a atuação individual dos colaboradores fora do balcão principal.</p>
                     <div class="success-box">
-                        <strong>🔔 Monitor de Puxadas em Tempo Real</strong>
-                        <p class="mt-2 text-green-900">Quando um colaborador solicita antecipar um caso através da função <em>"Puxar para mim"</em>, o coordenador recebe um alerta visual em tempo real no botão <strong>PUXADA(S)</strong> ao lado do menu de Ações. Através do monitor integrado, é possível analisar a justificativa e decidir por <em>Autorizar e Delegar</em> ou <em>Negar e Devolver</em> com um único clique.</p>
+                        <strong class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Monitor de Puxadas em Tempo Real</strong>
+                        <p class="mt-2 text-green-900">Quando um colaborador solicita antecipar um caso através da função <em>"Puxar para mim"</em>, o coordenador recebe um alerta visual em tempo real no botão <strong>PUXADA(S)</strong> ao lado do menu de Ações.</p>
+                    </div>
+                    <p>Ao clicar no alerta, abre o <strong>Monitor de Puxadas de Fila</strong>. Cada pedido mostra:</p>
+                    <ul>
+                        <li>o nome do assistido, o assunto e a etiqueta <strong>Urgente</strong>, quando houver;</li>
+                        <li>quem solicitou a puxada;</li>
+                        <li>o horário agendado, o horário de chegada e a sala;</li>
+                        <li>a <strong>justificativa</strong> escrita pelo colaborador.</li>
+                    </ul>
+                    <p>E você decide com um clique:</p>
+                    <ul>
+                        <li><strong>Autorizar e Delegar:</strong> o caso passa para "Em Atendimento" no nome de quem pediu e o sistema já abre a definição do local de atendimento.</li>
+                        <li><strong>Negar e Devolver:</strong> o assistido volta para a fila de "Aguardando" e a recusa fica registrada no histórico do caso.</li>
+                    </ul>
+                </section>
+
+                <!-- SEÇÃO 8: MONITOR DA EQUIPE E PAUSAS -->
+                <section id="monitor-equipe" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span> 8. Monitor da Equipe e Pausas</h2>
+                    <p>O <strong>Monitor da Equipe</strong> mostra, em tempo real, o que cada pessoa está fazendo. Abra pelo <strong>Menu de Ações → Monitor da Equipe</strong>.</p>
+
+                    <h3 class="sub-title">8.1. Cards de Métricas</h3>
+                    <p>No topo, cinco cards coloridos resumem a pauta. Clicando em um deles, o sistema fecha o monitor e leva você direto à coluna correspondente (se a coluna estiver escondida, ela é ligada automaticamente):</p>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-indigo-600 uppercase">Em Mesa</p>
+                            <p class="text-[11px] text-indigo-900 mt-1">Casos em atendimento agora</p>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-blue-600 uppercase">Assinaturas</p>
+                            <p class="text-[11px] text-blue-900 mt-1">Aguardando o Defensor assinar</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-amber-600 uppercase">Avaliações</p>
+                            <p class="text-[11px] text-amber-900 mt-1">Casos devolvidos para correção</p>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-red-600 uppercase flex items-center justify-center gap-1"><svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg> Pausas</p>
+                            <p class="text-[11px] text-red-900 mt-1">Pessoas em pausa</p>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-green-600 uppercase">Protocolados</p>
+                            <p class="text-[11px] text-green-900 mt-1">Casos finalizados pela equipe</p>
+                        </div>
+                    </div>
+
+                    <h3 class="sub-title">8.2. Colunas do Monitor</h3>
+                    <ul>
+                        <li><strong>Servidores:</strong> cada servidor aparece com um ponto verde (presente) ou cinza (ausente) e com o status <em>Livre</em> ou <em>N Em Mesa</em>. Ao lado, a lista dos casos que ele está atendendo, com o horário de início.</li>
+                        <li><strong>Defensores:</strong> mostra quantas <em>Assinaturas</em> e <em>Avaliações</em> cada defensor tem pendentes, com o nome do assistido, assunto e quem enviou o caso.</li>
+                        <li><strong>Últimos Concluídos:</strong> os casos protocolados, com o responsável e o horário.</li>
+                        <li><strong>Busca:</strong> o campo no topo filtra por assistido, servidor, assunto ou motivo.</li>
+                    </ul>
+
+                    <h3 class="sub-title">8.3. Pausa de Colaboradores</h3>
+                    <p>Quando um colaborador sai da mesa (almoço, reunião, banheiro), ele entra em <strong>pausa</strong> e informa o motivo. A equipe é avisada na hora:</p>
+                    <ul>
+                        <li>Aparece a etiqueta vermelha <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-300 text-xs font-bold"><svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg> 1 PAUSA(S)</span> ao lado do Menu de Ações. No celular ela aparece de forma compacta, só com o ícone e o número.</li>
+                        <li>Ao clicar, abre a lista <strong>Equipe em Pausa</strong>, com o nome, o cargo e o <strong>motivo informado</strong> por cada pessoa.</li>
+                        <li>No Monitor da Equipe, quem está em pausa recebe o selo <strong>PAUSADO</strong> e uma caixa vermelha com o motivo.</li>
+                        <li>Quem está em pausa <strong>não é contado como livre</strong> e sai da etiqueta verde LIVRE(S).</li>
+                    </ul>
+                    <div class="note-box">
+                        <strong>Dica:</strong> a etiqueta de pausa desaparece sozinha quando todos retomam o atendimento. Não é preciso atualizar a página.
                     </div>
                 </section>
 
-                <!-- SEÇÃO 8: GESTÃO E GOVERNANÇA -->
+                <!-- SEÇÃO 9: PAINEL DA TV -->
+                <section id="painel-tv" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></svg></span> 9. Painel da TV e Totem</h2>
+                    <p>O <strong>Painel da TV</strong> exibe, em uma Smart TV ou monitor da recepção, quem está sendo chamado, sem precisar de login.</p>
+
+                    <h3 class="sub-title">9.1. Meu Local (Guichê)</h3>
+                    <p>Em <strong>Menu de Ações → Painel da TV / Fila → Meu Local (Guichê)</strong>, cada colaborador informa de onde está chamando (por exemplo, "Guichê 1" ou "Sala 3"). Esse local é usado para chamar os assistidos na TV automaticamente. A informação fica salva neste navegador, para cada pauta.</p>
+
+                    <h3 class="sub-title">9.2. Configurar Painel TV</h3>
+                    <p>Em <strong>Menu de Ações → Configurar Painel TV</strong> você escolhe:</p>
+                    <ul>
+                        <li><strong>Modo de visualização:</strong>
+                            <ul class="mt-2">
+                                <li><em>Lista (Fila):</em> grade mostrando quem está nas mesas e os próximos da fila.</li>
+                                <li><em>TV Padrão:</em> painel de chamada limpo, com aviso sonoro e histórico.</li>
+                                <li><em>TV + Vídeo:</em> divide a tela entre um vídeo institucional e os últimos chamados. Exige o link de um vídeo do YouTube.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Aviso Sonoro:</strong> ativado ou silencioso.</li>
+                        <li><strong>Logo do Painel Público:</strong> envie uma imagem PNG, JPG, WebP ou SVG (até 5 MB). O sistema reduz a imagem automaticamente. "Usar Padrão" volta para a logo do SIGEP.</li>
+                        <li><strong>PIN de acesso (opcional):</strong> protege o painel com um PIN. Deixar o campo vazio mantém o PIN atual. Para abrir o painel a qualquer pessoa, marque <em>Remover PIN</em>.</li>
+                    </ul>
+                    <p>O sistema gera o <strong>link da Smart TV</strong>. Você pode <em>Copiar Link</em> ou <em>Salvar e Abrir TV</em>. Basta colar o link no navegador da TV.</p>
+
+                    <div class="warning-box">
+                        <strong>Som na TV:</strong> os navegadores podem bloquear o som até que alguém clique na tela. Depois de abrir o painel na TV, clique uma vez na página para liberar o aviso sonoro.
+                    </div>
+
+                    <h3 class="sub-title">9.3. Ativar ou Desativar o Painel da TV</h3>
+                    <p>Se a sua pauta não usa TV, desligue a opção <strong>Utilizar Painel da TV</strong> em <em>Editar Configurações</em>. O grupo "Painel da TV / Fila" some do Menu de Ações e as chamadas deixam de ser enviadas.</p>
+
+                    <h3 class="sub-title">9.4. Totem</h3>
+                    <p>A opção <strong>Totem</strong> do Menu de Ações abre a tela do Totem desta pauta em uma nova aba, pronta para ser deixada em um tablet ou computador na recepção.</p>
+                </section>
+
+                <!-- SEÇÃO 10: COLETAS -->
+                <section id="coletas" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span> 10. Coletas Estatísticas e BI</h2>
+                    <p>O módulo de <strong>Coletas</strong> serve para levantar dados estatísticos (por exemplo, produtividade de uma vara) por meio de formulários próprios, separados das pautas.</p>
+                    <ol>
+                        <li>Na tela inicial, abra o módulo <strong>Coletas</strong>.</li>
+                        <li>Clique em <strong>Nova Coleta</strong> e dê um nome (ex.: "Produtividade - Varas de Família").</li>
+                        <li>Em <strong>Configurar</strong>, monte o formulário: o dicionário de campos e os links externos de preenchimento.</li>
+                        <li>Compartilhe os links gerados com quem vai preencher.</li>
+                        <li>Em <strong>Resultados</strong>, acompanhe os dados consolidados e os gráficos (BI).</li>
+                    </ol>
+                    <p>Cada coleta mostra quantos campos tem cadastrados e quantos links já foram gerados.</p>
+                </section>
+
+                <!-- SEÇÃO 11: GESTÃO E GOVERNANÇA -->
                 <section id="central-pdf" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> 8. Gestão, Central de PDFs e LGPD</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> 11. Gestão, Central de PDFs e LGPD</h2>
                     <p>O SIGEP não apenas organiza a fila, mas é uma verdadeira máquina de gerar documentos oficiais para compor os processos.</p>
 
-                    <h3 class="sub-title">8.1. Central de Documentos e Relatórios em PDF</h3>
+                    <h3 class="sub-title">11.1. Central de Documentos e Relatórios em PDF</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
                             <strong class="text-blue-700">Estatísticas da Pauta (Dashboard)</strong>
@@ -298,8 +464,8 @@
                         </div>
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
                             <strong class="text-blue-700">Ata de Ação Social (Mutirões)</strong>
-                            <p class="text-xs mt-1 mb-2 text-gray-500">Ações → Colaboradores → Gerar Ata Social</p>
-                            <p class="text-sm">Gera documento oficial com logotipo, total de atendimentos e lista de presença da equipe com espaço para assinaturas.</p>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Menu de Ações → Gerar Ata Social</p>
+                            <p class="text-sm">Informe a ação, o endereço, a data e o órgão. O sistema gera o documento oficial com o total de atendimentos e a lista de presença da equipe, com espaço para assinaturas. Você pode visualizar antes de baixar.</p>
                         </div>
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
                             <strong class="text-blue-700">Relatório Diário de Atendidos / Faltosos</strong>
@@ -308,23 +474,75 @@
                         </div>
                     </div>
 
-                    <h3 class="sub-title mt-10" id="lgpd"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 8.2. Privacidade, LGPD e o Prazo da Pauta</h3>
+                    <h3 class="sub-title mt-10" id="lgpd"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 11.2. Privacidade, LGPD e o Prazo da Pauta</h3>
                     <p>O SIGEP opera em conformidade com a LGPD. Ele é projetado para agilidade diária e não funciona como arquivo morto perpétuo (este papel cabe ao Verde/Solar).</p>
 
                     <div class="alert-box">
-                        <strong class="text-lg">Exclusão de Dados Pessoais Sensíveis</strong>
-                        <p class="mt-2 text-red-900">Quando ocorre o <strong>cumprimento do prazo para encerrar a pauta</strong> (após 7 dias a pauta expira), o sistema realiza uma limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
+                        <strong class="text-lg">Prazo de 7 dias e exclusão de dados pessoais</strong>
+                        <p class="mt-2 text-red-900">A pauta vale por <strong>7 dias a partir da data de atuação</strong> (ou da data de criação, quando não há data de atuação). Passado esse prazo, <strong>a pauta expira e não pode mais ser aberta</strong>, e o sistema realiza a limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
                     </div>
 
                     <div class="success-box">
                         <strong class="text-lg">Preservação das Estatísticas</strong>
-                        <p class="mt-2 text-green-900">Embora os dados pessoais sejam deletados para proteger os assistidos, <strong>os dados quantitativos e estatísticos ficam salvos de forma anônima</strong>. Graças a isso, você pode clicar na opção <strong>"Ver Estatísticas"</strong> de pautas antigas e expiradas para visualizar gráficos e emitir o PDF gerencial daquele dia sem ferir a LGPD!</p>
+                        <p class="mt-2 text-green-900">Embora os dados pessoais sejam deletados para proteger os assistidos, <strong>os dados quantitativos e estatísticos ficam salvos de forma anônima</strong>, sem ferir a LGPD.</p>
+                    </div>
+
+                    <div class="note-box">
+                        <strong>Outras proteções:</strong> fechar a pauta exige a senha do dono; o link público pode ocultar os nomes dos assistidos; o Painel da TV pode ser protegido por PIN; e todas as ações importantes ficam registradas no log de auditoria.
                     </div>
                 </section>
 
-                <!-- SEÇÃO 9: SENTRY E TECNOLOGIA -->
+                <!-- SEÇÃO 12: ADMINISTRAÇÃO -->
+                <section id="admin" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 12. Administração e Permissões</h2>
+                    <p>O <strong>Painel do Administrador</strong> aparece apenas para quem tem perfil de administrador. Ele reúne tudo o que é gestão do sistema:</p>
+                    <ul>
+                        <li><strong>Gerenciar Unidades / Órgãos:</strong> cadastro das unidades de trabalho, com importação em lote.</li>
+                        <li><strong>Gerenciar Recepções (Unidades de Apoio):</strong> cadastro das recepções vinculadas às unidades.</li>
+                        <li><strong>Usuários Pendentes:</strong> novos cadastros aguardam aprovação do administrador antes de acessar o sistema. Há busca por nome.</li>
+                        <li><strong>Usuários do Sistema:</strong> tabela com o perfil atual, as unidades vinculadas, a alteração de permissão e a exclusão do usuário.</li>
+                        <li><strong>Logs de Auditoria:</strong> registro de quem fez o quê e quando, com filtros por usuário, ação e período, e exportação em PDF.</li>
+                        <li><strong>Limpar Dados:</strong> limpeza de dados antigos, conforme o prazo da LGPD.</li>
+                        <li><strong>BI Dashboard:</strong> indicadores gerais de uso do sistema.</li>
+                        <li><strong>Permissões:</strong> ao final da página, o administrador ajusta o que cada perfil pode ver e fazer.</li>
+                    </ul>
+                    <div class="warning-box">
+                        <strong>Atenção:</strong> excluir um usuário e limpar dados são ações administrativas sensíveis. Confirme antes de executar.
+                    </div>
+                    <p>Usuários também podem ser vinculados a mais de uma unidade. Isso define quais unidades aparecem na escolha do Modo Normal. A <strong>Recepção Central</strong>, acessada por botão na tela inicial, concentra a visão das recepções.</p>
+                </section>
+
+                <!-- SEÇÃO 13: PERFIL E SONS -->
+                <section id="perfil-sons" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span> 13. Meu Perfil, Sons e Avisos</h2>
+                    <p>Em <strong>Meu Perfil</strong> você vê seus dados e escolhe como o sistema avisa você. Os avisos aparecem como notificações no canto da tela, e cada tipo pode ter som:</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center text-sm font-bold text-emerald-700">Sucesso</div>
+                        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 text-center text-sm font-bold text-rose-700">Erro</div>
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-center text-sm font-bold text-indigo-700">Informação</div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center text-sm font-bold text-amber-700">Aviso</div>
+                    </div>
+                    <ul class="mt-4">
+                        <li><strong>Sons:</strong> ligue ou desligue o som de cada tipo. Por padrão, todos tocam.</li>
+                        <li><strong>Avisos na tela:</strong> ligue ou desligue a exibição de cada tipo de notificação.</li>
+                        <li>As preferências ficam salvas na sua conta e valem em qualquer computador.</li>
+                    </ul>
+                    <div class="note-box">
+                        <strong>Sem som?</strong> Confira se o volume do computador está ligado e se o seu navegador não está bloqueando o áudio da página. Se a preferência estiver desligada em Meu Perfil, o som não toca.
+                    </div>
+                </section>
+
+                <!-- SEÇÃO 14: CONEXÃO E SENTRY -->
                 <section id="tecnologia" class="mb-10 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg></span> 9. Monitoramento Avançado (Sentry)</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg></span> 14. Conexão, Modo Offline e Monitoramento (Sentry)</h2>
+
+                    <h3 class="sub-title">14.1. Se a internet cair</h3>
+                    <p>O SIGEP guarda uma cópia local dos dados. Se a conexão cair, um <strong>indicador de offline</strong> aparece na tela e você continua vendo a pauta. Quando a internet volta, o sistema avisa com a mensagem "Conexão restabelecida!" (e um som, se estiver ativado) e sincroniza as alterações.</p>
+                    <div class="warning-box">
+                        <strong>Importante:</strong> o cache funciona melhor com apenas uma aba do sistema aberta por navegador. Evite editar o mesmo assistido em dois computadores ao mesmo tempo.
+                    </div>
+
+                    <h3 class="sub-title">14.2. Monitoramento Avançado (Sentry)</h3>
                     <p>Para garantir que o sistema não deixe a equipe na mão durante um mutirão com centenas de pessoas, o SIGEP conta com integração nativa ao <strong>Sentry</strong> (Monitoramento de Infraestrutura).</p>
                     
                     <ul class="mt-4">
@@ -356,8 +574,7 @@
                 
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
-                    const sectionHeight = section.clientHeight;
-                    // Adjusted offset to trigger earlier when scrolling down
+                    // Offset ajustado para acionar um pouco antes ao rolar para baixo
                     if (contentArea.scrollTop >= (sectionTop - 200)) {
                         current = section.getAttribute('id');
                     }
@@ -371,10 +588,9 @@
                 });
             });
 
-            // Smooth scrolling behavior adjustment for links
+            // Rolagem suave ao clicar nos links do menu
             navLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
-                    // Let default anchor jump happen, but then we scroll spy handles highlight
                     setTimeout(() => {
                         const targetId = this.getAttribute('href').substring(1);
                         const targetSection = document.getElementById(targetId);
