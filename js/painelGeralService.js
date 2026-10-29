@@ -1,4 +1,3 @@
-
 // js/painelGeralService.js - MONITOR DE EQUIPE (PADRÃO MINIMALISTA SIGEP)
 
 import { escapeHTML } from './utils.js';
@@ -42,7 +41,7 @@ export const PainelGeralService = {
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                 </span>
-                                <input type="search" id="busca-painel-monitor" placeholder="Buscar assistido ou assunto..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-all font-medium">
+                                <input type="search" id="busca-painel-monitor" placeholder="Buscar assistido, servidor ou motivo..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-all font-medium">
                             </div>
 
                             <button id="close-painel-geral-modal-btn" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm shrink-0">
@@ -151,6 +150,9 @@ export const PainelGeralService = {
         const defensores = colaboradoresDb.filter(c => c.cargo?.toLowerCase().includes('defensor'));
         const servidores = colaboradoresDb.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
 
+        // Contagem de quem está com status pausado
+        const totalPausados = colaboradoresDb.filter(c => c.status === 'pausado').length;
+
         const getBadges = (a) => {
             let badges = '';
             if (a.numeroProcesso) {
@@ -179,17 +181,32 @@ export const PainelGeralService = {
         let defensoresHtml = '';
         Object.keys(countDefensores).sort().forEach(def => {
             const stats = countDefensores[def];
-            const isLivre = stats.distrib.length === 0 && stats.correcao.length === 0;
+            const estaPausado = stats.dataObj.status === 'pausado';
+            const isLivre = stats.distrib.length === 0 && stats.correcao.length === 0 && !estaPausado;
             
-            let statusVisual = isLivre 
-                ? `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`
-                : `<div class="flex gap-1.5">
+            let statusVisual = '';
+            if (estaPausado) {
+                // Baguete dos paus em vermelho vivo com farofa com alho crítica
+                statusVisual = `
+                    <div class="flex flex-col items-end">
+                        <span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-xl text-[10px] font-extrabold border border-red-300 flex items-center gap-1 shadow-sm">
+                            <span>⏸️</span> PAUSADO
+                        </span>
+                        <span class="text-[9px] font-bold text-red-700 italic mt-0.5 max-w-[140px] truncate" title="${escapeHTML(stats.dataObj.motivoPausa || 'Ausente')}">
+                            ${escapeHTML(stats.dataObj.motivoPausa || 'Farofa com alho')}
+                        </span>
+                    </div>`;
+            } else if (isLivre) {
+                statusVisual = `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`;
+            } else {
+                statusVisual = `<div class="flex gap-1.5">
                      ${stats.distrib.length > 0 ? `<span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-blue-200">${stats.distrib.length} Assinatura(s)</span>` : ''}
                      ${stats.correcao.length > 0 ? `<span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-amber-200">${stats.correcao.length} Avaliação(ões)</span>` : ''}
                    </div>`;
+            }
 
             let detalhesHtml = '';
-            if (!isLivre) {
+            if (!isLivre && !estaPausado) {
                 detalhesHtml = `<div class="mt-3 space-y-2 pt-3 border-t border-slate-100">`;
                 
                 stats.distrib.forEach(a => {
@@ -223,7 +240,7 @@ export const PainelGeralService = {
             const emailExibição = stats.dataObj.email ? `<p class="text-xs font-mono text-slate-500 mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             defensoresHtml += `
-                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${estaPausado ? 'border-red-200 bg-red-50/20' : ''}">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm flex items-center">${ico('user')} ${escapeHTML(def)} ${presenca}</h3>
@@ -251,14 +268,29 @@ export const PainelGeralService = {
         let servidoresHtml = '';
         Object.keys(countServidores).sort().forEach(serv => {
             const stats = countServidores[serv];
-            const isLivre = stats.mesa.length === 0;
+            const estaPausado = stats.dataObj.status === 'pausado';
+            const isLivre = stats.mesa.length === 0 && !estaPausado;
             
-            let statusVisual = isLivre 
-                ? `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`
-                : `<span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-indigo-200">${stats.mesa.length} Em Mesa</span>`;
+            let statusVisual = '';
+            if (estaPausado) {
+                // Baguete dos paus em vermelho vivo com farofa com alho crítica
+                statusVisual = `
+                    <div class="flex flex-col items-end">
+                        <span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-xl text-[10px] font-extrabold border border-red-300 flex items-center gap-1 shadow-sm">
+                            <span>⏸️</span> PAUSADO
+                        </span>
+                        <span class="text-[9px] font-bold text-red-700 italic mt-0.5 max-w-[140px] truncate" title="${escapeHTML(stats.dataObj.motivoPausa || 'Ausente')}">
+                            ${escapeHTML(stats.dataObj.motivoPausa || 'Farofa com alho')}
+                        </span>
+                    </div>`;
+            } else if (isLivre) {
+                statusVisual = `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`;
+            } else {
+                statusVisual = `<span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-indigo-200">${stats.mesa.length} Em Mesa</span>`;
+            }
 
             let detalhesHtml = '';
-            if (!isLivre) {
+            if (!isLivre && !estaPausado) {
                 detalhesHtml = `<div class="mt-3 space-y-2 pt-3 border-t border-slate-100">`;
                 stats.mesa.forEach(a => {
                     const hora = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
@@ -279,7 +311,7 @@ export const PainelGeralService = {
             const emailExibição = stats.dataObj.email ? `<p class="text-xs font-mono text-slate-500 mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             servidoresHtml += `
-                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${estaPausado ? 'border-red-200 bg-red-50/20' : ''}">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm flex items-center">${ico('user')} ${escapeHTML(serv)} ${presenca}</h3>
@@ -324,25 +356,31 @@ export const PainelGeralService = {
 
         conteudo.innerHTML = `
             <!-- CARDS DE MÉTRICAS (PADRÃO SIMPLES E LIMPO) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <button data-target="em-atendimento-column" data-toggle="toggle-em-atendimento" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+                <button data-target="em-atendimento-column" data-toggle="toggle-em-atendimento" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
                     <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Em Mesa</p>
-                    <p class="text-3xl font-black text-slate-800">${emMesa.length}</p>
+                    <p class="text-2xl font-black text-slate-800">${emMesa.length}</p>
                 </button>
                 
-                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
                     <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Assinaturas</p>
-                    <p class="text-3xl font-black text-slate-800">${distrib.length}</p>
+                    <p class="text-2xl font-black text-slate-800">${distrib.length}</p>
                 </button>
 
-                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
                     <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Avaliações</p>
-                    <p class="text-3xl font-black text-slate-800">${correcao.length}</p>
+                    <p class="text-2xl font-black text-slate-800">${correcao.length}</p>
                 </button>
 
-                <button data-target="atendidos-column" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                <!-- CARD MÉTRICO DE PAUSADOS COM BAGUETE EM VERMELHO VIVO -->
+                <div class="card-metrica bg-red-50/50 rounded-2xl border border-red-200 p-4 text-center shadow-sm flex flex-col items-center justify-center">
+                    <p class="text-xs font-extrabold text-red-600 uppercase tracking-wide mb-1 flex items-center gap-1"><span>⏸️</span> Pausas</p>
+                    <p class="text-2xl font-black text-red-700">${totalPausados}</p>
+                </div>
+
+                <button data-target="atendidos-column" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
                     <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Protocolados</p>
-                    <p class="text-3xl font-black text-slate-800">${finalizados.length}</p>
+                    <p class="text-2xl font-black text-slate-800">${finalizados.length}</p>
                 </button>
             </div>
 
@@ -385,7 +423,7 @@ export const PainelGeralService = {
             </div>
         `;
 
-        document.querySelectorAll('.card-metrica').forEach(card => {
+        document.querySelectorAll('.card-metrica[data-target]').forEach(card => {
             card.onclick = () => {
                 const targetId = card.getAttribute('data-target');
                 const toggleId = card.getAttribute('data-toggle');
@@ -399,4 +437,3 @@ export const PainelGeralService = {
         }
     }
 };
-
