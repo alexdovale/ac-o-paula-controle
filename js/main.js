@@ -1947,6 +1947,9 @@ class SIGEPApp {
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
             this.atualizarMonitorEnvelopes();
+            
+            // ADICIONE ESTA LINHA AQUI:
+            PautaService.atualizarJanelasDesencaixadas();
 
             setTimeout(() => { 
                 if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); 
@@ -1956,7 +1959,6 @@ class SIGEPApp {
             showNotification("Erro ao carregar dados em tempo real", "error");
         });
     }
-
     async deletePauta(pautaId, pautaName) {
         const pautaRef = doc(this.db, "pautas", pautaId);
         const pautaSnap = await getDoc(pautaRef);
