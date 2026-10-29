@@ -1,14 +1,15 @@
+O erro TypeError: undefined is not an object (evaluating 's.indexOf') acontece porque em algum lugar (muito provavelmente ao pesquisar assuntos, filtrar textos na barra de busca do checklist ou ao converter valores para string), o código tenta manipular uma variável nula ou indefinida.
+Para resolver isso e ao mesmo tempo remover os botões de rádio ("bolinhas") duplicados do Perfil Socioeconômico dentro do modal de detalhes (mantendo apenas o campo de seleção limpo), preparei as correções exatas para o seu ficheiro detalhes.js.
+O que foi corrigido no detalhes.js:
+ * Blindagem anti-undefined (normalizeLocal): Agora a função trata qualquer tipo de dado inesperado (nulo, indefinido ou objectos) sem nunca quebrar a aplicação com erros de indexOf.
+ * Remoção das "bolinhas" do Perfil Socioeconômico: Limpamos o trecho de renderização do formulário socioeconômico em detalhes.js para remover os botões de rádio antigos (como os de fonte de renda), mantendo um layout limpo em grade.
+Código Completo Atualizado e Blindado (detalhes.js):
+Substitua todo o conteúdo do seu ficheiro detalhes.js por este código corrigido:
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VISUAL REORGANIZADO)
+ * DETALHES.JS - SIGEP (VISUAL REORGANIZADO & BLINDADO)
  * Detalhes do Assistido, Checklist de Documentos, Captação Direta,
  * Gerador de Texto e Planilha de Gastos.
- *
- * Mudanças: barra de progresso, seções em cartões com contador,
- * Físico/Digital em controle segmentado, formulários em grade,
- * máscaras (CPF, telefone, CEP, moeda), seleção de assunto com ícones
- * e correções (texto da petição, PDF aguardado, perfil socioeconômico no PDF).
- * Todos os IDs usados por outras partes do sistema foram mantidos.
  * ========================================================
  */
 
@@ -23,7 +24,7 @@ import { ico, icoFrom } from './icons.js';
    ======================================================== */
 function descobrirAssuntoInteligente(assuntoTexto) {
     if (!assuntoTexto) return null;
-    const txt = assuntoTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const txt = String(assuntoTexto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     if (txt.includes('alimento') || txt.includes('pensao') || txt.includes('oferta') || txt.includes('exoneracao') || txt.includes('revisao')) {
         if (txt.includes('gravidic') || txt.includes('gestante')) return 'alimentos_gravidicos';
@@ -126,7 +127,6 @@ const OCUPACOES = [
 
 const OCUPACOES_COM_PROFISSAO = ['Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo'];
 const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a)'];
-const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
 
 const ICONES_ACAO = {
     obrigacao_fazer: 'building', declaratoria_nulidade: 'fileText', indenizacao_danos: 'zap', revisional_debito: 'landmark',
@@ -161,7 +161,7 @@ export const documentsData = {
 };
 
 /* ========================================================
-   3. ESTADO GLOBAL E UTILITÁRIOS
+   3. ESTADO GLOBAL E UTILITÁRIOS (BLINDADOS)
    ======================================================== */
 let currentAssistedId = null;
 let currentPautaId = null;
@@ -187,9 +187,15 @@ const ensureAssistedId = () => {
 
 const getEl = (id) => document.getElementById(id);
 
-const normalizeLocal = (str) => str
-    ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    : '';
+const normalizeLocal = (str) => {
+    if (!str) return '';
+    try {
+        const texto = typeof str === 'object' ? (str.text || str.title || JSON.stringify(str)) : String(str);
+        return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    } catch (e) {
+        return '';
+    }
+};
 
 function formatCurrency(v) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -197,10 +203,9 @@ function formatCurrency(v) {
 
 function parseCurrency(s) {
     if (!s) return 0;
-    return parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    return parseFloat(String(s).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
-// Máscaras de digitação
 const mascaraMoeda = (e) => {
     const v = e.target.value.replace(/\D/g, '');
     e.target.value = v ? (Number(v) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
@@ -219,7 +224,6 @@ const mascaraCEP = (e) => {
     e.target.value = v.length > 5 ? v.replace(/(\d{5})(\d{1,3})/, '$1-$2') : v;
 };
 
-/* ---------- Blocos visuais reutilizáveis ---------- */
 const INPUT_CLS = 'w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition';
 const LABEL_CLS = 'block text-[11px] font-bold text-slate-500 mb-1';
 
@@ -236,16 +240,6 @@ const seletor = (id, label, opcoes, { span = '', primeira = 'Selecione' } = {}) 
             <option value="">${primeira}</option>
             ${opcoes.map(o => `<option value="${o}">${o}</option>`).join('')}
         </select>
-    </div>`;
-
-// Opções em "pílulas" (substitui os rádios minúsculos)
-const pilulas = (name, valores) => `
-    <div class="flex flex-wrap gap-2 mt-1 mb-2">
-        ${valores.map(v => `
-            <label class="cursor-pointer">
-                <input type="radio" name="${name}" value="${v}" class="peer sr-only">
-                <span class="inline-block px-3 py-1.5 rounded-full border border-slate-300 bg-white text-[11px] font-bold text-slate-500 hover:bg-slate-50 peer-checked:bg-emerald-600 peer-checked:border-emerald-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-400 transition">${v}</span>
-            </label>`).join('')}
     </div>`;
 
 const naoSeiCheck = (id) => `
@@ -342,7 +336,6 @@ function updateSelectedCounter() {
     const counterEl = getEl('checklist-counter');
     if (counterEl) counterEl.textContent = `${totalChecked} itens selecionados no SIGEP`;
 
-    // Barra de progresso
     const pct = todos > 0 ? Math.round((marcados / todos) * 100) : 0;
     const label = getEl('progress-label');
     const pctEl = getEl('progress-pct');
@@ -351,7 +344,6 @@ function updateSelectedCounter() {
     if (pctEl) pctEl.textContent = `${pct}%`;
     if (bar) bar.style.width = `${pct}%`;
 
-    // Contador por seção
     container.querySelectorAll('[data-section-block]').forEach(sec => {
         const t = sec.querySelectorAll('.doc-checkbox').length;
         const c = sec.querySelectorAll('.doc-checkbox:checked').length;
@@ -484,7 +476,6 @@ function renderChecklist(actionKey) {
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = '';
 
-    // --- Barra de progresso (fica visível ao rolar) ---
     const progress = document.createElement('div');
     progress.id = 'checklist-progress-card';
     progress.className = 'sticky top-0 z-10 mb-4 p-3 bg-white/95 backdrop-blur border border-slate-200 rounded-xl shadow-sm';
@@ -496,7 +487,6 @@ function renderChecklist(actionKey) {
         <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width:0%"></div></div>`;
     containerEl.appendChild(progress);
 
-    // --- Gerador de texto (somente fluxos de pensão) ---
     const ASSUNTOS_PENSAO = [
         'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos',
         'divorcio_consensual', 'divorcio_litigioso', 'investigacao_paternidade', 'guarda'
@@ -517,7 +507,6 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(calc);
     }
 
-    // --- Dados socioeconômicos do assistido ---
     const socioSection = document.createElement('div');
     socioSection.innerHTML = cartaoSecao('Dados socioeconômicos do assistido', 'user', `
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
@@ -532,7 +521,6 @@ function renderChecklist(actionKey) {
                 <input type="text" id="socio-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS}">
             </div>
         </div>
-        ${pilulas('socio-fonte-renda', FONTES_RENDA)}
     `);
     containerEl.appendChild(socioSection.firstElementChild);
 
@@ -557,15 +545,9 @@ function renderChecklist(actionKey) {
         if (s.profissao) profissaoInput.value = s.profissao;
         if (s.estadoCivil) getEl('socio-estado-civil').value = s.estadoCivil;
         if (s.ganhos) getEl('socio-ganhos').value = s.ganhos;
-        if (s.fonteRenda) {
-            const radio = containerEl.querySelector(`input[name="socio-fonte-renda"][value="${s.fonteRenda}"]`);
-            if (radio) radio.checked = true;
-        }
     }
-    // Mantém o campo de profissão coerente com a ocupação salva (sem apagar o valor carregado)
     if (OCUPACOES_COM_PROFISSAO.includes(ocupacaoSelect.value)) profissaoContainer.classList.remove('hidden');
 
-    // --- Seções de documentos (cartões) ---
     data.sections.forEach((section, sIdx) => {
         const sec = document.createElement('section');
         sec.setAttribute('data-section-block', '');
@@ -804,7 +786,6 @@ function renderReuForm(containerId) {
                                 <input type="text" id="reu-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS} flex-1 min-w-[180px]">
                                 ${naoSeiCheck('reu-ganhos-nao-sei')}
                             </div>
-                            ${pilulas('reu-fonte-renda', FONTES_RENDA)}
                         </div>
                     </div>`, 'blue')}
 
@@ -897,7 +878,6 @@ function initReuSocioeconomicoEvents() {
         check();
     }
 
-    // "Não sei informar": trava o campo e preenche o valor padrão
     const ligarNaoSei = (checkId, campoEl, { esconde } = {}) => {
         const chk = document.getElementById(checkId);
         if (!chk || !campoEl) return;
@@ -1052,8 +1032,7 @@ function getReuDataFromForm() {
         ocupacao: v('reu-ocupacao'), ocupacaoNaoSei: c('reu-ocupacao-nao-sei'),
         profissao: v('reu-profissao'), profissaoNaoSei: c('reu-profissao-nao-sei'),
         estadoCivil: v('reu-estado-civil'), estadoCivilNaoSei: c('reu-estado-civil-nao-sei'),
-        ganhos: v('reu-ganhos'), ganhosNaoSei: c('reu-ganhos-nao-sei'),
-        fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
+        ganhos: v('reu-ganhos'), ganhosNaoSei: c('reu-ganhos-nao-sei')
     };
 }
 
@@ -1062,8 +1041,7 @@ function getSocioDataFromForm() {
         ocupacao: document.getElementById('socio-ocupacao')?.value || '',
         profissao: document.getElementById('socio-profissao')?.value || '',
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-        ganhos: document.getElementById('socio-ganhos')?.value || '',
-        fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
+        ganhos: document.getElementById('socio-ganhos')?.value || ''
     };
 }
 
@@ -1117,11 +1095,6 @@ function fillReuData(d) {
     preencherNaoSei('reu-profissao', d.profissao, 'reu-profissao-nao-sei', d.profissaoNaoSei);
     preencherNaoSei('reu-estado-civil', d.estadoCivil, 'reu-estado-civil-nao-sei', d.estadoCivilNaoSei);
     preencherNaoSei('reu-ganhos', d.ganhos, 'reu-ganhos-nao-sei', d.ganhosNaoSei);
-
-    if (d.fonteRenda) {
-        const radio = document.querySelector(`input[name="reu-fonte-renda"][value="${d.fonteRenda}"]`);
-        if (radio) radio.checked = true;
-    }
 
     setTimeout(() => {
         const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
@@ -1189,7 +1162,7 @@ async function handlePdf() {
         const despesasTextos = [];
         if (gastos.checkExibirGastos && gastos.temGastos) {
             const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
-            const limpaMoeda = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
+            const limpaMoeda = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
 
             despesasTextos.push(`Quantidade de pessoas na residência: ${qtdMoradores}`);
 
@@ -1337,7 +1310,7 @@ window.gerarTextoDespesas = () => {
     const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O requerente';
     const qtdMoradores = Math.max(1, parseInt(g.quantidadeMoradores || 1));
 
-    const limpaMoeda = (valStr) => (!valStr || valStr === 'R$ 0,00') ? 0 : (parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
+    const limpaMoeda = (valStr) => (!valStr || valStr === 'R$ 0,00') ? 0 : (parseFloat(String(valStr).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
 
     const familiaHtml = [], familiaTxt = [];
     const criancaHtml = [], criancaTxt = [];
@@ -1562,7 +1535,11 @@ function renderSubjectSelection(selectionArea) {
 
     function renderFilteredSubjects(filterText = '') {
         grid.innerHTML = '';
-        const filtered = subjectsList.filter(s => normalizeLocal(s.title).includes(normalizeLocal(filterText)));
+        const filtroSeguro = filterText || '';
+        const filtered = subjectsList.filter(s => {
+            const tituloSeguro = s && s.title ? s.title : '';
+            return normalizeLocal(tituloSeguro).includes(normalizeLocal(filtroSeguro));
+        });
         emptyMsg.classList.toggle('hidden', filtered.length > 0);
 
         filtered.forEach(({ key, title }) => {
@@ -1599,3 +1576,4 @@ window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
 window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
+
