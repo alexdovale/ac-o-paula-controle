@@ -405,7 +405,7 @@ const CollaboratorService = {
         baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/'));
         if (!baseUrl) baseUrl = window.location.origin;
 
-        const link = `${baseUrl}/mesa_digital.html?pautaId=${window.app.currentPauta.id}&colab=${encodeURIComponent(nomeColab)}&view=dashboard`;
+        const link = `${baseUrl}/atendimento_externo.html?pautaId=${window.app.currentPauta.id}&colab=${encodeURIComponent(nomeColab)}&view=dashboard`;
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(link).then(() => {
