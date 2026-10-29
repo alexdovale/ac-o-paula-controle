@@ -1,5 +1,4 @@
-O arquivo js/pdfService.js já possui aquela janela de seleção de colunas/campos que aparece para você na tela, mas precisamos atualizá-lo para que ele também traga as novas informações que você configurou na Mesa Digital (como os status de Reagendado, Cancelado, os motivos detalhados, o CNP / ID do Verde e as Demandas Adicionais).
-Aqui está o código completo, reestruturado e otimizado para o seu js/pdfService.js. Ele preserva o seu modal interativo na tela, mas agora totalmente integrado aos novos fluxos de atendimento:
+
 import { ico } from './icons.js';
 // js/pdfService.js - SIGEP
 // Visual unificado: cabeçalho com logo, resumo (KPIs), tabelas padronizadas e rodapé "Página X de Y" em todas as páginas.
