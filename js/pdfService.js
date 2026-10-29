@@ -1,3 +1,5 @@
+O arquivo js/pdfService.js já possui aquela janela de seleção de colunas/campos que aparece para você na tela, mas precisamos atualizá-lo para que ele também traga as novas informações que você configurou na Mesa Digital (como os status de Reagendado, Cancelado, os motivos detalhados, o CNP / ID do Verde e as Demandas Adicionais).
+Aqui está o código completo, reestruturado e otimizado para o seu js/pdfService.js. Ele preserva o seu modal interativo na tela, mas agora totalmente integrado aos novos fluxos de atendimento:
 import { ico } from './icons.js';
 // js/pdfService.js - SIGEP
 // Visual unificado: cabeçalho com logo, resumo (KPIs), tabelas padronizadas e rodapé "Página X de Y" em todas as páginas.
@@ -531,13 +533,14 @@ export const PDFService = {
 
             const opcoes = [
                 { v: 'numAgendamento', l: 'Nº do Agendamento / Senha', on: false },
-                { v: 'numeroProcesso', l: 'Número do Processo', on: false },
+                { v: 'numeroProcesso', l: 'Número do Processo / CNP / VERDE', on: true },
                 { v: 'scheduledTime', l: 'Horário Agendado', on: true },
                 { v: 'arrivalTime', l: 'Horário de Chegada', on: true },
                 { v: 'attendedTime', l: 'Horário de Finalização', on: true },
                 { v: 'duration', l: 'Duração do Atendimento', on: true },
                 { v: 'subject', l: 'Assunto Principal', on: true },
-                { v: 'demandas', l: 'Demandas Adicionais', on: false },
+                { v: 'demandas', l: 'Demandas Adicionais', on: true },
+                { v: 'resultado', l: 'Resultado (Atendido / Reagendado / Cancelado + Motivo)', on: true },
                 { v: 'attendant', l: 'Responsável pelo Atendimento', on: true }
             ];
 
@@ -602,18 +605,30 @@ export const PDFService = {
             atendidosList = [...(atendidosList || [])].sort(sortByScheduledTime);
 
             let somaMin = 0, nMin = 0;
+            let totalReagendados = 0;
+            let totalCancelados = 0;
+            let totalConcluidos = 0;
+
+            atendidosList.forEach(a => {
+                const motivo = (a.motivoEncerramento || '').toLowerCase();
+                if (motivo.startsWith('reagendado')) totalReagendados++;
+                else if (a.status === 'cancelado') totalCancelados++;
+                else totalConcluidos++;
+            });
+
             const totalDemandas = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
 
             const colDef = [
                 { key: 'name', label: 'Nome completo' },
                 { key: 'numAgendamento', label: 'Nº Agend.' },
-                { key: 'numeroProcesso', label: 'Nº Processo' },
+                { key: 'numeroProcesso', label: 'CNP / VERDE' },
                 { key: 'scheduledTime', label: 'Agendado' },
                 { key: 'arrivalTime', label: 'Chegou' },
                 { key: 'attendedTime', label: 'Chamado/Fim' },
                 { key: 'duration', label: 'Duração' },
                 { key: 'subject', label: 'Assunto' },
-                { key: 'demandas', label: 'Demandas adicionais' },
+                { key: 'demandas', label: 'Demandas Adicionais' },
+                { key: 'resultado', label: 'Resultado / Motivo' },
                 { key: 'attendant', label: 'Atendente' }
             ];
             const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
@@ -634,7 +649,18 @@ export const PDFService = {
 
                 const hora = (d) => d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const demandasStr = item.demandas?.descricoes?.length ? item.demandas.descricoes.join(', ') : '---';
-                const processoStr = item.numeroProcesso || item.processo || '---';
+                const processoStr = item.numeroProcesso || item.idCasoVerde || item.processo || '---';
+
+                // Tratamento de Resultado e Motivo
+                const motivoStr = item.motivoEncerramento || '';
+                let resultadoTexto = 'ATENDIDO';
+                if (motivoStr.toLowerCase().startsWith('reagendado')) {
+                    resultadoTexto = `REAGENDADO: ${motivoStr.replace(/^reagendado:\s*/i, '')}`;
+                } else if (item.status === 'cancelado') {
+                    resultadoTexto = motivoStr ? `CANCELADO: ${motivoStr.replace(/^cancelado:\s*/i, '')}` : 'CANCELADO';
+                } else if (item.status === 'aguardandoNumero') {
+                    resultadoTexto = 'AGUARDANDO CNP';
+                }
 
                 const rowData = {
                     name: cleanString(item.name).toUpperCase(),
@@ -646,6 +672,7 @@ export const PDFService = {
                     duration,
                     subject: cleanString(item.subject).toUpperCase(),
                     demandas: cleanString(demandasStr).toUpperCase(),
+                    resultado: cleanString(resultadoTexto).toUpperCase(),
                     attendant: cleanString(getAttendantNameForPDF(item)).toUpperCase()
                 };
                 return [index + 1, ...activeCols.map(c => rowData[c.key])];
@@ -655,28 +682,29 @@ export const PDFService = {
                 body.push([{ content: "Nenhum atendimento finalizado nesta pauta até o momento.", colSpan: activeCols.length + 1, styles: { halign: 'center', fontStyle: 'italic', textColor: C.cinza } }]);
             }
 
-            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos', lines: [`Pauta: ${pautaNome}`] });
+            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos e Status', lines: [`Pauta: ${pautaName}`] });
             y = drawKpis(doc, y, [
-                { label: 'Assistidos atendidos', valor: atendidosList.length },
-                { label: 'Volume de demandas', valor: totalDemandas, cor: [59, 130, 246] },
-                { label: 'Duração média', valor: nMin ? calculateDuration(Math.round(somaMin / nMin)) : '—', cor: [245, 158, 11] }
+                { label: 'Concluídos', valor: totalConcluidos },
+                { label: 'Reagendados', valor: totalReagendados, cor: [245, 158, 11] },
+                { label: 'Cancelados', valor: totalCancelados, cor: C.vermelho },
+                { label: 'Volume total', valor: totalDemandas, cor: [59, 130, 246] }
             ]);
 
             await yieldThread();
 
-            const fixas = { numAgendamento: 55, scheduledTime: 55, arrivalTime: 50, attendedTime: 60, duration: 55, numeroProcesso: 110 };
+            const fixas = { numAgendamento: 55, scheduledTime: 55, arrivalTime: 50, attendedTime: 60, duration: 55, numeroProcesso: 80 };
             const columnStyles = { 0: { cellWidth: 24, halign: 'center', textColor: C.cinza } };
             activeCols.forEach((c, i) => {
                 const idx = i + 1;
                 if (c.key === 'name') columnStyles[idx] = { halign: 'left', fontStyle: 'bold' };
-                else if (['subject', 'demandas', 'attendant'].includes(c.key)) columnStyles[idx] = { halign: 'left' };
+                else if (['subject', 'demandas', 'resultado', 'attendant'].includes(c.key)) columnStyles[idx] = { halign: 'left' };
                 else columnStyles[idx] = { halign: 'center', cellWidth: fixas[c.key] || 'auto' };
             });
 
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
-            applyFooters(doc, pautaNome);
+            applyFooters(doc, pautaName);
 
-            doc.save(`Relatorio_Atendidos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Relatorio_Atendidos_${(pautaName || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
         } catch (error) {
@@ -747,7 +775,6 @@ export const PDFService = {
         }
     },
 
-    // 🔥 MODAL INTERATIVO IMPLEMENTADO PARA A EXPORTAÇÃO DE COLABORADORES 🔥
     async generateCollaboratorsPDF(arg1, arg2, arg3) {
         return new Promise((resolve) => {
             let colaboradores = [];
@@ -774,7 +801,6 @@ export const PDFService = {
             const modalId = 'pdf-colab-selector-modal';
             document.getElementById(modalId)?.remove();
 
-            // Opções disponíveis para a equipe (A coluna presença foi removida a seu pedido)
             const opcoes = [
                 { v: 'cargo', l: 'Cargo', on: true },
                 { v: 'equipe', l: 'Equipe', on: true },
@@ -820,7 +846,6 @@ export const PDFService = {
                 btn.innerHTML = 'Gerando...';
                 btn.disabled = true;
 
-                // Captura as colunas marcadas no modal interativo
                 const selectedColumns = ['nome', ...Array.from(document.querySelectorAll('#pdf-colab-checkboxes input:checked:not([disabled])')).map(cb => cb.value)];
                 
                 const success = await PDFService._buildCollaboratorsPDF(colaboradores, pautaNome, selectedColumns);
@@ -888,7 +913,6 @@ export const PDFService = {
 
             let y = drawHeader(doc, logo, { title: 'Lista das Equipes', lines: [`Pauta: ${pautaNome}`] });
             
-            // 🔥 REMOVIDO O CARTÃO (KPI) REFERENTE AOS PRESENTES 🔥
             y = drawKpis(doc, y, [
                 { label: 'Total de membros', valor: colaboradores.length },
                 { label: 'Defensores(as)', valor: defensores, cor: [139, 92, 246] },
@@ -1202,4 +1226,6 @@ export const generateChecklistPDF = (assistedName, actionTitle, checklistData, d
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
 export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
 
+export default PDFService;
 window.PDFService = PDFService;
+
