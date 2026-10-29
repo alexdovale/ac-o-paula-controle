@@ -833,21 +833,22 @@ export const PautaService = {
     },
 
     // ============================================================
-    // MÓDULO DE DESENCAIXAR COLUNA (TOTALMENTE OPERÁVEL VIA OPENER)
+    // MÓDULO DE DESENCAIXAR COLUNA (CORRIGIDO COM FOCO, MODAIS E AÇÕES)
     // ============================================================
 
     desencaixarColuna(colunaId, titulo = 'Fila de Atendimento') {
-        const colunaOriginal = document.getElementById(colunaId);
-        if (!colunaOriginal) {
+        const elementoOrigem = document.getElementById(colunaId);
+        if (!elementoOrigem) {
             showNotification("Coluna não encontrada para desencaixar.", "error");
             return;
         }
 
-        // Abre pop-up
-        const largura = 480;
-        const altura = 720;
-        const esquerda = window.screen.width - largura - 40;
-        const topo = 60;
+        const largura = 520;
+        const altura = 760;
+        const esquerda = Math.max(0, window.screen.width - largura - 30);
+        const topo = 50;
+        
+        // Abre e foca imediatamente na janela
         const janela = window.open('', `desencaixe_${colunaId}`, `width=${largura},height=${altura},left=${esquerda},top=${topo},resizable=yes,scrollbars=yes`);
 
         if (!janela) {
@@ -865,47 +866,93 @@ export const PautaService = {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>${escapeHTML(titulo)} • SIGEP</title>
                 <script src="https://cdn.tailwindcss.com"></script>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
-                    body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 12px; }
+                    body { font-family: 'Inter', system-ui, sans-serif; background-color: #f8fafc; margin: 0; padding: 12px; }
                     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
                 </style>
             </head>
-            <body class="flex flex-col h-screen overflow-hidden">
-                <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200 shrink-0">
+            <body class="flex flex-col h-screen overflow-hidden text-slate-800">
+                <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200 shrink-0 bg-white p-3 rounded-xl border shadow-sm">
                     <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
-                        <h2 class="text-sm font-black uppercase text-slate-800 tracking-wider">${escapeHTML(titulo)}</h2>
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <h2 class="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">${escapeHTML(titulo)}</h2>
                     </div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Janela Ativa</span>
+                    <span class="text-[10px] font-black px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-widest">Painel Externo</span>
                 </div>
-                <div id="conteudo-desencaixado" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1"></div>
+                <div id="conteudo-desencaixado" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 pb-4"></div>
             </body>
             </html>
         `);
         janela.document.close();
+        janela.focus();
 
-        // 1. Delegação de Eventos de Clique da janela filha para a janela mãe
+        // 1. Injeta o conteúdo imediatamente após abrir a janela
+        const containerDestino = janela.document.getElementById('conteudo-desencaixado');
+        if (containerDestino) {
+            containerDestino.innerHTML = elementoOrigem.innerHTML;
+        }
+
+        // 2. Delegação completa de cliques: traz o controle e o foco para os modais da janela mãe
         janela.document.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
+            const btn = e.target.closest('button, a');
             if (!btn) return;
 
-            const app = window.app;
+            const app = window.app || window.opener?.app;
             if (!app) return;
 
-            // Chamar Próximo
+            const id = btn.dataset.id || btn.closest('[data-id]')?.dataset.id || btn.closest('[data-assistido-id]')?.dataset.assistidoId;
+
+            // Se a ação for chamar próximo
             if (btn.id === 'call-next-assisted-btn' || btn.classList.contains('btn-chamar-proximo')) {
                 e.preventDefault();
+                e.stopPropagation();
+                window.focus(); // Traz foco para a janela principal onde o modal abre
                 this.callNextAssisted(app);
                 return;
             }
 
-            // Atender ou outras ações diretas
+            // Ações de atendimento, detalhes, prioridade ou presença:
+            if (id) {
+                const assisted = app.allAssisted?.find(a => a.id === id);
+                window.assistedIdToHandle = id;
+                window.assistedNameToHandle = assisted?.name || '';
+
+                // Se clicou em atender diretamente ou delegar
+                if (btn.classList.contains('attend-directly-from-aguardando-btn') || btn.classList.contains('select-collaborator-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.focus();
+                    this.actionAttendDirectly(app, id, assisted);
+                    return;
+                }
+
+                // Se clicou em check-in (presença)
+                if (btn.classList.contains('check-in-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.focus();
+                    this.actionCheckIn(id);
+                    return;
+                }
+
+                // Se clicou em ver detalhes
+                if (btn.classList.contains('view-details-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.focus();
+                    if (window.openDetailsModal) {
+                        window.openDetailsModal({ assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted, db: app.db });
+                    }
+                    return;
+                }
+            }
+
+            // Executa o restante das ações normais do card no contexto da janela principal
+            window.focus();
             this.handleCardActions(e, app);
         });
-
-        // 2. Renderiza o conteúdo inicial
-        this.atualizarJanelasDesencaixadas();
     },
 
     atualizarJanelasDesencaixadas() {
@@ -915,7 +962,10 @@ export const PautaService = {
                 const elementoOrigem = document.getElementById(colunaId);
                 const containerDestino = janela.document.getElementById('conteudo-desencaixado');
                 if (elementoOrigem && containerDestino) {
+                    // Atualiza em tempo real preservando o scroll atual da janela pop-up
+                    const posScroll = containerDestino.scrollTop;
                     containerDestino.innerHTML = elementoOrigem.innerHTML;
+                    containerDestino.scrollTop = posScroll;
                 }
             } else {
                 this.janelasDesencaixadas.delete(colunaId);
