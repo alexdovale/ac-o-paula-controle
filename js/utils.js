@@ -14,17 +14,22 @@ export const escapeHTML = (str) => {
 };
 
 /**
+ * Pasta dos sons, resolvida a partir deste arquivo (js/utils.js -> ../assets/sounds/).
+ * Funciona em subpasta (GitHub Pages) e não depende do Router SPA.
+ */
+const SOUNDS_BASE = new URL('../assets/sounds/', import.meta.url).href;
+
+/**
  * Toca sons do sistema respeitando as preferências do usuário
  */
 export function playSound(type = 'notification') {
-    // Garante que os caminhos iniciem da raiz (/) para evitar problemas com o Router SPA
     const sounds = {
-        'success': '/assets/sounds/success.mp3',
-        'error': '/assets/sounds/error.mp3',
-        'chime': '/assets/sounds/chime.mp3',
-        'info': '/assets/sounds/chime.mp3',
-        'warning': '/assets/sounds/notification.mp3',
-        'notification': '/assets/sounds/notification.mp3'
+        'success': SOUNDS_BASE + 'success.mp3',
+        'error': SOUNDS_BASE + 'error.mp3',
+        'chime': SOUNDS_BASE + 'chime.mp3',
+        'info': SOUNDS_BASE + 'chime.mp3',
+        'warning': SOUNDS_BASE + 'notification.mp3',
+        'notification': SOUNDS_BASE + 'notification.mp3'
     };
 
     const preferenceKey = `enableSounds${type.charAt(0).toUpperCase() + type.slice(1)}`;
@@ -39,9 +44,9 @@ export function playSound(type = 'notification') {
 
     try {
         const audio = new Audio(sounds[type] || sounds['notification']);
-        audio.volume = 0.4; // Volume um pouco mais suave e elegante
+        audio.volume = 0.4;
         
-        // Captura o erro no console em modo de desenvolvimento para você ver se o navegador bloqueou
+        // Captura o erro no console para ver se o navegador bloqueou ou se o arquivo não foi achado
         const playPromise = audio.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
@@ -79,13 +84,11 @@ export function showNotification(message, type = 'info', duration = 4000, action
     if (!container) {
         container = document.createElement('div');
         container.id = 'notification-container';
-        // Ajustei o z-index para garantir que fique em cima de modais muito altos
         container.className = 'fixed bottom-4 left-4 right-4 sm:bottom-auto sm:top-6 sm:left-auto sm:right-6 z-[99999] flex flex-col sm:items-end space-y-3 pointer-events-none';
         document.body.appendChild(container);
     }
 
     const notification = document.createElement('div');
-    // Design moderno com Backdrop Blur (Fundo de vidro)
     notification.className = 'w-full sm:w-[350px] p-4 rounded-xl shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-slate-800 bg-white/90 backdrop-blur-md border transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] transform sm:translate-x-10 translate-y-10 sm:translate-y-0 opacity-0 scale-95 pointer-events-auto gap-3';
 
     let iconSvg = '';
@@ -118,17 +121,17 @@ export function showNotification(message, type = 'info', duration = 4000, action
 
     notification.classList.add(borderColor);
     
-    // Toca o som (que agora loga se houver bloqueio)
+    // Toca o som (loga no console se houver bloqueio ou arquivo não encontrado)
     playSound(type);
 
-    // Estrutura Interna da Notificação
+    // Estrutura Interna da Notificação (whitespace-pre-line respeita as quebras de linha \n)
     notification.innerHTML = `
         <div class="flex items-start gap-3 w-full">
             <div class="shrink-0 p-1.5 rounded-full ${iconColor} mt-0.5">
                 ${iconSvg}
             </div>
-            <div class="flex flex-col flex-grow pt-1">
-                <p class="text-sm font-semibold text-slate-800 leading-tight">${message}</p>
+            <div class="flex flex-col flex-grow pt-1 min-w-0">
+                <p class="text-sm font-semibold text-slate-800 leading-tight whitespace-pre-line break-words">${message}</p>
             </div>
         </div>
     `;
