@@ -60,6 +60,7 @@
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Visão Geral</p>
                 <a href="#perfis" class="wiki-link">1. Perfis de Usuário e Acessos</a>
                 <a href="#modos" class="wiki-link">1.1 Modo Normal, Evento e Unidades</a>
+                <a href="#recepcao-central" class="wiki-link">1.2 Recepção Central e Hubs</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão de Pautas</p>
                 <a href="#criar-pauta" class="wiki-link">2.1 Criar e Ordenar Pauta</a>
@@ -73,7 +74,7 @@
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Módulos Avançados</p>
                 <a href="#captacao-externa" class="wiki-link">6. Captação Externa (Autocadastro)</a>
-                <a href="#mesa-digital" class="wiki-link">7. Mesa Digital & Puxadas</a>
+                <a href="#mesa-digital" class="wiki-link">7. Mesa Digital V5 & Puxadas</a>
                 <a href="#monitor-equipe" class="wiki-link">8. Monitor da Equipe e Pausas</a>
                 <a href="#painel-tv" class="wiki-link">9. Painel da TV e Totem</a>
                 <a href="#coletas" class="wiki-link">10. Coletas Estatísticas e BI</a>
@@ -81,7 +82,7 @@
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão e Governança</p>
                 <a href="#central-pdf" class="wiki-link">11.1 Central de PDFs e Relatórios</a>
                 <a href="#lgpd" class="wiki-link">11.2 Privacidade e LGPD</a>
-                <a href="#admin" class="wiki-link">12. Administração e Permissões</a>
+                <a href="#admin" class="wiki-link">12. Administração, Abas e Permissões</a>
                 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Sistema</p>
                 <a href="#perfil-sons" class="wiki-link">13. Meu Perfil, Sons e Avisos</a>
@@ -106,14 +107,14 @@
                     <p>O SIGEP é inteligente e adapta a sua interface, botões e permissões de acordo com o cargo do usuário logado. Existem 4 níveis principais de acesso no sistema:</p>
                     
                     <ul class="space-y-4">
-                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Administrador / Superadmin:</strong> Tem controle total da plataforma. Pode aprovar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs) e Estatísticas globais. O administrador enxerga todas as pautas do seu órgão; o <em>Superadmin Global</em> enxerga as pautas de todos os órgãos.</li>
-                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Defensor(a):</strong> Possui um fluxo focado em produtividade e aprovação. Tem acesso exclusivo ao "Meu Painel Judicial", uma caixa de entrada onde visualiza apenas os processos que já passaram pela triagem da equipe e estão prontos para revisão, assinatura ou protocolo.</li>
-                        <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor). Só enxerga as pautas das quais é dono ou membro.</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Administrador / Superadmin / Superadmin Global:</strong> Tem controle total da plataforma. Pode aprovar, suspender, reativar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs), Ouvidoria, Monitoramento de IPs e Estatísticas globais. O administrador enxerga todas as pautas do seu órgão; o <em>Superadmin Global</em> enxerga as pautas de todos os órgãos e gerencia o acesso corporativo de Clientes (Tenants).</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Defensor(a):</strong> Possui um fluxo focado em produtividade e aprovação. Tem acesso exclusivo ao "Meu Painel Judicial" e à visão de Defensor na Mesa Digital, onde visualiza apenas os processos que já passaram pela triagem da equipe e estão prontos para revisão, avaliação, assinatura, distribuição ou devolução para correção.</li>
+                        <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas, geração de link direto do Verde) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor). Só enxerga as pautas das quais é dono ou membro.</li>
                         <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Apoio (Recepção):</strong> Focado estritamente no controle de entrada. Pode registrar a chegada dos assistidos (check-in), marcar faltas e fazer encaminhamentos básicos. Por medidas de segurança e preservação da pauta, <strong>o sistema bloqueia</strong> este perfil de realizar ações críticas, como importar planilhas em lote (CSV) ou puxar dados oficiais do Verde.</li>
                     </ul>
 
                     <div class="note-box">
-                        <strong>Permissões configuráveis:</strong> o administrador pode ajustar o que cada perfil enxerga e executa no painel de Permissões (veja a seção 12). Por isso, alguns botões podem aparecer ou sumir conforme a configuração do seu órgão.
+                        <strong>Permissões configuráveis em duas camadas:</strong> o administrador pode ajustar o padrão de cada perfil na aba <strong>Permissões por Perfil</strong> ou definir exceções individuais por servidor no botão <strong>Permissões (Granulares)</strong>, onde a regra individual tem prioridade sobre o perfil (veja a seção 12).
                     </div>
                 </section>
 
@@ -138,6 +139,17 @@
                         <li><strong>Trocar unidade:</strong> disponível apenas no Modo Normal, na tela de pautas.</li>
                         <li><strong>Trocar modo:</strong> volta para a tela de escolha entre Normal e Evento, encerrando a pauta que estiver aberta.</li>
                         <li><strong>Filtros da lista:</strong> é possível filtrar por minhas pautas, compartilhadas comigo, ativas ou expiradas, e buscar pelo nome.</li>
+                    </ul>
+                </section>
+
+                <!-- SEÇÃO 1.2: RECEPÇÃO CENTRAL -->
+                <section id="recepcao-central" class="mb-16 pt-8 border-t border-slate-100">
+                    <h3 class="sub-title"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></span> 1.2. Recepção Central e Unidades de Apoio</h3>
+                    <p>Para prédios ou sedes que atendem múltiplos órgãos ou defensorias no mesmo espaço físico, o SIGEP conta com o módulo de <strong>Recepção Central</strong>, acessível diretamente na tela inicial.</p>
+                    <ul>
+                        <li><strong>Hubs Operacionais (Central vs. Específica):</strong> As recepções podem ser configuradas como <em>Central</em> (concentrando o fluxo de todo um prédio) ou <em>Específica</em> (atendendo apenas a um andar ou núcleo determinado).</li>
+                        <li><strong>Unidades Vinculadas:</strong> Uma única recepção pode estar associada a várias unidades operacionais simultaneamente, permitindo que a equipe de apoio visualize e dê check-in nos assistidos de todas as pautas daquelas unidades em uma tela unificada.</li>
+                        <li><strong>Lotação de Equipe e TV Própria:</strong> Apenas os servidores autorizados e lotados naquela recepção operam o hub, que também conta com um link exclusivo de Smart TV para chamar os assistidos daquele andar ou setor.</li>
                     </ul>
                 </section>
 
@@ -173,10 +185,10 @@
                 <!-- SEÇÃO 2.3 e 2.4: INTEGRAÇÃO -->
                 <section id="integracao" class="mb-16 pt-8">
                     <h3 class="sub-title"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span> 2.3. Integração com Sistema Verde / Solar</h3>
-                    <p>O SIGEP possui capacidade de conexão com a base de dados oficial (Verde/Solar), eliminando a digitação manual.</p>
+                    <p>O SIGEP possui capacidade de conexão com a base de dados oficial (Verde/Solar), eliminando a digitação manual e integrando o <strong>ID do Caso (CNP / Verde)</strong>.</p>
                     <ul>
                         <li><strong>Como funciona:</strong> Durante a criação da pauta, no campo "Sincronizar com Órgão", selecione a sua Defensoria.</li>
-                        <li><strong>O Resultado:</strong> O sistema fará o download automático de todos os assistidos agendados para o dia, importando Nome, Assunto, Horário e Número do Processo.</li>
+                        <li><strong>O Resultado:</strong> O sistema fará o download automático de todos os assistidos agendados para o dia, importando Nome, Assunto, Horário e Número do Processo/CNP.</li>
                         <li><strong>Botão Sincronizar:</strong> Dentro da pauta, use o botão azul <strong>"Sincronizar Verde"</strong> para buscar novos agendamentos que tenham caído de última hora.</li>
                     </ul>
 
@@ -211,6 +223,7 @@
                     <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Ações (Botão Verde)</h4>
                     <ul>
                         <li><strong>Monitor da Equipe:</strong> painel em tempo real com o que cada pessoa está fazendo (seção 8).</li>
+                        <li><strong>Monitor da Pauta (Global):</strong> acompanhamento geral e histórico completo da pauta.</li>
                         <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> <strong>Compartilhamento Externo:</strong> liga ou desliga o acesso público (Público/Privado) e gera o link de acompanhamento. A opção <em>ocultar nomes</em> mascara os nomes dos assistidos na página pública.</li>
                         <li><strong>Totem:</strong> abre a tela do Totem desta pauta em uma nova aba.</li>
                         <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg> <strong>Ver Estatísticas:</strong> Permite ver os dados estatísticos da pauta individualmente e <strong>emitir um PDF gerencial</strong>.</li>
@@ -251,11 +264,11 @@
                         </div>
                         <div class="bg-cyan-50 p-4 rounded border border-cyan-200 shadow-sm">
                             <span class="font-bold text-cyan-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Distribuição</span>
-                            <p class="text-sm mt-2 text-cyan-900">Casos triados que aguardam assinatura do Defensor para protocolo.</p>
+                            <p class="text-sm mt-2 text-cyan-900">Casos triados que aguardam assinatura, distribuição ou avaliação do Defensor para protocolo.</p>
                         </div>
                         <div class="bg-green-50 p-4 rounded border border-green-200 shadow-sm">
                             <span class="font-bold text-green-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Atendidos</span>
-                            <p class="text-sm mt-2 text-green-900">Arquivo de sucesso. O caso foi 100% resolvido.</p>
+                            <p class="text-sm mt-2 text-green-900">Arquivo de concluídos do dia. Inclui os atendimentos protocolados, bem como os reagendados e cancelados na Mesa Digital (com seus respectivos motivos salvos para relatório e auditoria).</p>
                         </div>
                         <div class="bg-red-50 p-4 rounded border border-red-200 shadow-sm">
                             <span class="font-bold text-red-800 text-lg"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg> Faltosos</span>
@@ -275,8 +288,8 @@
                     <ul>
                         <li><strong>Assuntos Inteligentes:</strong> Ao digitar um assunto (Ex: <em>Alimentos</em>), o SIGEP exibe uma <strong>descrição explicativa</strong> com os requisitos da ação.</li>
                         <li><strong>Checklist Documental:</strong> Exibe os documentos exatos exigidos. O servidor marca o que foi entregue e se o documento é físico ou digital.</li>
-                        <li><strong>Planilha de Gastos (Automática):</strong> Indispensável para ações de família. Insira as despesas e o SIGEP calcula o valor total automaticamente.</li>
-                        <li><strong>Dados do Réu:</strong> campos para qualificação da outra parte (endereço residencial e comercial), que seguem para os documentos gerados.</li>
+                        <li><strong>Planilha de Gastos (Automática) e Texto para Petição:</strong> Indispensável para ações de família. Insira a quantidade de moradores na residência, as despesas comuns da família (calculadas por cota-parte automática) e as despesas exclusivas da criança (100% integral). O SIGEP calcula a <strong>Necessidade Mensal Apurada</strong> e oferece um botão para <strong>Copiar Texto Pronto para a Petição Inicial</strong>, já redigido em linguagem jurídica formal.</li>
+                        <li><strong>Perfil Socioeconômico e Dados do Réu:</strong> Campos estruturados para ocupação, profissão, estado civil, renda/fonte de renda do assistido e qualificação completa da parte contrária (polo passivo), incluindo CPF, telefone, endereço residencial, ponto de referência e endereço comercial/empresa.</li>
                         <li><strong>Prioridade Urgente:</strong> ao marcar um assistido como urgente, o sistema pede o motivo (por exemplo, idoso, gestante ou PCD) e registra a justificativa.</li>
                     </ul>
 
@@ -293,9 +306,9 @@
                     <p>Após a triagem, o colaborador decide o destino do processo:</p>
                     <ul>
                         <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Finalizar Atendimento:</strong> Resolve o caso e move para "Atendidos".</li>
-                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Fila de Distribuição:</strong> Envia o caso para a mesa do Defensor. O servidor escolhe o nome e adiciona notas de revisão.</li>
+                        <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Fila de Distribuição:</strong> Envia o caso para a mesa do Defensor. O servidor escolhe o nome, a finalidade (Assinar, Distribuir ou Corrigir) e adiciona notas de revisão.</li>
                         <li><strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Transferir Colega:</strong> O caso é complexo? Transfira para um colega mais sénior atuar.</li>
-                        <li><strong>Ações rápidas:</strong> para casos simples (reagendar, agendar, consulta, outros) é possível concluir o atendimento direto, sem passar pelo fluxo completo.</li>
+                        <li><strong>Ações rápidas (Atendido, Reagendar ou Cancelar):</strong> permite concluir o atendimento direto informando o resultado final (exigindo motivo obrigatório em casos de reagendamento ou cancelamento).</li>
                         <li><strong>Editar atendente:</strong> permite corrigir qual colaborador ficou responsável pelo caso.</li>
                     </ul>
                 </section>
@@ -323,25 +336,64 @@
                     </ul>
                 </section>
 
-                <!-- SEÇÃO 7: MESA DIGITAL E PUXADAS -->
+                <!-- SEÇÃO 7: MESA DIGITAL V5 E PUXADAS -->
                 <section id="mesa-digital" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span> 7. Mesa Digital & Gestão de Puxadas</h2>
-                    <p>A <strong>Mesa Digital</strong> centraliza a atuação individual dos colaboradores fora do balcão principal.</p>
-                    <div class="success-box">
-                        <strong class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Monitor de Puxadas em Tempo Real</strong>
-                        <p class="mt-2 text-green-900">Quando um colaborador solicita antecipar um caso através da função <em>"Puxar para mim"</em>, o coordenador recebe um alerta visual em tempo real no botão <strong>PUXADA(S)</strong> ao lado do menu de Ações.</p>
-                    </div>
-                    <p>Ao clicar no alerta, abre o <strong>Monitor de Puxadas de Fila</strong>. Cada pedido mostra:</p>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span> 7. Mesa Digital V5 & Gestão de Puxadas</h2>
+                    <p>A <strong>Mesa Digital V5</strong> (<code>atendimentoExternoService.js</code>) é o ambiente dedicado e otimizado para a atuação individual dos colaboradores e Defensores fora do balcão principal, contando com sincronização em tempo real, alertas sonoros e proteções de segurança.</p>
+
+                    <h3 class="sub-title">7.1. Kanban de 4 Colunas e Visão "Pauta Completa"</h3>
+                    <p>O painel principal da Mesa Digital organiza o trabalho em <strong>4 colunas simultâneas</strong>:</p>
                     <ul>
-                        <li>o nome do assistido, o assunto e a etiqueta <strong>Urgente</strong>, quando houver;</li>
-                        <li>quem solicitou a puxada;</li>
-                        <li>o horário agendado, o horário de chegada e a sala;</li>
-                        <li>a <strong>justificativa</strong> escrita pelo colaborador.</li>
+                        <li><strong>1. Fila de Espera:</strong> Assistidos que já fizeram check-in e aguardam chamada, ordenados pela fila da recepção.</li>
+                        <li><strong>2. Minha Mesa:</strong> Casos atualmente em atendimento pelo colaborador logado ou pendentes de assinatura/avaliação do Defensor logado.</li>
+                        <li><strong>3. Meus Concluídos:</strong> Histórico de todos os atendimentos finalizados ou encaminhados por você no dia, com atalhos para auditoria e registro posterior de CNP.</li>
+                        <li><strong>4. Pauta Geral e Botão "Ver Completa":</strong> Exibe os demais atendimentos da pauta em andamento por outros colegas. Ao clicar em <strong>"Ver Completa"</strong> no topo desta coluna, abre-se um painel executivo com barra de progresso percentual da pauta, 6 indicadores (KPIs) e todos os casos agrupados por etapa.</li>
+                        <li><strong>Histórico Rápido e Linha do Tempo:</strong> Clicar sobre qualquer cartão do Kanban abre imediatamente o <em>Histórico Rápido</em> do caso (com todo o checklist, perfil socioeconômico e botões de PDF) e o acesso à <em>Linha do Tempo Completa</em> com cada evento cronológico e seu autor.</li>
                     </ul>
-                    <p>E você decide com um clique:</p>
+
+                    <h3 class="sub-title">7.2. Gerador de Link Direto VERDE / CNP Compartilhado</h3>
+                    <p>Dentro da tela de atendimento individual, no topo do painel de ações, encontra-se o cartão escuro do <strong>Gerador de Link Direto • VERDE</strong>:</p>
                     <ul>
-                        <li><strong>Autorizar e Delegar:</strong> o caso passa para "Em Atendimento" no nome de quem pediu e o sistema já abre a definição do local de atendimento.</li>
-                        <li><strong>Negar e Devolver:</strong> o assistido volta para a fila de "Aguardando" e a recusa fica registrada no histórico do caso.</li>
+                        <li>Ao digitar ou colar o Número do Caso (ID numérico do Verde/CNP) e clicar em <strong>"Salvar ID"</strong>, o sistema sanitiza o número, grava imediatamente no banco de dados e gera a URL direta para o prontuário oficial no sistema Verde (<code>verde.rj.def.br</code>).</li>
+                        <li>Uma vez salvo, o botão verde <strong>"Abrir Caso no VERDE"</strong> e a etiqueta <code>CNP/VERDE</code> ficam visíveis instantaneamente para o Defensor e para toda a equipe tanto nos cartões do Kanban quanto na coluna de Identificação.</li>
+                    </ul>
+
+                    <h3 class="sub-title">7.3. Fluxos de Encerramento, Reagendamento e Cancelamento</h3>
+                    <p>Na aba de encerramento da Mesa Digital, o colaborador conta com opções completas de tramitação:</p>
+                    <ul>
+                        <li><strong>Finalizar Protocolo (Atendido, Reagendar ou Cancelar):</strong> Permite escolher entre 3 subfluxos diretos:
+                            <ul class="mt-2">
+                                <li><em>✅ Atendido:</em> Conclui o protocolo normalmente (permitindo informar o CNP agora ou deixá-lo em <em>Aguardando CNP</em> caso a pauta exija distribuição).</li>
+                                <li><em>📅 Reagendar / ❌ Cancelar:</em> Exige o preenchimento de um <strong>Motivo Obrigatório</strong> detalhando por que o atendimento não seguiu (ex.: falta de documento ou desistência). Ao confirmar, <strong>tanto os reagendados quanto os cancelados são movidos para a lista de Atendidos (Concluídos)</strong> com a justificativa gravada no campo <code>motivoEncerramento</code>, garantindo que constem perfeitamente nos relatórios finais e nas estatísticas de produtividade da equipe.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Demandas Adicionais (Estatística):</strong> Campo dedicado para somar demandas extras (ex.: cumulação de Divórcio, Alimentos, Guarda) que ficam salvas no prontuário e nos relatórios em PDF.</li>
+                        <li><strong>Enviar ao Defensor e Pedir Correção / Avaliação:</strong> Permite selecionar o Defensor destinatário, a finalidade (<em>Assinar, Distribuir ou Corrigir</em>) e redigir uma nota interna. Se o e-mail estiver configurado, o sistema dispara um aviso com token seguro de delegação.</li>
+                        <li><strong>Ações Exclusivas do Defensor:</strong> Além de concluir e distribuir, o Defensor possui os botões <strong>"Devolver p/ Correção"</strong> (retornando o caso diretamente para a mesa do servidor de origem com orientações) e <strong>"Devolver à Distribuição"</strong>.</li>
+                    </ul>
+
+                    <h3 class="sub-title">7.4. Botão de Pausa Rápida no Cabeçalho da Mesa Digital</h3>
+                    <p>No topo direito da Mesa Digital, ao lado do indicador de status (<code>LIVRE</code> / <code>OCUPADO</code> / <code>PAUSADO</code>), o colaborador possui o botão <strong>"Pausar / Ausente"</strong>:</p>
+                    <ul>
+                        <li>Ao clicar, abre-se um modal com motivos rápidos (<em>Almoço</em>, <em>Banheiro / Café</em>, <em>Atendimento Externo / Diligência</em>) ou campo livre.</li>
+                        <li>Enquanto pausado, o botão fica amarelo pulsante (<em>"Pausado • Deseja retornar?"</em>) e a coordenação vê a ausência em tempo real no painel principal da pauta. Basta um clique para confirmar o retorno ao trabalho.</li>
+                    </ul>
+
+                    <h3 class="sub-title">7.5. Monitor de Puxadas em Tempo Real</h3>
+                    <div class="success-box">
+                        <strong class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Solicitação de Puxada com Justificativa</strong>
+                        <p class="mt-2 text-green-900">Quando um colaborador clica em <em>"Puxar para mim"</em> na Fila de Espera da Mesa Digital, abre-se um modal com motivos pré-definidos (<em>Urgência / Prioridade</em>, <em>Presente no guichê</em>, <em>Continuidade de atendimento</em>) ou justificativa personalizada. O coordenador recebe um alerta visual imediato no botão <strong>PUXADA(S)</strong> e na própria coluna de espera.</p>
+                    </div>
+                    <p>Ao avaliar o pedido (na pauta principal ou pela própria Mesa Digital), a coordenação ou outro membro autorizado visualiza quem pediu e o motivo, decidindo com um clique:</p>
+                    <ul>
+                        <li><strong>Autorizar:</strong> o caso passa imediatamente para "Em Atendimento" na mesa de quem solicitou.</li>
+                        <li><strong>Negar:</strong> o assistido retorna para a fila de "Aguardando" e a recusa fica registrada no histórico do caso.</li>
+                    </ul>
+
+                    <h3 class="sub-title">7.6. Verificadores de Segurança da Mesa Digital</h3>
+                    <ul>
+                        <li><strong>Trava de Pauta Fechada ou Expirada (LGPD 7 dias):</strong> A Mesa Digital verifica automaticamente se a pauta foi encerrada manualmente ou se já ultrapassou os 7 dias da data de atuação. Caso positivo, bloqueia edições ou impede o acesso com aviso de segurança.</li>
+                        <li><strong>Validação de Vínculo e Token de Delegação:</strong> Apenas usuários autenticados e cadastrados na lista de colaboradores daquela pauta conseguem abrir a Mesa Digital. Links antigos cujo token de delegação já tenha sido substituído por novo repasse são bloqueados automaticamente.</li>
                     </ul>
                 </section>
 
@@ -448,7 +500,7 @@
                 <!-- SEÇÃO 11: GESTÃO E GOVERNANÇA -->
                 <section id="central-pdf" class="mb-16 pt-8 border-t border-slate-100">
                     <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> 11. Gestão, Central de PDFs e LGPD</h2>
-                    <p>O SIGEP não apenas organiza a fila, mas é uma verdadeira máquina de gerar documentos oficiais para compor os processos.</p>
+                    <p>O SIGEP não apenas organiza a fila, mas é uma verdadeira máquina de gerar documentos oficiais para compor os processos, contando com modais interativos para seleção de colunas.</p>
 
                     <h3 class="sub-title">11.1. Central de Documentos e Relatórios em PDF</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -458,19 +510,19 @@
                             <p class="text-sm">Balanço gerencial individual da pauta, com ranking de assuntos e tempos médios. Ótimo para relatórios mensais.</p>
                         </div>
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
-                            <strong class="text-blue-700">Planilha de Gastos Mensais</strong>
-                            <p class="text-xs mt-1 mb-2 text-gray-500">Atendimento → Botão "Baixar Planilha PDF"</p>
-                            <p class="text-sm">Gera a tabela formatada com os cálculos automáticos de despesas para instruir a Petição Inicial de Alimentos.</p>
+                            <strong class="text-blue-700">Planilha de Gastos e Checklist PDF</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Atendimento / Mesa Digital → Botões de Download</p>
+                            <p class="text-sm">Gera a tabela formatada com os cálculos automáticos de despesas (cota familiar e gastos exclusivos) e o comprovante completo de documentos recolhidos e dados do réu.</p>
                         </div>
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
-                            <strong class="text-blue-700">Ata de Ação Social (Mutirões)</strong>
-                            <p class="text-xs mt-1 mb-2 text-gray-500">Menu de Ações → Gerar Ata Social</p>
-                            <p class="text-sm">Informe a ação, o endereço, a data e o órgão. O sistema gera o documento oficial com o total de atendimentos e a lista de presença da equipe, com espaço para assinaturas. Você pode visualizar antes de baixar.</p>
+                            <strong class="text-blue-700">Ata de Ação Social e PDF da Equipe</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Menu de Ações → Colaboradores / Gerar Ata Social</p>
+                            <p class="text-sm">Emite a Ata Oficial com total de atendimentos e espaço para assinaturas, além do Relatório de Equipe com seleção interativa de colunas (Cargo, Equipe, Matrícula, Telefone, E-mail, Chegada e Deslocamento).</p>
                         </div>
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
-                            <strong class="text-blue-700">Relatório Diário de Atendidos / Faltosos</strong>
+                            <strong class="text-blue-700">Relatório Personalizado de Atendidos / Faltosos</strong>
                             <p class="text-xs mt-1 mb-2 text-gray-500">Topo das colunas Atendidos ou Faltosos → PDF</p>
-                            <p class="text-sm">Livro de registro de quem compareceu ou comprovação de abstenção para baixar processos no Verde.</p>
+                            <p class="text-sm">Permite escolher dinamicamente quais colunas exibir no PDF (Nome, Nº Agendamento, <strong>CNP/VERDE</strong>, Horários, Duração, Assunto, <strong>Demandas Adicionais</strong>, <strong>Resultado e Motivo de Reagendamento/Cancelamento</strong> e Atendente).</p>
                         </div>
                     </div>
 
@@ -479,12 +531,12 @@
 
                     <div class="alert-box">
                         <strong class="text-lg">Prazo de 7 dias e exclusão de dados pessoais</strong>
-                        <p class="mt-2 text-red-900">A pauta vale por <strong>7 dias a partir da data de atuação</strong> (ou da data de criação, quando não há data de atuação). Passado esse prazo, <strong>a pauta expira e não pode mais ser aberta</strong>, e o sistema realiza a limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
+                        <p class="mt-2 text-red-900">A pauta vale por <strong>7 dias a partir da data de atuação</strong> (ou da data de criação, quando não há data de atuação). Passado esse prazo, <strong>a pauta expira e não pode mais ser aberta</strong> (inclusive na Mesa Digital), e o sistema realiza a limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
                     </div>
 
                     <div class="success-box">
                         <strong class="text-lg">Preservação das Estatísticas</strong>
-                        <p class="mt-2 text-green-900">Embora os dados pessoais sejam deletados para proteger os assistidos, <strong>os dados quantitativos e estatísticos ficam salvos de forma anônima</strong>, sem ferir a LGPD.</p>
+                        <p class="mt-2 text-green-900">Embora os dados pessoais sejam deletados para proteger os assistidos, <strong>os dados quantitativos e estatísticos ficam salvos de forma anônima</strong> na coleção permanente de BI, sem ferir a LGPD.</p>
                     </div>
 
                     <div class="note-box">
@@ -494,22 +546,35 @@
 
                 <!-- SEÇÃO 12: ADMINISTRAÇÃO -->
                 <section id="admin" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 12. Administração e Permissões</h2>
-                    <p>O <strong>Painel do Administrador</strong> aparece apenas para quem tem perfil de administrador. Ele reúne tudo o que é gestão do sistema:</p>
-                    <ul>
-                        <li><strong>Gerenciar Unidades / Órgãos:</strong> cadastro das unidades de trabalho, com importação em lote.</li>
-                        <li><strong>Gerenciar Recepções (Unidades de Apoio):</strong> cadastro das recepções vinculadas às unidades.</li>
-                        <li><strong>Usuários Pendentes:</strong> novos cadastros aguardam aprovação do administrador antes de acessar o sistema. Há busca por nome.</li>
-                        <li><strong>Usuários do Sistema:</strong> tabela com o perfil atual, as unidades vinculadas, a alteração de permissão e a exclusão do usuário.</li>
-                        <li><strong>Logs de Auditoria:</strong> registro de quem fez o quê e quando, com filtros por usuário, ação e período, e exportação em PDF.</li>
-                        <li><strong>Limpar Dados:</strong> limpeza de dados antigos, conforme o prazo da LGPD.</li>
-                        <li><strong>BI Dashboard:</strong> indicadores gerais de uso do sistema.</li>
-                        <li><strong>Permissões:</strong> ao final da página, o administrador ajusta o que cada perfil pode ver e fazer.</li>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 12. Administração, Sistema de Abas e Permissões</h2>
+                    <p>O <strong>Painel do Administrador</strong> é restrito aos gestores da plataforma e foi estruturado em um <strong>Sistema de Abas Inteligentes com carregamento sob demanda</strong>. Além de reduzir drasticamente o consumo de leituras no banco de dados (filtrando consultas por órgão/tenant), todas as listagens contam com <strong>barra de pesquisa em tempo real</strong> e <strong>seletor de paginação flexível (exibindo 15, 20 ou 30 registros por página)</strong>.</p>
+
+                    <h3 class="sub-title">12.1. As 7 Abas do Painel Administrativo</h3>
+                    <ul class="space-y-3">
+                        <li><strong>1. Aba Usuários:</strong> Divide-se entre <em>Cadastros Pendentes de Aprovação</em> (onde o administrador define o cargo inicial antes de aprovar ou rejeitar) e <em>Usuários Ativos no Sistema</em>. Em cada usuário ativo é possível alterar o perfil (Usuário, Apoio, Administrador, Superadmin, Superadmin Global), <strong>Suspender ou Reativar a conta</strong> com um clique, remover definitivamente, vincular a múltiplas <strong>Unidades de Lotação</strong> e abrir o modal de <strong>Permissões Granulares + 2FA</strong>.</li>
+                        <li><strong>2. Aba Permissões por Perfil:</strong> Exibe a Matriz Geral de Permissões do órgão atual dividida em 5 grupos (<em>Telas e módulos</em>, <em>Menu de Ações</em>, <em>Equipe/Colaboradores</em>, <em>Colunas Kanban</em> e <em>Operações/Zona de Risco</em>). O administrador ativa ou desativa interruptores (<em>toggles</em>) para os perfis <strong>Usuário</strong>, <strong>Apoio</strong> e <strong>Administrador</strong>, podendo salvar na hora (aplicando o bloqueio visual ao vivo para quem está logado) ou restaurar o padrão de fábrica.</li>
+                        <li><strong>3. Aba Unidades & Recepções:</strong> Lista os cartões das unidades cadastradas com busca instantânea, visualização de membros vinculados e edição rápida. Pelo botão <strong>Unidades</strong> é possível criar novas unidades ou abrir o <strong>Importador em Massa (CSV, JSON, Entrada Manual por pipe <code>|</code> com pré-visualização e aba de Estrutura Atual)</strong>. O botão <strong>Recepções</strong> abre a gestão completa de Unidades de Apoio e lotação de equipes. Para o perfil <em>Superadmin Global</em>, esta aba também exibe o botão <strong>Gestão de Clientes (Tenants)</strong> para cadastrar, bloquear ou desbloquear prefeituras e órgãos contratantes.</li>
+                        <li><strong>4. Aba Auditoria & Logs:</strong> Rastreia todas as operações sensíveis do sistema com filtros combinados por usuário, tipo de ação, data inicial/final e busca textual, além de botão para <strong>Exportar Relatório de Auditoria em PDF</strong>.</li>
+                        <li><strong>5. Aba Dashboard / BI:</strong> Calcula indicadores executivos consolidados (Demanda Total, Atendimentos Realizados, Taxa de Absenteísmo, Ranking de Principais Assuntos e Produtividade por Atendente) filtrados por período e usuário, além do botão <strong>Compactar Dados (7+ dias)</strong> em conformidade com a LGPD.</li>
+                        <li><strong>6. Aba Segurança & IPs (Exclusivo Superadmins):</strong> Painel de monitoramento de tráfego e infraestrutura que exibe:
+                            <ul class="mt-2">
+                                <li><strong>Verificador Real de Latência do Servidor:</strong> Mede em milissegundos (<code>ms</code>) o tempo de resposta real com o banco de dados Firestore, indicando se está <em>Online</em> ou <em>Instável/Offline</em>.</li>
+                                <li><strong>KPIs e Tabela de Rastreabilidade:</strong> Contabiliza acessos recentes e erros capturados, listando Usuário, Endereço IP, Localidade, Dispositivo/Navegador e Data/Hora de login.</li>
+                            </ul>
+                        </li>
+                        <li><strong>7. Aba Ouvidoria & Erros:</strong> Centraliza todos os feedbacks, sugestões, elogios, dúvidas e relatórios de falha enviados pelos usuários. Conta com busca rápida, etiquetas coloridas por categoria e botão prático para <strong>Marcar como Resolvido (✔)</strong> ou excluir o registro.</li>
                     </ul>
+
+                    <h3 class="sub-title">12.2. Controle de Permissões Granulares e Segurança 2FA por Usuário</h3>
+                    <p>Ao clicar no botão preto <strong>"Permissões"</strong> na linha de qualquer servidor na Aba Usuários, abre-se o controle individual daquela pessoa:</p>
+                    <ul>
+                        <li><strong>Prioridade sobre o Perfil:</strong> O administrador pode marcar ou desmarcar individualmente o que aquele servidor específico pode ver ou executar (incluindo botões de "Marcar Todos", "Desmarcar Todos" e <strong>"Seguir o perfil"</strong> para limpar exceções e voltar ao padrão da matriz).</li>
+                        <li><strong>Autenticação em Duas Etapas (2FA):</strong> Na seção 6 do modal, é possível <strong>Exigir Autenticação 2FA (App Autenticador)</strong> para aquela conta ou clicar em <strong>"Resetar / Desativar 2FA"</strong> caso o servidor tenha trocado ou perdido o telemóvel, permitindo que ele reconfigure o vínculo no próximo acesso.</li>
+                    </ul>
+
                     <div class="warning-box">
-                        <strong>Atenção:</strong> excluir um usuário e limpar dados são ações administrativas sensíveis. Confirme antes de executar.
+                        <strong>Atenção:</strong> excluir um usuário, bloquear um cliente (Tenant) e compactar dados antigos são ações administrativas sensíveis. Confirme sempre antes de executar.
                     </div>
-                    <p>Usuários também podem ser vinculados a mais de uma unidade. Isso define quais unidades aparecem na escolha do Modo Normal. A <strong>Recepção Central</strong>, acessada por botão na tela inicial, concentra a visão das recepções.</p>
                 </section>
 
                 <!-- SEÇÃO 13: PERFIL E SONS -->
@@ -523,7 +588,7 @@
                         <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center text-sm font-bold text-amber-700">Aviso</div>
                     </div>
                     <ul class="mt-4">
-                        <li><strong>Sons:</strong> ligue ou desligue o som de cada tipo. Por padrão, todos tocam.</li>
+                        <li><strong>Sons:</strong> ligue ou desligue o som de cada tipo. Por padrão, todos tocam (inclusive ao receber novos assistidos na fila ou na sua Mesa Digital).</li>
                         <li><strong>Avisos na tela:</strong> ligue ou desligue a exibição de cada tipo de notificação.</li>
                         <li>As preferências ficam salvas na sua conta e valem em qualquer computador.</li>
                     </ul>
@@ -542,12 +607,12 @@
                         <strong>Importante:</strong> o cache funciona melhor com apenas uma aba do sistema aberta por navegador. Evite editar o mesmo assistido em dois computadores ao mesmo tempo.
                     </div>
 
-                    <h3 class="sub-title">14.2. Monitoramento Avançado (Sentry)</h3>
-                    <p>Para garantir que o sistema não deixe a equipe na mão durante um mutirão com centenas de pessoas, o SIGEP conta com integração nativa ao <strong>Sentry</strong> (Monitoramento de Infraestrutura).</p>
+                    <h3 class="sub-title">14.2. Monitoramento Avançado (Sentry) e Ouvidoria Integrada</h3>
+                    <p>Para garantir que o sistema não deixe a equipe na mão durante um mutirão com centenas de pessoas, o SIGEP conta com integração nativa ao <strong>Sentry</strong> (Monitoramento de Infraestrutura) e à <strong>Ouvidoria Interna</strong>.</p>
                     
                     <ul class="mt-4">
-                        <li>Se ocorrer qualquer travamento ou erro no navegador do usuário, o Sentry captura a falha de forma silenciosa e em tempo real.</li>
-                        <li>Ele recolhe os dados técnicos (por que a falha aconteceu) e envia um alerta imediato diretamente para a equipe de desenvolvimento.</li>
+                        <li>Se ocorrer qualquer travamento ou erro no navegador do usuário, o Sentry e o capturador interno registram a falha de forma silenciosa e em tempo real.</li>
+                        <li>Os dados técnicos são enviados imediatamente para a equipe de desenvolvimento e contabilizados no KPI de <em>Erros Capturados</em> da Aba Segurança no Painel Admin.</li>
                         <li>Isso permite manutenções preventivas e proativas, garantindo extrema estabilidade à plataforma, muitas vezes corrigindo erros antes mesmo que o núcleo precise abrir um chamado de suporte.</li>
                     </ul>
                 </section>
