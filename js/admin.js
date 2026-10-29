@@ -2176,7 +2176,9 @@ export const AdminService = {
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
     abrirModalPermissoesGranulares,
-    carregarFeedbacksSistema, // Exportado para caso precise chamar externamente
+    carregarFeedbacksSistema,
+    carregarPainelMonitoramentoSeguranca, // <-- Adicionado aqui
 };
+
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
