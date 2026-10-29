@@ -1,5 +1,4 @@
-Aqui está o seu ficheiro atendimentoExternoService.js COMPLETO E INTEGRADO, contendo todas as regras anteriores (filtro de pautas ativas, LGPD, fluxo de triagem e gerador do Verde), agora com a lógica de Pausa do Colaborador (com a "farofa com alho" crítica e contagem de paus em vermelho vivo) perfeitamente implementada.
-Pode copiar todo o código abaixo e substituir integralmente no seu arquivo js/atendimentoExternoService.js:
+
 // js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD E PAUSA DE COLABORADOR)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
