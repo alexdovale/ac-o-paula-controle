@@ -114,6 +114,9 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 <button class="tab-admin-btn py-3 px-4 font-black text-xs uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 transition flex items-center gap-2" data-target="aba-usuarios">
                     ${ico('users', 'w-4 h-4')} Usuários
                 </button>
+                <button class="tab-admin-btn py-3 px-4 font-black text-xs uppercase tracking-wider text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition flex items-center gap-2" data-target="aba-permissoes-perfil">
+                    ${ico('shield', 'w-4 h-4')} Permissões por Perfil
+                </button>                
                 <button class="tab-admin-btn py-3 px-4 font-black text-xs uppercase tracking-wider text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition flex items-center gap-2" data-target="aba-unidades">
                     ${ico('building', 'w-4 h-4')} Unidades & Recepções
                 </button>
@@ -139,6 +142,22 @@ export const renderizarLayoutAbasAdmin = (container) => {
                     <div id="pending-users-list"></div>
                     <div id="pagination-pendentes" class="hidden"></div>
                     <div id="page-size-pendentes" class="mt-2"></div>
+                </div>
+                <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Matriz de Permissões por Perfil</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Padrão de acesso de cada perfil para o órgão atual.</p>
+                            </div>
+                            <button id="btn-atualizar-permissoes-perfil" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+                                ${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar
+                            </button>
+                        </div>
+                        <div id="container-matriz-permissoes-perfil" class="overflow-x-auto">
+                            <p class="text-xs text-slate-400 py-6 text-center">Carregando matriz de permissões...</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider mb-3">Usuários Ativos no Sistema</h3>
@@ -291,6 +310,14 @@ export const renderizarLayoutAbasAdmin = (container) => {
             if (targetId === 'aba-auditoria' && cachedLogs.length === 0) loadAuditLogs(db);
             if (targetId === 'aba-seguranca') carregarPainelMonitoramentoSeguranca(db);
             if (targetId === 'aba-ouvidoria') carregarFeedbacksSistema(db);
+            if (targetId === 'aba-permissoes-perfil') {
+                // Chama o serviço de permissões para renderizar a matriz no container
+                if (window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
+                    PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, document.getElementById('container-matriz-permissoes-perfil'));
+                }
+            }
+
+            
         });
     });
 };
