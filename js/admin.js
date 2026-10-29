@@ -87,6 +87,109 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
     }
 };
 
+
+// ==========================================
+// PAINEL DE MONITORAMENTO E SEGURANÇA (IPs e Tráfego)
+// ==========================================
+export const carregarPainelMonitoramentoSeguranca = async (db) => {
+    const container = document.getElementById('admin-content');
+    if (!container) return;
+
+    let secaoMonitoramento = document.getElementById('secao-monitoramento-seguranca');
+    if (!secaoMonitoramento) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'secao-monitoramento-seguranca';
+        wrapper.className = 'mt-10 pt-6 border-t border-slate-200';
+        wrapper.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span class="text-slate-500">${ico('shield', 'w-5 h-5')}</span> Monitoramento, Tráfego e IPs de Acesso
+                </h3>
+                <button id="btn-atualizar-monitoramento" class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                    ${ico('refresh', 'w-3.5 h-3.5')} Atualizar Dados
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Acessos Registrados</p>
+                    <h3 id="kpi-total-acessos" class="text-2xl font-black text-slate-800 mt-1">Carregando...</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Erros de Código Capturados</p>
+                    <h3 id="kpi-total-erros" class="text-2xl font-black text-red-600 mt-1">Carregando...</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status do Servidor</p>
+                    <h3 class="text-2xl font-black text-emerald-600 mt-1 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                    </h3>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">
+                    📍 Rastreabilidade de IPs e Tráfego Recente
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">Usuário</th>
+                                <th class="p-3">Endereço IP & Localidade</th>
+                                <th class="p-3">Dispositivo / Navegador</th>
+                                <th class="p-3">Data e Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-monitoramento-acessos" class="divide-y divide-slate-100">
+                            <tr><td colspan="4" class="text-center py-6 text-slate-400">Carregando acessos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        container.appendChild(wrapper);
+
+        document.getElementById('btn-atualizar-monitoramento')?.addEventListener('click', () => carregarPainelMonitoramentoSeguranca(db));
+    }
+
+    try {
+        const qAcessos = query(collection(db, "logs_acessos_seguranca"), orderBy("dataAcesso", "desc"), limit(25));
+        const snapAcessos = await getDocs(qAcessos);
+        const acessos = snapAcessos.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const qErros = query(collection(db, "feedbacks_sistema"), orderBy("criadoEm", "desc"), limit(10));
+        const snapErros = await getDocs(qErros);
+        const erros = snapErros.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        document.getElementById('kpi-total-acessos').textContent = acessos.length;
+        document.getElementById('kpi-total-erros').textContent = erros.length;
+
+        const tbodyAcessos = document.getElementById('tabela-monitoramento-acessos');
+        if (tbodyAcessos) {
+            if (acessos.length === 0) {
+                tbodyAcessos.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-slate-400">Nenhum acesso registrado recentemente.</td></tr>';
+            } else {
+                tbodyAcessos.innerHTML = acessos.map(log => {
+                    let dataFmt = '-';
+                    try { dataFmt = new Date(log.dataAcesso).toLocaleString('pt-BR'); } catch(e){}
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-semibold text-slate-800">${escapeHTML(log.usuario)}</td>
+                            <td class="p-3 font-mono text-slate-600">${escapeHTML(log.ip)} <span class="text-[10px] text-slate-400 block">${escapeHTML(log.localidade || '')}</span></td>
+                            <td class="p-3 text-slate-600">${escapeHTML(log.dispositivo)} <span class="text-[10px] text-slate-400 block truncate max-w-xs">${escapeHTML(log.navegador || '')}</span></td>
+                            <td class="p-3 font-mono text-slate-500 whitespace-nowrap">${escapeHTML(dataFmt)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao carregar monitoramento de segurança:", error);
+    }
+};
+
+
 // ==========================================
 // GESTAO DE UNIDADES
 // ==========================================
