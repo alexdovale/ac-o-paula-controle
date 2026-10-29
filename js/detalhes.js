@@ -1,10 +1,4 @@
-O erro TypeError: undefined is not an object (evaluating 's.indexOf') acontece porque em algum lugar (muito provavelmente ao pesquisar assuntos, filtrar textos na barra de busca do checklist ou ao converter valores para string), o código tenta manipular uma variável nula ou indefinida.
-Para resolver isso e ao mesmo tempo remover os botões de rádio ("bolinhas") duplicados do Perfil Socioeconômico dentro do modal de detalhes (mantendo apenas o campo de seleção limpo), preparei as correções exatas para o seu ficheiro detalhes.js.
-O que foi corrigido no detalhes.js:
- * Blindagem anti-undefined (normalizeLocal): Agora a função trata qualquer tipo de dado inesperado (nulo, indefinido ou objectos) sem nunca quebrar a aplicação com erros de indexOf.
- * Remoção das "bolinhas" do Perfil Socioeconômico: Limpamos o trecho de renderização do formulário socioeconômico em detalhes.js para remover os botões de rádio antigos (como os de fonte de renda), mantendo um layout limpo em grade.
-Código Completo Atualizado e Blindado (detalhes.js):
-Substitua todo o conteúdo do seu ficheiro detalhes.js por este código corrigido:
+
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VISUAL REORGANIZADO & BLINDADO)
