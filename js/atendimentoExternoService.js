@@ -1,4 +1,4 @@
-// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD, MODAL DE PUXADA E PAUSA RÁPIDA)
+// js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD, MODAL DE PUXADA, PAUSA RÁPIDA, SALVAMENTO VERDE/CNP E MOTIVO DE REAGENDAMENTO/CANCELAMENTO)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -18,12 +18,13 @@ const statusMap = {
     pauta:                      { cor: 'text-slate-600 border-slate-200 bg-slate-50',      txt: 'Na Pauta' },
     aguardando:                 { cor: 'text-amber-700 border-amber-200 bg-amber-50',      txt: 'Espera' },
     emAtendimento:              { cor: 'text-blue-700 border-blue-200 bg-blue-50',         txt: 'Atendendo' },
-    aguardandoDistribuicao:   { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',         txt: 'No Defensor' },
-    aguardandoCorrecao:        { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
+    aguardandoDistribuicao:     { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',         txt: 'No Defensor' },
+    aguardandoCorrecao:         { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
     atendido:                   { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
-    aguardandoNumero:          { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
+    cancelado:                  { cor: 'text-rose-700 border-rose-200 bg-rose-50',         txt: 'Cancelado' },
+    aguardandoNumero:           { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
     faltoso:                    { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
-    aguardandoAutorizacaoPuxada: { cor: 'text-violet-700 border-violet-200 bg-violet-50', txt: 'Puxada pendente' },
+    aguardandoAutorizacaoPuxada:{ cor: 'text-violet-700 border-violet-200 bg-violet-50',   txt: 'Puxada pendente' },
 };
 
 const app = initializeApp(firebaseConfig);
@@ -42,6 +43,7 @@ export const AtendimentoExternoService = {
     colaboradorNome: null,
     colaboradorId: null,
     fluxoSelecionado: null,
+    subFluxoDireto: 'normal', // 'normal' | 'reagendar' | 'cancelar'
     assistidoData: null,
     todosColaboradores: [],
     colaboradorAtual: null,
@@ -58,11 +60,11 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (Gerador Verde Integrado)");
+        console.log("Mesa Digital V5 Inicializada (Gerador Verde Salvo + Fluxos Completos)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
-        this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
-        this.assistidoId   = urlParams.get('assistidoId') || urlParams.get('aid');
+        this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid') || this.pautaId;
+        this.assistidoId   = urlParams.get('assistidoId') || urlParams.get('aid') || this.assistidoId;
         const tokenRecebido= urlParams.get('token');
 
         if (!this.pautaId) {
@@ -144,6 +146,26 @@ export const AtendimentoExternoService = {
             console.error("Erro na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
         }
+    },
+
+    // ─── NAVEGAÇÃO SEGURA DE RETORNO (CORREÇÃO DO ERRO DO PRINT) ──────────────
+
+    voltarParaDashboard() {
+        const btnVoltar = document.getElementById('btn-voltar-dashboard') || document.getElementById('btn-voltar-portal');
+        if (btnVoltar && this._modoVoltar === 'mesa') {
+            btnVoltar.click();
+            return;
+        }
+        if (this.unsubscribeAssistido) {
+            this.unsubscribeAssistido();
+            this.unsubscribeAssistido = null;
+        }
+        this.assistidoId = null;
+        this.assistidoData = null;
+        this._ajustarGrelhaKanban();
+        this.renderizarKanban();
+        this.iniciarDashboardKanban();
+        this.atualizarBadgeHeader();
     },
 
     // ─── LÓGICA DE DADOS (DASHBOARD) ──────────────────────────────────────────
@@ -422,7 +444,7 @@ export const AtendimentoExternoService = {
     },
 
     _assinaturaDados(a) {
-        return JSON.stringify([a.name, a.subject, a.status, a.documentChecklist || null, a.demandas?.descricoes || null, a.historicoTransferencia || null]);
+        return JSON.stringify([a.name, a.subject, a.status, a.numeroProcesso || null, a.idCasoVerde || null, a.motivoEncerramento || null, a.documentChecklist || null, a.demandas?.descricoes || null, a.historicoTransferencia || null]);
     },
 
     _escutarAssistido(pautaData) {
@@ -455,7 +477,7 @@ export const AtendimentoExternoService = {
 
     _registrarAbertura(assistido) {
         if (this.pautaFechada || !this.colaboradorNome) return;
-        if (['atendido', 'aguardandoNumero', 'faltoso'].includes(assistido.status)) return;
+        if (['atendido', 'aguardandoNumero', 'faltoso', 'cancelado'].includes(assistido.status)) return;
         const ultimo = (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).slice(-1)[0] || '';
         if (ultimo.startsWith('Aberto na Mesa Digital') && ultimo.includes(`(por ${this.colaboradorNome})`)) return;
         updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistido.id), {
@@ -644,13 +666,13 @@ export const AtendimentoExternoService = {
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
         const mesa = this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a));
         const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
-            const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
+            const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao', 'cancelado'].includes(a.status);
             return isDone && !this._ehPendenteDoDefensor(a) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
         });
 
         const pautaGeral = this.todosAtendimentosPauta.filter(a => {
             const isMine = this._pertenceAMim(a) ||
-                          (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+                          (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao', 'cancelado'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const isEspera = a.status === 'aguardando';
             return !isMine && !isEspera && a.status !== 'faltoso';
         });
@@ -800,15 +822,20 @@ export const AtendimentoExternoService = {
             }
         }
 
+        const cnpTag = assistido.numeroProcesso
+            ? `<div class="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mb-2 inline-block w-fit">CNP/VERDE: ${escapeHTML(assistido.numeroProcesso)}</div>`
+            : '';
+
         return `
             <div class="kanban-card cursor-pointer bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow ${urgencia}" data-assistido-id="${assistido.id}" title="Ver histórico do checklist">
                 <div class="flex justify-between items-start mb-2 gap-2">
                     <h4 class="font-black text-slate-800 text-sm leading-tight line-clamp-2">${escapeHTML(assistido.name)}</h4>
                     ${badgeUrgencia}
                 </div>
-                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-3 truncate">
+                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-2 truncate">
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span> ${escapeHTML(assistido.subject || 'Sem assunto')}
                 </div>
+                ${cnpTag}
                 <div class="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
                     <span class="text-[9px] font-black px-2 py-1 rounded-md border ${st.cor} uppercase tracking-widest">${st.txt}</span>
                     <span class="font-bold text-[9px] text-slate-400 uppercase truncate max-w-[80px] text-right">${donoLabel}</span>
@@ -1067,7 +1094,7 @@ export const AtendimentoExternoService = {
             DEVOLVIDO_COM_ERRO: 'Devolvido para correção', TRANSFERENCIA_DE_CASO: 'Transferido',
             ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila',
             DEVOLVIDO_PARA_CORRECAO: 'Devolvido para correção', APROVADO_E_DISTRIBUIDO: 'Distribuído',
-            DEVOLVIDO_PARA_DISTRIBUICAO: 'Devolvido à distribuição'
+            DEVOLVIDO_PARA_DISTRIBUICAO: 'Devolvido à distribuição', REAGENDADO: 'Reagendado', CANCELADO: 'Cancelado'
         };
         const hhmm = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const fmtData = (d) => d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -1134,6 +1161,7 @@ export const AtendimentoExternoService = {
         const revisao = por('aguardandoDistribuicao', 'aguardandoCorrecao');
         const concluidos = por('atendido', 'aguardandoNumero');
         const faltosos = por('faltoso');
+        const cancelados = por('cancelado');
         const total = todos.length;
         const pct = total > 0 ? Math.round((concluidos.length / total) * 100) : 0;
 
@@ -1171,18 +1199,20 @@ export const AtendimentoExternoService = {
                 <span class="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">${pct}% concluído</span>
             </div>
             <div class="h-2 bg-slate-200 rounded-full mb-5 overflow-hidden"><div class="h-full bg-emerald-500" style="width:${pct}%"></div></div>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
                 ${kpi(espera.length, 'Espera', 'amber')}
                 ${kpi(atendendo.length, 'Atendendo', 'blue')}
                 ${kpi(revisao.length, 'Com defensor / avaliação', 'cyan')}
                 ${kpi(concluidos.length, 'Concluídos', 'emerald')}
                 ${kpi(faltosos.length, 'Faltosos', 'red')}
+                ${kpi(cancelados.length, 'Cancelados', 'rose')}
             </div>
             ${grupo('Aguardando', espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0)))}
             ${grupo('Em atendimento', atendendo)}
             ${grupo('Com defensor / avaliação', revisao)}
             ${grupo('Concluídos', concluidos, false)}
             ${grupo('Faltosos', faltosos, false)}
+            ${grupo('Cancelados', cancelados, false)}
         `;
 
         this._setupAcoesCards();
@@ -1207,7 +1237,7 @@ export const AtendimentoExternoService = {
 
         if (this.pautaFechada) {
             this._renderizarPainelFechado();
-        } else if (['atendido', 'aguardandoNumero'].includes(assistido.status)) {
+        } else if (['atendido', 'aguardandoNumero', 'cancelado'].includes(assistido.status)) {
             this._renderizarPainelFinalizado(assistido);
         } else {
             this._renderizarPainelAcoes(assistido, pautaData);
@@ -1322,6 +1352,18 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
+        if (assistido.motivoEncerramento) {
+            html += `
+                <div class="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
+                    <div class="bg-amber-100 p-2 rounded-lg shrink-0 text-amber-700">📌</div>
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Motivo Registrado</p>
+                        <p class="text-xs font-bold leading-relaxed text-slate-700">${escapeHTML(assistido.motivoEncerramento)}</p>
+                    </div>
+                </div>`;
+        }
+
         const temDetalhes = typeof window.openDetailsModal === 'function' && !!document.getElementById('assisted-details-modal');
         if (mostrarBotoes) html += `
             <div class="grid grid-cols-1 ${temDetalhes ? 'sm:grid-cols-2' : ''} gap-4 mb-6">
@@ -1347,19 +1389,30 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
+        const idVerdeOuCnp = assistido.numeroProcesso || assistido.idCasoVerde || '';
+        const urlVerdeDireta = this._gerarUrlVerde(idVerdeOuCnp);
+
         const txtVal = (v) => Array.isArray(v) ? v.filter(Boolean).join(' | ') : (v == null ? '' : String(v));
         const linhasId = [
             ['Nome', assistido.name], ['CPF', assistido.cpf], ['Telefone', assistido.telefone || assistido.phone],
             ['Agendamento', assistido.numeroAgendamento || assistido.numAgendamento], ['Assunto', assistido.subject],
             ['Horário agendado', assistido.scheduledTime],
             ['Chegada', assistido.arrivalTime ? new Date(assistido.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''],
-            ['Sala', assistido.room], ['Nº do processo', assistido.numeroProcesso]
+            ['Sala', assistido.room], ['Nº do processo / CNP', idVerdeOuCnp]
         ].filter(([, v]) => txtVal(v).trim() !== '');
+
         if (linhasId.length) {
             html += `
                 <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
                     <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} IDENTIFICAÇÃO</h4>
                     <div class="space-y-1">${linhasId.map(([k, v]) => `<div class="flex justify-between items-center py-2 border-b border-slate-100 gap-3"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">${k}</span><span class="text-xs font-bold text-slate-700 text-right break-words">${escapeHTML(txtVal(v))}</span></div>`).join('')}</div>
+                    ${urlVerdeDireta ? `
+                        <div class="mt-3 pt-3 border-t border-slate-100">
+                            <a href="${urlVerdeDireta}" target="_blank" rel="noopener" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-sm flex items-center justify-center gap-2 transition active:scale-95">
+                                Abrir Caso ${escapeHTML(idVerdeOuCnp)} no VERDE &nearr;
+                            </a>
+                        </div>
+                    ` : ''}
                 </div>`;
         }
 
@@ -1573,8 +1626,9 @@ export const AtendimentoExternoService = {
                 <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
                 <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
             </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
+            <button id="btn-voltar-painel-fechado" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
         `;
+        document.getElementById('btn-voltar-painel-fechado').onclick = () => this.voltarParaDashboard();
     },
 
     async registrarCnpFinal() {
@@ -1588,13 +1642,14 @@ export const AtendimentoExternoService = {
             await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), {
                 status: 'atendido',
                 numeroProcesso: cnp,
+                idCasoVerde: cnp,
                 finalizadoPeloColaborador: true,
                 distributionStatus: 'completed',
                 historicoAcoes: arrayUnion(this._registroHistorico(`CNP registrado: ${cnp}`, iso)),
                 history: arrayUnion({ action: 'APROVADO_E_DISTRIBUIDO', by: this.colaboradorNome || 'Sistema', msg: `Nº CNP: ${cnp}`, at: iso })
             });
             if (typeof showNotification === 'function') showNotification("CNP registrado. Caso concluído!", "success");
-            document.getElementById('btn-voltar-dashboard').click();
+            this.voltarParaDashboard();
         } catch (error) {
             console.error(error);
             alert(`Erro ao registrar o CNP: ${error.message}`);
@@ -1613,21 +1668,28 @@ export const AtendimentoExternoService = {
                     <input type="text" id="input-cnp-final" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono" placeholder="Ex: 1045239">
                     <button id="btn-registrar-cnp" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-md text-xs uppercase tracking-widest active:scale-95">Registrar CNP e Concluir</button>
                 </div>
-                <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+                <button id="btn-voltar-painel-finalizado" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
             `;
             document.getElementById('btn-registrar-cnp').onclick = () => this.registrarCnpFinal();
+            document.getElementById('btn-voltar-painel-finalizado').onclick = () => this.voltarParaDashboard();
             return;
         }
+
+        const ehCancelado = assistido.status === 'cancelado';
         aba.innerHTML = `
-            <div class="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm mt-4 mb-6">
-                <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
-                <h2 class="text-lg font-black text-emerald-800 uppercase tracking-wider mb-2">Protocolo Concluído</h2>
-                <p class="text-xs font-bold text-emerald-700 leading-relaxed">Atendimento salvo por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
-                ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
+            <div class="text-center p-6 ${ehCancelado ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'} rounded-2xl border shadow-sm mt-4 mb-6">
+                <div class="w-14 h-14 ${ehCancelado ? 'bg-rose-500' : 'bg-emerald-500'} rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
+                <h2 class="text-lg font-black ${ehCancelado ? 'text-rose-800' : 'text-emerald-800'} uppercase tracking-wider mb-2">${ehCancelado ? 'Atendimento Encerrado' : 'Protocolo Concluído'}</h2>
+                <p class="text-xs font-bold ${ehCancelado ? 'text-rose-700' : 'text-emerald-700'} leading-relaxed">Registrado por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
+                ${assistido.motivoEncerramento ? `<div class="mt-3 p-3 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700">${escapeHTML(assistido.motivoEncerramento)}</div>` : ''}
+                ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP / VERDE: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
             </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
+            <button id="btn-voltar-painel-finalizado" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
         `;
+        document.getElementById('btn-voltar-painel-finalizado').onclick = () => this.voltarParaDashboard();
     },
+
+    // ─── GERADOR DE LINK DIRETO VERDE (COM SALVAMENTO NO FIREBASE) ──────────
 
     _gerarUrlVerde(idCaso) {
         const limpo = String(idCaso || '').trim();
@@ -1641,11 +1703,17 @@ export const AtendimentoExternoService = {
 
         return `
             <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md mb-6">
-                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Gerador de Link Direto • VERDE</p>
-                <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link de acesso:</p>
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Gerador de Link Direto • VERDE</p>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase">Compartilhado na Pauta</span>
+                </div>
+                <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link e salvar para o Defensor e equipe:</p>
 
-                <div class="mb-3">
-                    <input type="text" id="input-id-caso-verde" value="${escapeHTML(idCasoAtual)}" placeholder="Ex: 7039722" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="input-id-caso-verde" value="${escapeHTML(idCasoAtual)}" placeholder="Ex: 7039722" class="flex-1 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                    <button type="button" id="btn-salvar-id-verde" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider px-4 rounded-xl shadow-sm active:scale-95 transition-colors shrink-0">
+                        Salvar ID
+                    </button>
                 </div>
 
                 <div id="container-link-verde-gerado" class="${urlGerada ? '' : 'hidden'} space-y-2 mt-3 pt-3 border-t border-slate-800">
@@ -1662,6 +1730,8 @@ export const AtendimentoExternoService = {
 
     _setupGeradorVerde(assistido) {
         const inputId = document.getElementById('input-id-caso-verde');
+        const inputCnpDireto = document.getElementById('input-numero-caso');
+        const btnSalvar = document.getElementById('btn-salvar-id-verde');
         const containerLink = document.getElementById('container-link-verde-gerado');
         const textoUrl = document.getElementById('texto-url-gerada');
         const btnAbrir = document.getElementById('btn-abrir-link-verde');
@@ -1673,6 +1743,9 @@ export const AtendimentoExternoService = {
             const apenasNumeros = rawVal.replace(/\D/g, '');
             if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
                 inputId.value = apenasNumeros;
+                if (inputCnpDireto && !inputCnpDireto.value.trim()) {
+                    inputCnpDireto.value = apenasNumeros;
+                }
                 const url = this._gerarUrlVerde(apenasNumeros);
                 if (textoUrl) textoUrl.textContent = url;
                 if (btnAbrir) btnAbrir.href = url;
@@ -1688,6 +1761,47 @@ export const AtendimentoExternoService = {
             const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
             processarValor(colarTexto);
         });
+
+        // Sincroniza se o usuário digitar no campo CNP do Finalizar
+        if (inputCnpDireto) {
+            inputCnpDireto.addEventListener('input', (e) => {
+                const limpo = e.target.value.replace(/\D/g, '');
+                if (limpo) processarValor(limpo);
+            });
+        }
+
+        // Botão para salvar o ID/Link do VERDE imediatamente para todos os colaboradores e Defensor terem acesso
+        if (btnSalvar) {
+            btnSalvar.onclick = async () => {
+                const valor = inputId.value.trim();
+                const textoOriginal = btnSalvar.textContent;
+                btnSalvar.disabled = true;
+                btnSalvar.textContent = "Salvando...";
+                try {
+                    const iso = new Date().toISOString();
+                    await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), {
+                        numeroProcesso: valor,
+                        idCasoVerde: valor,
+                        noVerde: !!valor,
+                        historicoAcoes: arrayUnion(this._registroHistorico(`ID do Caso VERDE salvo: ${valor || 'limpo'}`, iso))
+                    });
+                    if (this.assistidoData) {
+                        this.assistidoData.numeroProcesso = valor;
+                        this.assistidoData.idCasoVerde = valor;
+                    }
+                    if (inputCnpDireto) inputCnpDireto.value = valor;
+                    if (typeof showNotification === 'function') {
+                        showNotification("ID do VERDE salvo! O Defensor e a equipe já têm acesso ao link.", "success");
+                    }
+                } catch (err) {
+                    console.error("Erro ao salvar ID do Verde:", err);
+                    alert("Erro ao salvar o número do caso.");
+                } finally {
+                    btnSalvar.disabled = false;
+                    btnSalvar.textContent = textoOriginal;
+                }
+            };
+        }
 
         if (btnCopiar) {
             btnCopiar.onclick = () => {
@@ -1713,7 +1827,7 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 p-4 rounded-2xl text-left transition-all shadow-md group">
                     <span class="block text-emerald-600 mb-1">${ico('checkCircle', 'w-7 h-7')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">${isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo"}</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encerrar atendimento definitivo</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Concluir atendimento, reagendar ou cancelar</span>
                 </button>
         `;
 
@@ -1722,7 +1836,7 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-blue-50 hover:border-blue-300 group">
                     <span class="block text-blue-600 mb-1">${ico('send', 'w-7 h-7')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">Enviar ao Defensor</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Assinar ou distribuir</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Assinar, distribuir ou corrigir</span>
                 </button>
                 <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-amber-50 hover:border-amber-300 group">
                     <span class="block text-amber-600 mb-1">${ico('helpCircle', 'w-7 h-7')}</span>
@@ -1770,10 +1884,31 @@ export const AtendimentoExternoService = {
                 <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
             </div>
 
+            <!-- APARECE SOMENTE QUANDO CLICAR EM FINALIZAR PROTOCOLO -->
             <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Resultado da Finalização</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-subfluxo="normal" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-800 font-black text-[10px] uppercase tracking-wider transition">
+                            ✅ Atendido
+                        </button>
+                        <button type="button" data-subfluxo="reagendar" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-amber-50 font-black text-[10px] uppercase tracking-wider transition">
+                            📅 Reagendar
+                        </button>
+                        <button type="button" data-subfluxo="cancelar" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-rose-50 font-black text-[10px] uppercase tracking-wider transition">
+                            ❌ Cancelar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="box-cnp-finalizar">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
-                    <input type="text" id="input-numero-caso" value="${escapeHTML(assistido.numeroProcesso || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 7039722">
+                    <input type="text" id="input-numero-caso" value="${escapeHTML(assistido.numeroProcesso || assistido.idCasoVerde || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 7039722">
+                </div>
+
+                <div id="box-motivo-reagendar-cancelar" class="hidden">
+                    <label id="label-motivo-reagendar-cancelar" class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1.5">Motivo Obrigatório</label>
+                    <textarea id="input-motivo-reagendar-cancelar" rows="2" class="w-full p-3 border border-amber-300 rounded-xl text-xs bg-amber-50/40 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none resize-none font-medium" placeholder="Informe o motivo pelo qual não seguiu o atendimento..."></textarea>
                 </div>
             </div>
 
@@ -1787,6 +1922,7 @@ export const AtendimentoExternoService = {
                     <select id="select-finalidade-envio" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
                         <option value="assinar">Assinar</option>
                         <option value="distribuir">Distribuir</option>
+                        <option value="corrigir">Corrigir</option>
                     </select>
                 </div>
                 <div>
@@ -1842,6 +1978,50 @@ export const AtendimentoExternoService = {
         this._setupGeradorVerde(assistido);
 
         this.fluxoSelecionado = 'direto';
+        this.subFluxoDireto = 'normal';
+
+        // Alternância entre Concluir Normal, Reagendar e Cancelar dentro de Finalizar
+        const botoesSubFluxo = aba.querySelectorAll('.btn-subfluxo-direto');
+        const boxCnp = document.getElementById('box-cnp-finalizar');
+        const boxMotivo = document.getElementById('box-motivo-reagendar-cancelar');
+        const labelMotivo = document.getElementById('label-motivo-reagendar-cancelar');
+        const inputMotivo = document.getElementById('input-motivo-reagendar-cancelar');
+
+        botoesSubFluxo.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = btn.dataset.subfluxo;
+                this.subFluxoDireto = sub;
+
+                botoesSubFluxo.forEach(b => {
+                    b.className = 'btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-wider transition';
+                });
+
+                if (sub === 'normal') {
+                    btn.className = 'btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-800 font-black text-[10px] uppercase tracking-wider transition shadow-sm';
+                    boxCnp?.classList.remove('hidden');
+                    boxMotivo?.classList.add('hidden');
+                } else if (sub === 'reagendar') {
+                    btn.className = 'btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-amber-500 bg-amber-50 text-amber-800 font-black text-[10px] uppercase tracking-wider transition shadow-sm';
+                    boxCnp?.classList.add('hidden');
+                    boxMotivo?.classList.remove('hidden');
+                    if (labelMotivo) labelMotivo.textContent = 'Motivo do Reagendamento (Obrigatório)';
+                    if (inputMotivo) {
+                        inputMotivo.placeholder = 'Ex: Faltou documentação, assistido pediu nova data...';
+                        inputMotivo.focus();
+                    }
+                } else if (sub === 'cancelar') {
+                    btn.className = 'btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-rose-500 bg-rose-50 text-rose-800 font-black text-[10px] uppercase tracking-wider transition shadow-sm';
+                    boxCnp?.classList.add('hidden');
+                    boxMotivo?.classList.remove('hidden');
+                    if (labelMotivo) labelMotivo.textContent = 'Motivo do Cancelamento (Obrigatório)';
+                    if (inputMotivo) {
+                        inputMotivo.placeholder = 'Ex: Desistiu do atendimento, não quis prosseguir...';
+                        inputMotivo.focus();
+                    }
+                }
+            });
+        });
+
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
         const configBoxes = {
             'direto': document.getElementById('config-numero-processo'),
@@ -1958,15 +2138,32 @@ export const AtendimentoExternoService = {
 
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
+        // Captura unificada do CNP / ID do Caso no VERDE
+        const numProcessoSeguro = (
+            document.getElementById('input-numero-caso')?.value.trim() ||
+            document.getElementById('input-id-caso-verde')?.value.trim() ||
+            this.assistidoData?.numeroProcesso ||
+            ''
+        );
+
+        const colabSeguro = this.colaboradorNome || 'Sistema';
+        const pautaIdSeguro = this.pautaId || '';
+        const assistidoIdSeguro = this.assistidoId || '';
+
+        // Validação de motivo obrigatório caso seja Reagendar ou Cancelar
+        if (this.fluxoSelecionado === 'direto' && (this.subFluxoDireto === 'reagendar' || this.subFluxoDireto === 'cancelar')) {
+            const motivoDigitado = document.getElementById('input-motivo-reagendar-cancelar')?.value.trim() || '';
+            if (!motivoDigitado) {
+                alert(`É obrigatório informar o motivo para ${this.subFluxoDireto === 'reagendar' ? 'reagendar' : 'cancelar'} o atendimento.`);
+                document.getElementById('input-motivo-reagendar-cancelar')?.focus();
+                return;
+            }
+        }
+
         this.isProcessing = true;
         const btnFinalizar = document.getElementById('btn-finalizar-dinamico');
         btnFinalizar.disabled = true;
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
-
-        const numProcessoSeguro = document.getElementById('input-numero-caso')?.value.trim() || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema';
-        const pautaIdSeguro = this.pautaId || '';
-        const assistidoIdSeguro = this.assistidoId || '';
 
         let tituloSucesso = "Atendimento Atualizado!";
         let subtituloSucesso = "Ação registrada com sucesso.";
@@ -1999,37 +2196,70 @@ export const AtendimentoExternoService = {
                 if (enviadoPorColaborador) mapaProdutividadeBI[enviadoPorColaborador] = 1;
                 mapaProdutividadeBI[colabSeguro] = 1;
 
-                let statusDestinoFinal = 'aguardandoNumero';
-                if (numProcessoSeguro || !temDistribuicaoAtiva) statusDestinoFinal = 'atendido';
+                if (this.subFluxoDireto === 'reagendar' || this.subFluxoDireto === 'cancelar') {
+                    const ehReagendar = this.subFluxoDireto === 'reagendar';
+                    const motivo = document.getElementById('input-motivo-reagendar-cancelar')?.value.trim() || '';
+                    const rotuloMotivo = ehReagendar ? `Reagendado: ${motivo}` : `Cancelado: ${motivo}`;
 
-                await updateDoc(docRef, {
-                    ...atualizacaoDeResponsavel,
-                    status: statusDestinoFinal,
-                    attendedBy: colabSeguro,
-                    enviadoPor: enviadoPorColaborador,
-                    trabalhosPorUsuario: mapaProdutividadeBI,
-                    creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null),
-                    attendedAt: timestampIso,
-                    finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
-                    numeroProcesso: numProcessoSeguro,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
-                        by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
-                        at: timestampIso
-                    })
-                });
+                    await updateDoc(docRef, {
+                        ...atualizacaoDeResponsavel,
+                        status: ehReagendar ? 'atendido' : 'cancelado',
+                        attendedBy: colabSeguro,
+                        enviadoPor: enviadoPorColaborador,
+                        trabalhosPorUsuario: mapaProdutividadeBI,
+                        attendedAt: timestampIso,
+                        finalizadoPeloColaborador: true,
+                        numeroProcesso: numProcessoSeguro,
+                        idCasoVerde: numProcessoSeguro,
+                        motivoEncerramento: rotuloMotivo,
+                        demandas: objetoDemandasFinal,
+                        historicoAcoes: arrayUnion(this._registroHistorico(`${ehReagendar ? 'Atendimento reagendado' : 'Atendimento cancelado'} — Motivo: ${motivo}`, timestampIso, colabSeguro)),
+                        history: arrayUnion({
+                            action: ehReagendar ? 'REAGENDADO' : 'CANCELADO',
+                            by: colabSeguro,
+                            msg: rotuloMotivo,
+                            at: timestampIso
+                        })
+                    });
 
-                tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
+                    tituloSucesso = ehReagendar ? "Caso Reagendado!" : "Atendimento Cancelado!";
+                    subtituloSucesso = `Motivo registrado: ${motivo}`;
+                } else {
+                    let statusDestinoFinal = 'aguardandoNumero';
+                    if (numProcessoSeguro || !temDistribuicaoAtiva) statusDestinoFinal = 'atendido';
+
+                    await updateDoc(docRef, {
+                        ...atualizacaoDeResponsavel,
+                        status: statusDestinoFinal,
+                        attendedBy: colabSeguro,
+                        enviadoPor: enviadoPorColaborador,
+                        trabalhosPorUsuario: mapaProdutividadeBI,
+                        creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null),
+                        attendedAt: timestampIso,
+                        finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
+                        numeroProcesso: numProcessoSeguro,
+                        idCasoVerde: numProcessoSeguro,
+                        demandas: objetoDemandasFinal,
+                        historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
+                        history: arrayUnion({
+                            action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
+                            by: colabSeguro,
+                            msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
+                            at: timestampIso
+                        })
+                    });
+
+                    tituloSucesso = "Atendimento Finalizado!";
+                    subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
+                }
             }
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
-                const finalidade = document.getElementById('select-finalidade-envio')?.value === 'distribuir' ? 'distribuir' : 'assinar';
-                const verboFinalidade = finalidade === 'distribuir' ? 'distribuição' : 'assinatura';
+                const rawFinalidade = document.getElementById('select-finalidade-envio')?.value || 'assinar';
+                const finalidade = ['assinar', 'distribuir', 'corrigir'].includes(rawFinalidade) ? rawFinalidade : 'assinar';
+                const verboFinalidade = finalidade === 'distribuir' ? 'distribuição' : (finalidade === 'corrigir' ? 'correção' : 'assinatura');
+
                 if (!def) {
                     alert("Obrigatório selecionar um Defensor.");
                     this.isProcessing = false;
@@ -2039,13 +2269,16 @@ export const AtendimentoExternoService = {
                 }
 
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
+                const statusEnvio = finalidade === 'corrigir' ? 'aguardandoCorrecao' : 'aguardandoDistribuicao';
 
                 await updateDoc(docRef, {
                     ...atualizacaoDeResponsavel,
-                    status: 'aguardandoDistribuicao',
+                    status: statusEnvio,
                     defensorResponsavel: def,
                     notasRevisao: nota,
+                    reviewMotivoDevolucao: finalidade === 'corrigir' ? nota : null,
                     numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     finalidadeEnvio: finalidade,
                     enviadoEm: timestampIso,
                     distributionStatus: 'pending',
@@ -2054,15 +2287,15 @@ export const AtendimentoExternoService = {
                     demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para ${verboFinalidade} do Defensor(a) ${def}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
-                        action: 'ENVIADO_PARA_REVISAO',
+                        action: finalidade === 'corrigir' ? 'ENVIADO_PARA_CORRECAO' : 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
                         msg: nota || `Enviado para ${verboFinalidade} do Defensor(a) ${def}`,
                         at: timestampIso
                     })
                 });
 
-                tituloSucesso = "Enviado à Distribuição!";
-                subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
+                tituloSucesso = finalidade === 'corrigir' ? "Enviado p/ Correção!" : "Enviado ao Defensor!";
+                subtituloSucesso = `O Defensor(a) ${def} já recebeu o caso para ${verboFinalidade}.`;
             }
             else if (this.fluxoSelecionado === 'correcao') {
                 const def = document.getElementById('select-defensor-correcao')?.value || '';
@@ -2084,6 +2317,7 @@ export const AtendimentoExternoService = {
                     notasRevisao: nota,
                     reviewMotivoDevolucao: nota,
                     numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     finalidadeEnvio: 'corrigir',
                     enviadoEm: timestampIso,
                     enviadoPor: colabSeguro,
@@ -2118,6 +2352,8 @@ export const AtendimentoExternoService = {
                     status: 'emAtendimento',
                     assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: serv, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso,
+                    numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido p/ Correção por ${colabSeguro}. Msg: ${nota}`,
                     demandas: objetoDemandasFinal,
@@ -2147,6 +2383,7 @@ export const AtendimentoExternoService = {
                     enviadoEm: timestampIso,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a distribuição', timestampIso, colabSeguro)),
                     history: arrayUnion({
@@ -2176,6 +2413,8 @@ export const AtendimentoExternoService = {
                     status: 'emAtendimento',
                     assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: colega, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso,
+                    numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
                     demandas: objetoDemandasFinal,
@@ -2202,6 +2441,8 @@ export const AtendimentoExternoService = {
                     delegatedAt: null,
                     inAttendanceTime: null,
                     distributionStatus: null,
+                    numeroProcesso: numProcessoSeguro,
+                    idCasoVerde: numProcessoSeguro,
                     demandas: objetoDemandasFinal,
                     historicoAcoes: arrayUnion(this._registroHistorico('Atendimento pausado e devolvido à fila de espera', timestampIso, colabSeguro)),
                     history: arrayUnion({
@@ -2236,7 +2477,7 @@ export const AtendimentoExternoService = {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
 
-            document.getElementById('btn-voltar-dashboard').click();
+            this.voltarParaDashboard();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
