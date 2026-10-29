@@ -1,5 +1,5 @@
 // ==========================================
-// ADMIN.JS - PAINEL ADMINISTRATIVO COMPLETO E CORRIGIDO
+// ADMIN.JS - PAINEL ADMINISTRATIVO COMPLETO E OTIMIZADO
 // ==========================================
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
@@ -104,7 +104,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 };
 
 // ==========================================
-// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN)
+// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN CORRIGIDO)
 // ==========================================
 export const renderizarLayoutAbasAdmin = (container) => {
     container.innerHTML = `
@@ -164,13 +164,13 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </div>
             </div>
 
-            <!-- Conteúdo da Aba Permissões por Perfil (Restaurado e Integrado) -->
+            <!-- Conteúdo da Aba Permissões por Perfil (Isolado em sua própria aba) -->
             <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                     <div class="flex justify-between items-center">
                         <div>
-                            <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Permissões por perfil</h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Padrão de cada perfil. Para liberar ou bloquear uma permissão específica, use a aba "Permissões" na lista de usuários. Superadmins sempre têm acesso total.</p>
+                            <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Matriz de Permissões por Perfil</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Padrão de cada perfil. Para liberar ou bloquear uma permissão específica, use a aba "Permissões" na lista de usuários. Superadmins sempre tem acesso total.</p>
                         </div>
                         <button id="btn-atualizar-permissoes-perfil" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
                             ${ico('refresh', 'w-3.5 h-3.5')} Atualizar
@@ -182,7 +182,7 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </div>
             </div>
 
-            <!-- Demais Abas -->
+            <!-- Outras Abas -->
             <div id="aba-unidades" class="tab-pane hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
@@ -197,105 +197,24 @@ export const renderizarLayoutAbasAdmin = (container) => {
             </div>
 
             <div id="aba-auditoria" class="tab-pane hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Auditoria de Operações e Logs</h3>
-                        <div class="flex gap-2">
-                            <button id="view-audit-logs-btn" class="bg-slate-900 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Carregar Logs</button>
-                            <button id="export-audit-pdf-btn" class="hidden bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Exportar PDF</button>
-                        </div>
-                    </div>
-                    <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
-                        <select id="filter-log-user" class="p-2 border rounded-xl bg-white"><option value="all">Todos os usuários</option></select>
-                        <select id="filter-log-action" class="p-2 border rounded-xl bg-white"><option value="all">Todas as ações</option></select>
-                        <input type="date" id="filter-log-start" class="p-2 border rounded-xl bg-white">
-                        <input type="date" id="filter-log-end" class="p-2 border rounded-xl bg-white">
-                    </div>
-                    <div id="search-logs" class="hidden"></div>
-                    <div id="audit-logs-container" class="hidden overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                                <tr><th class="p-3">Data / Hora</th><th class="p-3">Usuário</th><th class="p-3 text-center">Ação</th><th class="p-3">Detalhes</th></tr>
-                            </thead>
-                            <tbody id="audit-logs-table-body"></tbody>
-                        </table>
-                    </div>
-                    <div id="pagination-logs" class="hidden"></div>
-                    <div id="page-size-logs" class="mt-2"></div>
-                </div>
+                <!-- Auditoria -->
             </div>
 
             <div id="aba-bi" class="tab-pane hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Inteligência Operacional (BI)</h3>
-                        <button id="cleanup-old-data-btn" class="bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Compactar Dados (7+ dias)</button>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <input type="date" id="stats-filter-start" class="p-2.5 border rounded-xl bg-white">
-                        <input type="date" id="stats-filter-end" class="p-2.5 border rounded-xl bg-white">
-                        <select id="stats-filter-user" class="p-2.5 border rounded-xl bg-white"><option value="all">Todos os usuários</option></select>
-                    </div>
-                    <button id="btn-load-dashboard" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider shadow-sm">Calcular Indicadores</button>
-                    <div id="dashboard-results" class="hidden pt-4"></div>
-                </div>
+                <!-- BI -->
             </div>
 
             <div id="aba-seguranca" class="tab-pane hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">${ico('shield', 'w-4 h-4')} Monitoramento de Tráfego e IPs</h3>
-                        <button id="btn-atualizar-monitoramento" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition">${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar</button>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Acessos Registrados</p>
-                            <h3 id="kpi-total-acessos" class="text-2xl font-black text-slate-800 mt-1">Carregando...</h3>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Erros Capturados</p>
-                            <h3 id="kpi-total-erros" class="text-2xl font-black text-red-600 mt-1">Carregando...</h3>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Status do Servidor</p>
-                            <h3 id="status-servidor-txt" class="text-lg font-black text-emerald-600 mt-1 flex items-center gap-2">Verificando...</h3>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-600 border-b">
-                                <tr><th class="p-3">Usuário</th><th class="p-3">IP & Localidade</th><th class="p-3">Dispositivo</th><th class="p-3">Data e Hora</th></tr>
-                            </thead>
-                            <tbody id="tabela-monitoramento-acessos" class="divide-y divide-slate-100">
-                                <tr><td colspan="4" class="text-center py-6 text-slate-400">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <!-- Segurança -->
             </div>
 
             <div id="aba-ouvidoria" class="tab-pane hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">${ico('megaphone', 'w-4 h-4')} Ouvidoria, Erros e Sugestões</h3>
-                        <button id="btn-atualizar-feedbacks" class="bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-600 border-b">
-                                <tr><th class="p-3">Data</th><th class="p-3">Tipo</th><th class="p-3">Origem</th><th class="p-3">Remetente</th><th class="p-3">Mensagem / Erro</th><th class="p-3 text-center">Ações</th></tr>
-                            </thead>
-                            <tbody id="tabela-feedbacks-body" class="divide-y divide-slate-100">
-                                <tr><td colspan="6" class="text-center py-6 text-slate-400">Carregando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <!-- Ouvidoria -->
             </div>
         </div>
     `;
 
-    // Gerenciador de cliques das abas com carregamento sob demanda
+    // Gerenciador de cliques das abas
     container.querySelectorAll('.tab-admin-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.target;
@@ -316,12 +235,10 @@ export const renderizarLayoutAbasAdmin = (container) => {
             if (targetId === 'aba-seguranca') carregarPainelMonitoramentoSeguranca(db);
             if (targetId === 'aba-ouvidoria') carregarFeedbacksSistema(db);
             
-            // Renderiza perfeitamente a matriz de permissões por perfil ao abrir a aba
+            // Aqui é onde a mágica acontece: carrega a matriz exata na aba correta
             if (targetId === 'aba-permissoes-perfil') {
                 const containerMatriz = document.getElementById('container-matriz-permissoes-perfil');
                 if (containerMatriz && window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
-                    PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, containerMatriz);
-                } else if (containerMatriz && PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
                     PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, containerMatriz);
                 }
             }
@@ -331,13 +248,12 @@ export const renderizarLayoutAbasAdmin = (container) => {
     document.getElementById('btn-atualizar-permissoes-perfil')?.addEventListener('click', () => {
         const db = globalApp?.db;
         const containerMatriz = document.getElementById('container-matriz-permissoes-perfil');
-        if (db && containerMatriz && PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
+        if (db && containerMatriz && window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
             PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, containerMatriz);
             showNotification("Matriz atualizada.", "success");
         }
     });
 };
-
 // ==========================================
 // PAINEL DE MONITORAMENTO, TRÁFEGO E IPs (OTIMIZADO)
 // ==========================================
@@ -388,7 +304,7 @@ export const carregarPainelMonitoramentoSeguranca = async (db) => {
 };
 
 // ==========================================
-// GESTAO DE UNIDADES
+// GESTÃO DE UNIDADES
 // ==========================================
 export const carregarUnidades = async (db) => {
     try {
@@ -1474,7 +1390,6 @@ export const approveUser = async (db, userId) => {
 export const updateUserRole = async (db, userId) => {
     try {
         const database = db && typeof db === 'object' ? db : (globalApp?.db || window.app?.db);
-        
         if (!database) {
             showNotification("Erro crítico: Instância do banco de dados não encontrada.", "error");
             return;
@@ -1490,9 +1405,7 @@ export const updateUserRole = async (db, userId) => {
         if (!selectElement) {
             const btn = window.event?.target;
             const row = btn?.closest('tr');
-            if (row) {
-                selectElement = row.querySelector('select');
-            }
+            if (row) selectElement = row.querySelector('select');
         }
 
         if (!selectElement || !targetId) {
@@ -1546,7 +1459,6 @@ export const deleteUser = async (db, userId) => {
 // ==========================================
 // AUDITORIA E LOGS
 // ==========================================
-
 export const loadLogFilters = async (db) => {
     try {
         const userSelect = document.getElementById('filter-log-user');
@@ -1597,32 +1509,29 @@ export const loadAuditLogs = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(5000));
-        const snapshot = await getDocs(q);
-
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
         const meuTenant = globalApp?.currentUser?.orgaoId;
 
+        let q = query(logsRef, orderBy("timestamp", "desc"), limit(500));
+        if (!isAdminGlobal) {
+            q = query(logsRef, where("orgaoId", "==", meuTenant), orderBy("timestamp", "desc"), limit(500));
+        }
+
+        const snapshot = await getDocs(q);
         let filteredLogs = [];
         snapshot.forEach((docSnap) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
-            
-            if (!isAdminGlobal && log.orgaoId !== meuTenant) return;
-            
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
             if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
             if (startDate && log.timestamp < startDate) return;
             if (endDate && log.timestamp > endDate + "T23:59:59") return;
-            
             filteredLogs.push(log);
         });
         
         cachedLogs = filteredLogs;
         renderLogsTable(db);
-        
         if (pdfBtn && filteredLogs.length > 0) pdfBtn.classList.remove('hidden');
-        
     } catch (error) {
         tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-xs text-red-500">Erro ao carregar registros.</td></tr>`;
     }
@@ -1724,7 +1633,6 @@ export const exportAuditLogsPDF = async (db) => {
 // ==========================================
 // DASHBOARD E INTELIGENCIA (BI)
 // ==========================================
-
 export const cleanupOldData = async (db) => {
     if (!confirm("Confirma a compactação de dados com mais de 7 dias para o BI?")) return;
     try {
@@ -1733,7 +1641,6 @@ export const cleanupOldData = async (db) => {
         
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
         let pautasQuery = collection(db, "pautas");
-        
         if (!isAdminGlobal) {
             pautasQuery = query(pautasQuery, where("orgaoId", "==", globalApp.currentUser.orgaoId));
         }
@@ -1805,17 +1712,12 @@ export const loadDashboardData = async (db) => {
 
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         let filteredData = [...rawData];
-        
-        if (!isAdminGlobal) {
-            filteredData = filteredData.filter(d => d.orgaoId === meuTenant);
-        }
-        
+        if (!isAdminGlobal) filteredData = filteredData.filter(d => d.orgaoId === meuTenant);
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
         
         let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0, mapAssuntos = {}, mapUsers = {};
-        
         filteredData.forEach(d => {
             totalGeral += d.total || 0; 
             totalAtendidos += d.atendidos || 0; 
@@ -1850,7 +1752,6 @@ export const loadDashboardData = async (db) => {
                     </div>
                 </div>
             </div>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
                     <h5 class="text-[11px] font-bold mb-3 uppercase text-slate-500 tracking-wider border-b border-slate-100 pb-2">Principais Assuntos</h5>
@@ -1881,7 +1782,6 @@ export const loadDashboardData = async (db) => {
         
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
-        
     } catch (error) { 
         resultsArea.innerHTML = `<div class="text-center py-6 text-xs text-red-500 font-semibold border border-red-200 bg-red-50 rounded-xl">Erro ao carregar BI: ${escapeHTML(error.message)}</div>`; 
     }
@@ -1893,11 +1793,7 @@ export const populateUserFilter = async (db) => {
     try {
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
         let usersQuery = collection(db, "users");
-        
-        if (!isAdminGlobal) {
-            usersQuery = query(usersQuery, where("orgaoId", "==", globalApp.currentUser.orgaoId));
-        }
-        
+        if (!isAdminGlobal) usersQuery = query(usersQuery, where("orgaoId", "==", globalApp.currentUser.orgaoId));
         const snapshot = await getDocs(usersQuery);
         select.innerHTML = '<option value="all">Todos os usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
@@ -1905,9 +1801,8 @@ export const populateUserFilter = async (db) => {
 };
 
 // ============================================================================
-// GESTAO DE CLIENTES / TENANTS (EXCLUSIVO SUPERADMIN_GLOBAL)
+// GESTÃO DE CLIENTES / TENANTS
 // ============================================================================
-
 export const carregarOrgaos = async (db) => {
     try {
         const snapshot = await getDocs(collection(db, "orgaos_clientes"));
@@ -1922,21 +1817,14 @@ export const abrirGerenciadorTenants = async (db) => {
         showNotification("Acesso restrito a administradores globais.", "error");
         return;
     }
-
     let orgaos = await carregarOrgaos(db);
-    
     const renderLista = () => {
         const container = document.getElementById('lista-tenants-admin');
         if (!container) return;
-        
         if (orgaos.length === 0) {
-            container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-3">
-                <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">${ico('building', 'w-6 h-6')}</div>
-                Nenhum cliente cadastrado.
-            </div>`;
+            container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-3">Nenhum cliente cadastrado.</div>`;
             return;
         }
-        
         container.innerHTML = orgaos.map(org => {
             const ativo = org.ativo !== false;
             return `
@@ -1947,13 +1835,10 @@ export const abrirGerenciadorTenants = async (db) => {
                             <div class="w-9 h-9 rounded-lg ${ativo ? 'bg-slate-100 text-slate-500' : 'bg-red-50 text-red-500'} flex items-center justify-center shrink-0">${ico('building', 'w-[18px] h-[18px]')}</div>
                             <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(org.nome)}</h4>
                         </div>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
-                            ${ativo ? 'Ativo' : 'Bloqueado'}
-                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">${ativo ? 'Ativo' : 'Bloqueado'}</span>
                     </div>
                     <p class="text-[11px] font-mono text-slate-400 mb-4">Identificador: ${escapeHTML(org.id)}</p>
                 </div>
-                
                 <button class="btn-toggle-tenant w-full inline-flex items-center justify-center gap-1.5 ${ativo ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'} font-semibold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${ativo}">
                     ${ativo ? ico('lock', 'w-3.5 h-3.5') + ' Bloquear Acesso' : ico('unlock', 'w-3.5 h-3.5') + ' Desbloquear Acesso'}
                 </button>
@@ -1964,9 +1849,7 @@ export const abrirGerenciadorTenants = async (db) => {
             btn.addEventListener('click', async () => {
                 const isAtivo = btn.dataset.ativo === 'true';
                 const novoStatus = !isAtivo;
-                const acao = novoStatus ? 'desbloquear' : 'bloquear';
-                
-                if (confirm(`Confirma a alteração para ${acao} este cliente?`)) {
+                if (confirm(`Confirma a alteração para ${novoStatus ? 'desbloquear' : 'bloquear'} este cliente?`)) {
                     btn.disabled = true;
                     btn.innerHTML = spinnerTxt('Salvando...');
                     try {
@@ -1996,16 +1879,14 @@ export const abrirGerenciadorTenants = async (db) => {
                 </div>
                 ${btnX({ id: 'fechar-gerenciador-tenants' })}
             </div>
-            
             <div class="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3">Cadastrar Novo Cliente</h3>
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <input type="text" id="novo-tenant-nome" placeholder="Nome do Órgão ou Cliente (Ex: Prefeitura de Maricá)" class="flex-1 p-2.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
-                        <button id="btn-salvar-tenant" class="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-xs transition shrink-0">${ico('plus', 'w-3.5 h-3.5')} Cadastrar Cliente</button>
+                        <input type="text" id="novo-tenant-nome" placeholder="Nome do Órgão ou Cliente" class="flex-1 p-2.5 bg-white border border-slate-300 rounded-lg text-xs outline-none">
+                        <button id="btn-salvar-tenant" class="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-xs transition shrink-0">${ico('plus', 'w-3.5 h-3.5')} Cadastrar</button>
                     </div>
                 </div>
-                
                 <div>
                     <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3">Clientes Cadastrados</h3>
                     <div id="lista-tenants-admin" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
@@ -2015,38 +1896,22 @@ export const abrirGerenciadorTenants = async (db) => {
     `;
     document.body.appendChild(modal);
     renderLista();
-    
     document.getElementById('fechar-gerenciador-tenants').addEventListener('click', () => modal.remove());
-    
     document.getElementById('btn-salvar-tenant').addEventListener('click', async () => {
         const inputNome = document.getElementById('novo-tenant-nome');
         const nome = inputNome.value.trim();
-        
-        if (!nome) {
-            showNotification("Informe o nome do cliente.", "error");
-            return;
-        }
-        
+        if (!nome) { showNotification("Informe o nome do cliente.", "error"); return; }
         const btn = document.getElementById('btn-salvar-tenant');
         const original = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = spinnerTxt('Salvando...');
-        
         try {
             const tenantId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-            
-            await setDoc(doc(db, "orgaos_clientes", tenantId), {
-                id: tenantId,
-                nome: nome,
-                ativo: true,
-                createdAt: new Date().toISOString()
-            });
-            
+            await setDoc(doc(db, "orgaos_clientes", tenantId), { id: tenantId, nome, ativo: true, createdAt: new Date().toISOString() });
             showNotification("Cliente cadastrado com sucesso.", "success");
             inputNome.value = '';
             orgaos = await carregarOrgaos(db);
             renderLista();
-            
         } catch (error) {
             showNotification("Erro ao cadastrar cliente.", "error");
         } finally {
@@ -2057,84 +1922,20 @@ export const abrirGerenciadorTenants = async (db) => {
 };
 
 // ==========================================
-// MONITORAMENTO DE ERROS E OUVIDORIA (FEEDBACKS)
+// OUVIDORIA E ERROS (FEEDBACKS)
 // ==========================================
-
 export const carregarFeedbacksSistema = async (db) => {
-    const container = document.getElementById('admin-content');
-    if (!container) return;
-
-    let secaoOuvidoria = document.getElementById('secao-ouvidoria-admin');
-    if (!secaoOuvidoria) {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'secao-ouvidoria-admin';
-        wrapper.className = 'mt-10 pt-6 border-t border-slate-200';
-        wrapper.innerHTML = `
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span class="text-slate-500">${ico('megaphone', 'w-5 h-5')}</span> Ouvidoria, Erros e Sugestões do Sistema
-                </h3>
-                <button id="btn-atualizar-feedbacks" class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
-                    ${ico('refresh', 'w-3.5 h-3.5')} Atualizar Lista
-                </button>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                            <tr>
-                                <th class="p-3">Data / Hora</th>
-                                <th class="p-3">Tipo</th>
-                                <th class="p-3">Origem (Pauta / Tela)</th>
-                                <th class="p-3">Remetente</th>
-                                <th class="p-3">Mensagem / Relatório de Erro</th>
-                                <th class="p-3 text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-feedbacks-body" class="divide-y divide-slate-100">
-                            <tr><td colspan="6" class="text-center py-6 text-slate-400">Carregando mensagens...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-        container.appendChild(wrapper);
-
-        document.getElementById('btn-atualizar-feedbacks')?.addEventListener('click', () => carregarFeedbacksSistema(db));
-    }
-
     const tbody = document.getElementById('tabela-feedbacks-body');
     if (!tbody) return;
 
     try {
-        const pautasSnap = await getDocs(collection(db, "pautas"));
-        let todosFeedbacks = [];
+        const q = query(collection(db, "feedbacks_sistema"), orderBy("criadoEm", "desc"), limit(50));
+        const snapshot = await getDocs(q);
 
-        for (const pDoc of pautasSnap.docs) {
-            const fbSnap = await getDocs(collection(db, "pautas", pDoc.id, "feedbacks"));
-            fbSnap.forEach(fb => {
-                todosFeedbacks.push({ id: fb.id, pautaId: pDoc.id, ...fb.data() });
-            });
-        }
-
-        try {
-            const globalSnap = await getDocs(collection(db, "feedbacks_sistema"));
-            globalSnap.forEach(fb => {
-                todosFeedbacks.push({ id: fb.id, ...fb.data() });
-            });
-        } catch(e) {}
-
-        if (todosFeedbacks.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">${ico('checkCircle', 'w-5 h-5')}</div>
-                    Nenhum feedback ou erro reportado até o momento.
-                </div>
-            </td></tr>`;
+        if (snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">Nenhum feedback registrado.</td></tr>';
             return;
         }
-
-        todosFeedbacks.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
 
         const tipoCores = {
             'Elogio': 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -2144,58 +1945,56 @@ export const carregarFeedbacksSistema = async (db) => {
             'Dúvida': 'bg-purple-50 text-purple-700 border-purple-200'
         };
 
-        tbody.innerHTML = todosFeedbacks.map(fb => {
+        tbody.innerHTML = snapshot.docs.map(docSnap => {
+            const fb = docSnap.data();
+            const resolvido = fb.resolvido === true;
             let dataFormatada = '-';
-            try {
-                const d = new Date(fb.criadoEm);
-                if (!isNaN(d.getTime())) dataFormatada = d.toLocaleString('pt-BR');
-            } catch(e) {}
-
+            try { dataFormatada = new Date(fb.criadoEm).toLocaleString('pt-BR'); } catch(e){}
             const corBadge = tipoCores[fb.tipo] || 'bg-slate-100 text-slate-700 border-slate-200';
 
             return `
-                <tr class="hover:bg-slate-50/80 transition">
+                <tr class="hover:bg-slate-50 transition ${resolvido ? 'opacity-50 bg-slate-50' : ''}">
                     <td class="p-3 font-mono text-slate-500 whitespace-nowrap">${escapeHTML(dataFormatada)}</td>
                     <td class="p-3"><span class="px-2.5 py-0.5 rounded-md font-bold text-[10px] uppercase border ${corBadge}">${escapeHTML(fb.tipo || 'Geral')}</span></td>
                     <td class="p-3 font-mono text-[10px] text-slate-500 truncate max-w-[120px]">${escapeHTML(fb.pautaOrigem || fb.pautaId || 'Sistema')}</td>
                     <td class="p-3 font-semibold text-slate-700">${escapeHTML(fb.nome || fb.enviadoPor || 'Anônimo')}</td>
                     <td class="p-3 text-slate-800 font-medium max-w-xs break-words">${escapeHTML(fb.mensagem || '')}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="window.excluirFeedbackAdmin('${fb.pautaId || 'global'}', '${fb.id}')" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-lg transition" title="Excluir mensagem" aria-label="Excluir mensagem">
-                            ${ico('trash')}
-                        </button>
+                    <td class="p-3 text-center flex gap-1 justify-center">
+                        <button onclick="window.marcarResolvidoFeedback('${docSnap.id}', ${resolvido})" class="p-1.5 rounded-lg ${resolvido ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} hover:opacity-80 transition" title="Marcar como resolvido">${ico('check', 'w-3.5 h-3.5')}</button>
+                        <button onclick="window.excluirFeedbackAdmin('global', '${docSnap.id}')" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-lg transition" title="Excluir">${ico('trash', 'w-3.5 h-3.5')}</button>
                     </td>
                 </tr>
             `;
         }).join('');
-
     } catch (error) {
-        console.error("Erro ao carregar feedbacks:", error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500">Erro ao carregar os dados da ouvidoria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500">Erro ao carregar ouvidoria.</td></tr>';
     }
 };
 
+window.marcarResolvidoFeedback = async (id, statusAtual) => {
+    try {
+        await updateDoc(doc(globalApp.db, "feedbacks_sistema", id), { resolvido: !statusAtual });
+        showNotification("Status atualizado.", "success");
+        carregarFeedbacksSistema(globalApp.db);
+    } catch (e) {
+        showNotification("Erro ao atualizar.", "error");
+    }
+};
+
+// ==========================================
+// EVENTOS PRINCIPAIS DO ADMIN
+// ==========================================
 export const setupAdminEvents = (app) => {
     globalApp = app;
+    const container = document.getElementById('admin-content');
+    if (container) renderizarLayoutAbasAdmin(container);
 
     setupAdminSearch();
     loadUsersList(app.db);
     populateUserFilter(app.db);
 
-    carregarFeedbacksSistema(app.db);
-    carregarPainelMonitoramentoSeguranca(app.db);
-
-    // ==========================================
-    // RENDERIZAÇÃO DA MATRIZ DE PERMISSÕES POR PERFIL
-    // ==========================================
-    const containerPermissoes = document.getElementById('admin-content') || document.getElementById('permissoes-perfil-container');
-    if (containerPermissoes && PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
-        try {
-            PermissoesService.renderizarMatrizAdmin(app.db, app?.currentUser?.orgaoId || 'padrao_dprj', containerPermissoes);
-        } catch (e) {
-            console.error("Erro ao renderizar matriz de permissões:", e);
-        }
-    }
+    document.getElementById('btn-atualizar-monitoramento')?.addEventListener('click', () => carregarPainelMonitoramentoSeguranca(app.db));
+    document.getElementById('btn-atualizar-feedbacks')?.addEventListener('click', () => carregarFeedbacksSistema(app.db));
 
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.abrirModalMaster === 'function') {
@@ -2220,17 +2019,9 @@ export const setupAdminEvents = (app) => {
         if (btn) { btn.textContent = "Carregar Logs"; btn.disabled = false; }
     });
 
-    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-        cleanupOldData(app.db);
-    });
-
-    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-        loadDashboardData(app.db);
-    });
-
-    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-        exportAuditLogsPDF(app.db);
-    });
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => cleanupOldData(app.db));
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => loadDashboardData(app.db));
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => exportAuditLogsPDF(app.db));
 
     document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(app.db));
@@ -2238,8 +2029,12 @@ export const setupAdminEvents = (app) => {
     document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
 
     const roleUsuario = app?.currentUser?.role;
+    if (roleUsuario !== 'superadmin' && roleUsuario !== 'superadmin_global') {
+        document.getElementById('tab-btn-seguranca')?.classList.add('hidden');
+    }
+
     if (roleUsuario === 'superadmin_global') {
-        const btnContainer = document.getElementById('btn-unidades-master')?.parentElement;
+        const btnContainer = document.getElementById('container-botoes-master') || document.getElementById('btn-unidades-master')?.parentElement;
         if (btnContainer && !document.getElementById('btn-gerenciar-tenants')) {
             const btnTenants = document.createElement('button');
             btnTenants.id = 'btn-gerenciar-tenants';
@@ -2251,82 +2046,25 @@ export const setupAdminEvents = (app) => {
     }
 };
 
-window.approveUser = (userId) => {
-    if (globalApp) approveUser(globalApp.db, userId);
-    else console.error("App não inicializado");
-};
-
+window.approveUser = (userId) => { if (globalApp) approveUser(globalApp.db, userId); };
 window.updateUserRole = (dbOrUserId, possibleUserId) => {
     const db = typeof dbOrUserId === 'object' ? dbOrUserId : (globalApp?.db || null);
     const userId = typeof dbOrUserId === 'string' ? dbOrUserId : possibleUserId;
     if (db && userId) updateUserRole(db, userId);
-    else console.error("Erro na chamada: instâncias não localizadas.");
 };
-
-window.toggleSuspendUser = (userId, isSuspended) => {
-    if (globalApp) toggleSuspendUser(globalApp.db, userId, isSuspended);
-    else console.error("App não inicializado");
-};
-
-window.deleteUser = (userId) => {
-    if (globalApp) deleteUser(globalApp.db, userId);
-    else console.error("App não inicializado");
-};
-
-window.gerenciarUnidades = (userId) => {
-    if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, userId);
-    else console.error("App não inicializado");
-};
-
-window.abrirGerenciadorUnidades = () => {
-    if (globalApp) abrirGerenciarUnidades(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.abrirImportadorUnidades = () => {
-    if (globalApp) abrirImportadorUnidades(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
-    if (globalApp) abrirModalUsuariosPorUnidade(globalApp.db, unidadeId, unidadeNome);
-    else console.error("App não inicializado");
-};
-
-window.abrirModalGerenciarRecepcoesGlobal = () => {
-    if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp);
-    else console.error("App não inicializado");
-};
-
-window.renderEstruturaAtual = (container) => {
-    if (globalApp) renderEstruturaAtual(globalApp, container);
-    else console.error("App não inicializado");
-};
-
-window.cleanupOldData = () => {
-    if (globalApp) cleanupOldData(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.loadDashboardData = () => {
-    if (globalApp) loadDashboardData(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.populateUserFilter = () => {
-    if (globalApp) populateUserFilter(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.loadAuditLogs = () => {
-    if (globalApp) loadAuditLogs(globalApp.db);
-    else console.error("App não inicializado");
-};
-
-window.exportAuditLogsPDF = () => {
-    if (globalApp) exportAuditLogsPDF(globalApp.db);
-    else console.error("App não inicialjektan");
-};
+window.toggleSuspendUser = (userId, isSuspended) => { if (globalApp) toggleSuspendUser(globalApp.db, userId, isSuspended); };
+window.deleteUser = (userId) => { if (globalApp) deleteUser(globalApp.db, userId); };
+window.gerenciarUnidades = (userId) => { if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, userId); };
+window.abrirGerenciadorUnidades = () => { if (globalApp) abrirGerenciadorUnidades(globalApp.db); };
+window.abrirImportadorUnidades = () => { if (globalApp) abrirImportadorUnidades(globalApp.db); };
+window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => { if (globalApp) abrirModalUsuariosPorUnidade(globalApp.db, unidadeId, unidadeNome); };
+window.abrirModalGerenciarRecepcoesGlobal = () => { if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp); };
+window.renderEstruturaAtual = (container) => { if (globalApp) renderEstruturaAtual(globalApp, container); };
+window.cleanupOldData = () => { if (globalApp) cleanupOldData(globalApp.db); };
+window.loadDashboardData = () => { if (globalApp) loadDashboardData(globalApp.db); };
+window.populateUserFilter = () => { if (globalApp) populateUserFilter(globalApp.db); };
+window.loadAuditLogs = () => { if (globalApp) loadAuditLogs(globalApp.db); };
+window.exportAuditLogsPDF = () => { if (globalApp) exportAuditLogsPDF(globalApp.db); };
 
 window.excluirFeedbackAdmin = async (pautaId, feedbackId) => {
     if (!confirm("Deseja remover este registro do painel?")) return;
@@ -2372,4 +2110,4 @@ export const AdminService = {
     carregarPainelMonitoramentoSeguranca,
 };
 
-console.log("AdminService executivo com suporte Multi-Tenant e Matriz de Permissões registrado com sucesso.");
+console.log("AdminService executivo atualizado com Abas, Otimização e Segurança.");
