@@ -1,5 +1,5 @@
 // ==========================================
-// ADMIN.JS - PAINEL ADMINISTRATIVO COMPLETO E OTIMIZADO
+// ADMIN.JS - PAINEL ADMINISTRATIVO COMPLETO E CORRIGIDO
 // ==========================================
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
@@ -104,7 +104,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 };
 
 // ==========================================
-// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN)
+// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN CORRIGIDO)
 // ==========================================
 export const renderizarLayoutAbasAdmin = (container) => {
     container.innerHTML = `
@@ -134,7 +134,7 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </button>
             </div>
 
-            <!-- Conteúdo das Abas -->
+            <!-- Conteúdo da Aba Usuários -->
             <div id="aba-usuarios" class="tab-pane space-y-6">
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider mb-3">Cadastros Pendentes de Aprovação</h3>
@@ -142,22 +142,6 @@ export const renderizarLayoutAbasAdmin = (container) => {
                     <div id="pending-users-list"></div>
                     <div id="pagination-pendentes" class="hidden"></div>
                     <div id="page-size-pendentes" class="mt-2"></div>
-                </div>
-                <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Matriz de Permissões por Perfil</h3>
-                                <p class="text-xs text-slate-500 mt-0.5">Padrão de acesso de cada perfil para o órgão atual.</p>
-                            </div>
-                            <button id="btn-atualizar-permissoes-perfil" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition">
-                                ${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar
-                            </button>
-                        </div>
-                        <div id="container-matriz-permissoes-perfil" class="overflow-x-auto">
-                            <p class="text-xs text-slate-400 py-6 text-center">Carregando matriz de permissões...</p>
-                        </div>
-                    </div>
                 </div>
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider mb-3">Usuários Ativos no Sistema</h3>
@@ -180,6 +164,14 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </div>
             </div>
 
+            <!-- Conteúdo da Aba Permissões por Perfil (Utiliza o renderAdmin correto do PermissoesService) -->
+            <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
+                <div id="container-matriz-permissoes-perfil">
+                    <!-- A matriz será injetada aqui automaticamente via PermissoesService.renderAdmin -->
+                </div>
+            </div>
+
+            <!-- Demais Abas -->
             <div id="aba-unidades" class="tab-pane hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
@@ -292,6 +284,7 @@ export const renderizarLayoutAbasAdmin = (container) => {
         </div>
     `;
 
+    // Gerenciador de cliques das abas com renderização correta via PermissoesService.renderAdmin
     container.querySelectorAll('.tab-admin-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.target;
@@ -307,17 +300,18 @@ export const renderizarLayoutAbasAdmin = (container) => {
 
             const db = globalApp?.db;
             if (!db) return;
+
             if (targetId === 'aba-auditoria' && cachedLogs.length === 0) loadAuditLogs(db);
             if (targetId === 'aba-seguranca') carregarPainelMonitoramentoSeguranca(db);
             if (targetId === 'aba-ouvidoria') carregarFeedbacksSistema(db);
+            
+            // Chama a função nativa renderAdmin do PermissoesService para desenhar a matriz exata
             if (targetId === 'aba-permissoes-perfil') {
-                // Chama o serviço de permissões para renderizar a matriz no container
-                if (window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
-                    PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, document.getElementById('container-matriz-permissoes-perfil'));
+                const containerMatriz = document.getElementById('container-matriz-permissoes-perfil');
+                if (containerMatriz && PermissoesService && typeof PermissoesService.renderAdmin === 'function') {
+                    PermissoesService.renderAdmin(containerMatriz, globalApp);
                 }
             }
-
-            
         });
     });
 };
@@ -372,8 +366,9 @@ export const carregarPainelMonitoramentoSeguranca = async (db) => {
 };
 
 // ==========================================
-// GESTÃO DE UNIDADES
+// GESTAO DE UNIDADES
 // ==========================================
+
 export const carregarUnidades = async (db) => {
     try {
         const snapshot = await getDocs(collection(db, "unidades"));
@@ -2108,7 +2103,7 @@ export const setupAdminEvents = (app) => {
             btnTenants.id = 'btn-gerenciar-tenants';
             btnTenants.className = 'bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 ml-auto';
             btnTenants.innerHTML = `${ico('building', 'w-3.5 h-3.5')} Gestão de Clientes`;
-            btnTenants.onclick = () => abrirGerenciadorTenants(app.db);
+            btnTenants.onclick = () => abrirGerenciarTenants(app.db);
             btnContainer.appendChild(btnTenants);
         }
     }
@@ -2178,4 +2173,4 @@ export const AdminService = {
     carregarPainelMonitoramentoSeguranca,
 };
 
-console.log("AdminService executivo atualizado com Abas, Otimização e Segurança.");
+console.log("AdminService executivo com suporte Multi-Tenant e Matriz de Permissões registrado com sucesso.");
