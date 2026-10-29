@@ -1,4 +1,3 @@
-
 // js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER, MÓDULO DE COLETAS E PAUSA DE COLABORADORES)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -71,6 +70,7 @@ class SIGEPApp {
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
         this.unsubscribePuxadas = null;
+        this.unsubscribeColabPausados = null;
         this.currentPautaFilter = 'all';
         
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
@@ -1695,6 +1695,102 @@ class SIGEPApp {
         });
     }
 
+    // ─── ALERTA EM TEMPO REAL DE COLABORADORES PAUSADOS NA PAUTA ───
+    setupOuvinteColaboradoresPausados(pautaId) {
+        if (this.unsubscribeColabPausados) {
+            this.unsubscribeColabPausados();
+            this.unsubscribeColabPausados = null;
+        }
+
+        const colabRef = collection(this.db, "pautas", pautaId, "collaborators");
+        const q = query(colabRef, where("status", "==", "pausado"));
+
+        this.unsubscribeColabPausados = onSnapshot(q, (snapshot) => {
+            const pausados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            this.renderizarBadgePausadosPauta(pausados);
+        }, (err) => console.warn("Aviso no ouvinte de pausados:", err));
+    }
+
+    renderizarBadgePausadosPauta(pausados) {
+        let badge = document.getElementById('badge-pausados-topo');
+        const actionsToggle = document.getElementById('actions-toggle');
+        const containerAcoes = actionsToggle ? actionsToggle.parentElement : (document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header'));
+
+        if (pausados && pausados.length > 0) {
+            if (!badge && containerAcoes) {
+                badge = document.createElement('button');
+                badge.id = 'badge-pausados-topo';
+                badge.type = 'button';
+                // Classes Tailwind com ajuste responsivo para mobile (px-2 no mobile, px-3 no desktop)
+                badge.className = 'mr-2 sm:mr-3 flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 font-black rounded-lg transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer animate-pulse text-xs';
+                badge.title = `${pausados.length} Colaborador(es) Pausado(s)`;
+                badge.onclick = (e) => {
+                    e.stopPropagation();
+                    this.abrirModalListaPausados(pausados);
+                };
+
+                if (actionsToggle) {
+                    containerAcoes.insertBefore(badge, actionsToggle);
+                } else {
+                    containerAcoes.prepend(badge);
+                }
+            }
+            if (badge) {
+                // No mobile mostra compacto "⏸️ 2", no desktop mostra "⏸️ 2 PAUSA(S)"
+                badge.innerHTML = `<span>⏸️</span> <span class="font-extrabold text-red-600">${pausados.length}</span><span class="hidden sm:inline font-black tracking-wider text-[10px] uppercase">PAUSA(S)</span>`;
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    abrirModalListaPausados(pausados) {
+        let modal = document.getElementById('modal-lista-pausados');
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = 'modal-lista-pausados';
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[99999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-fade-in';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border border-slate-200" onclick="event.stopPropagation()">
+                <div class="px-5 py-4 bg-red-50 border-b border-red-100 flex justify-between items-center shrink-0">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm">⏸️</span>
+                        <div>
+                            <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Equipe em Pausa</h3>
+                            <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mt-0.5">${pausados.length} ausente(s) no momento</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('modal-lista-pausados')?.remove()" class="text-slate-400 hover:text-slate-700 bg-white border border-slate-200 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition">✕</button>
+                </div>
+                
+                <div class="p-4 overflow-y-auto space-y-2.5 bg-slate-50 flex-1 custom-scrollbar">
+                    ${pausados.map(c => `
+                        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <span class="font-black text-xs text-slate-800 uppercase truncate">${escapeHTML(c.nome)}</span>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wider">${escapeHTML(c.cargo || 'Membro')}</span>
+                            </div>
+                            <div class="mt-1 bg-amber-50/80 border border-amber-200/60 px-2.5 py-1.5 rounded-lg text-amber-900 text-xs">
+                                <span class="text-[9px] font-black text-amber-700 uppercase tracking-wider block">Motivo informado:</span>
+                                <span class="italic font-semibold text-slate-700">"${escapeHTML(c.motivoPausa || 'Ausente momentaneamente')}"</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="px-5 py-3 bg-white border-t border-slate-200 flex justify-end shrink-0">
+                    <button onclick="document.getElementById('modal-lista-pausados')?.remove()" class="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-black rounded-xl text-xs uppercase tracking-widest transition active:scale-95">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
@@ -1793,7 +1889,8 @@ class SIGEPApp {
 
             this.setupRealtimeListener(pautaId);
             this.setupOuvinteSolicitacoesPuxada(pautaId);
-            this.setupCollaboratorsListener(pautaId); // Adicionado para ouvir mudanças de status dos colaboradores em tempo real
+            this.setupOuvinteColaboradoresPausados(pautaId);
+            this.setupCollaboratorsListener(pautaId);
             
             if (typeof CollaboratorService?.setupListener === 'function') {
                 CollaboratorService.setupListener(this, pautaId);
@@ -1830,7 +1927,9 @@ class SIGEPApp {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
         if (this.unsubscribePuxadas) { this.unsubscribePuxadas(); this.unsubscribePuxadas = null; }
+        if (this.unsubscribeColabPausados) { this.unsubscribeColabPausados(); this.unsubscribeColabPausados = null; }
 
+        document.getElementById('badge-pausados-topo')?.remove();
         document.getElementById('badge-puxadas-pendentes')?.remove();
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         document.querySelectorAll('[id^="btn-colabs-pausados-"]').forEach(btn => btn.remove());
@@ -2558,4 +2657,3 @@ window.registrarAcaoHistorico = function(pautaId, assistidoId, descricaoAcao) {
 window.renderizarListaMonitorGlobal = function(filtro = '') {
     if(window.MonitoramentoService) window.MonitoramentoService.renderizarListaMonitorGlobal(window.app, filtro);
 };
-
