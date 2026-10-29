@@ -1,14 +1,20 @@
-// Conteúdo para o arquivo sw.js
+// Conteúdo para o arquivo sw.js corrigido
 
-const CACHE_NAME = 'pauta-defensoria-cache-v2'; // Mudei a versão para forçar a atualização
+const CACHE_NAME = 'pauta-defensoria-cache-v3'; // Atualizado para limpar o cache anterior
+
 const urlsToCache = [
-    '/',
-    './index.html', // Adicionei para garantir que a página principal seja cacheada
-    'https://cdn.tailwindcss.com',
+    './',
+    './index.html',
+    './mesa_digital.html',
+    './manual.html',
+    './css/style.css',
+    './js/main.js',
+    './js/detalhes.js',
+    './js/pdfService.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-    'https://alexdovale.github.io/ac-o-paula-controle/imagem.png'
+    './assets/logo/logo_sigep.png'
 ];
 
 self.addEventListener('install', event => {
@@ -16,8 +22,13 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('Cache aberto');
-                return cache.addAll(urlsToCache.map(url => new Request(url, { mode: 'no-cors' })))
-                    .catch(err => console.warn('Falha ao armazenar um ou mais itens em cache durante a instalação:', err));
+                // Faz o cache individualmente para evitar que uma falha externa derrube tudo
+                return Promise.allSettled(
+                    urlsToCache.map(url => {
+                        return cache.add(new Request(url, { mode: 'no-cors' }))
+                            .catch(err => console.warn('Não foi possível fazer cache de:', url, err));
+                    })
+                );
             })
     );
     self.skipWaiting();
@@ -53,7 +64,9 @@ self.addEventListener('fetch', event => {
                     return response;
                 }
                 // Senão, busca na rede
-                return fetch(event.request);
+                return fetch(event.request).catch(() => {
+                    // Fallback opcional caso esteja offline e a página não esteja no cache
+                });
             })
     );
 });
