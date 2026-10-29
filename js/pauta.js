@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO, RETORNO DE ATENDIDOS E INTEGRAÇÃO DE TV COMPLETA
+// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO, RETORNO DE ATENDIDOS, INTEGRAÇÃO DE TV COMPLETA E JANELA DESENCAIXADA
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -9,6 +9,7 @@ import { ico, icoFrom } from './icons.js';
 export const PautaService = {
     currentListeners: new Map(),
     actionCooldown: new Map(),
+    janelasDesencaixadas: new Map(),
 
     // Etapas (colunas) que existem de fato nesta pauta, da mais avançada para a mais inicial.
     getEtapasAtivas(appOuPauta) {
@@ -36,7 +37,6 @@ export const PautaService = {
             if (etapa !== 'atendido' && ativas[etapa]) return etapa;
         }
 
-        // Sem histórico: usa a coluna ativa mais próxima do "atendido"
         if (ativas.emAtendimento) return 'emAtendimento';
         if (ativas.aguardandoDistribuicao) return 'aguardandoDistribuicao';
         return 'aguardando';
@@ -88,6 +88,7 @@ export const PautaService = {
         const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             callback(data);
+            this.atualizarJanelasDesencaixadas();
         }, (error) => {
             console.error("Erro no listener:", error);
             showNotification("Erro ao carregar dados em tempo real", "error");
@@ -590,7 +591,6 @@ export const PautaService = {
         }
     },
 
-    // ── GERAÇÃO DO NOVO MODAL "Definir Local e Delegar" (Integrado e Atualizado) ──
     abrirModalDefinirLocal(assistidoId, nomeAssistido) {
         document.getElementById('modal-definir-local-delegar')?.remove();
         document.getElementById('modal-chamada-tv-global')?.remove();
@@ -756,12 +756,11 @@ export const PautaService = {
             }
         };
     },
-    // Compatibilidade reversa: mantém a função antiga apontando para a nova
+
     abrirModalChamadaTV(app, assisted, pauta, tipoAcao) {
         this.abrirModalDefinirLocal(assisted.id, assisted.name);
     },
 
-    // Abertura Condicional do Modal Clássico
     _abrirModalClassico(app, assisted, tipoAcao) {
         if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
             PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
@@ -831,6 +830,97 @@ export const PautaService = {
         } else {
             this._abrirModalClassico(app, nextAssisted, tipoAcao);
         }
+    },
+
+    // ============================================================
+    // MÓDULO DE DESENCAIXAR COLUNA (TOTALMENTE OPERÁVEL VIA OPENER)
+    // ============================================================
+
+    desencaixarColuna(colunaId, titulo = 'Fila de Atendimento') {
+        const colunaOriginal = document.getElementById(colunaId);
+        if (!colunaOriginal) {
+            showNotification("Coluna não encontrada para desencaixar.", "error");
+            return;
+        }
+
+        // Abre pop-up
+        const largura = 480;
+        const altura = 720;
+        const esquerda = window.screen.width - largura - 40;
+        const topo = 60;
+        const janela = window.open('', `desencaixe_${colunaId}`, `width=${largura},height=${altura},left=${esquerda},top=${topo},resizable=yes,scrollbars=yes`);
+
+        if (!janela) {
+            showNotification("Permita pop-ups no navegador para desencaixar a coluna.", "warning");
+            return;
+        }
+
+        this.janelasDesencaixadas.set(colunaId, { janela, titulo });
+
+        janela.document.write(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${escapeHTML(titulo)} • SIGEP</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 12px; }
+                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+                </style>
+            </head>
+            <body class="flex flex-col h-screen overflow-hidden">
+                <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+                        <h2 class="text-sm font-black uppercase text-slate-800 tracking-wider">${escapeHTML(titulo)}</h2>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Janela Ativa</span>
+                </div>
+                <div id="conteudo-desencaixado" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1"></div>
+            </body>
+            </html>
+        `);
+        janela.document.close();
+
+        // 1. Delegação de Eventos de Clique da janela filha para a janela mãe
+        janela.document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            const app = window.app;
+            if (!app) return;
+
+            // Chamar Próximo
+            if (btn.id === 'call-next-assisted-btn' || btn.classList.contains('btn-chamar-proximo')) {
+                e.preventDefault();
+                this.callNextAssisted(app);
+                return;
+            }
+
+            // Atender ou outras ações diretas
+            this.handleCardActions(e, app);
+        });
+
+        // 2. Renderiza o conteúdo inicial
+        this.atualizarJanelasDesencaixadas();
+    },
+
+    atualizarJanelasDesencaixadas() {
+        this.janelasDesencaixadas.forEach((info, colunaId) => {
+            const { janela } = info;
+            if (janela && !janela.closed) {
+                const elementoOrigem = document.getElementById(colunaId);
+                const containerDestino = janela.document.getElementById('conteudo-desencaixado');
+                if (elementoOrigem && containerDestino) {
+                    containerDestino.innerHTML = elementoOrigem.innerHTML;
+                }
+            } else {
+                this.janelasDesencaixadas.delete(colunaId);
+            }
+        });
     },
 
     async deleteAssisted(db, pautaId, assistedId, userName) {
@@ -1356,7 +1446,6 @@ export const PautaService = {
             return this.handleQuickActionItem(app, button, id, assisted);
         }
 
-        // MAPA DE AÇÕES ATUALIZADO
         const actionMap = {
             'update-doc-status-btn': () => this.actionUpdateDocStatus(button, id, assisted),
             'check-in-btn': () => this.actionCheckIn(id),
