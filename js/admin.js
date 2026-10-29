@@ -104,7 +104,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 };
 
 // ==========================================
-// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN CORRIGIDO)
+// SISTEMA DE ABAS INTELIGENTES (LAYOUT ADMIN)
 // ==========================================
 export const renderizarLayoutAbasAdmin = (container) => {
     container.innerHTML = `
@@ -134,7 +134,7 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </button>
             </div>
 
-            <!-- Conteúdo da Aba Usuários -->
+            <!-- Conteúdo das Abas -->
             <div id="aba-usuarios" class="tab-pane space-y-6">
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider mb-3">Cadastros Pendentes de Aprovação</h3>
@@ -142,6 +142,22 @@ export const renderizarLayoutAbasAdmin = (container) => {
                     <div id="pending-users-list"></div>
                     <div id="pagination-pendentes" class="hidden"></div>
                     <div id="page-size-pendentes" class="mt-2"></div>
+                </div>
+                <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Matriz de Permissões por Perfil</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Padrão de acesso de cada perfil para o órgão atual.</p>
+                            </div>
+                            <button id="btn-atualizar-permissoes-perfil" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+                                ${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar
+                            </button>
+                        </div>
+                        <div id="container-matriz-permissoes-perfil" class="overflow-x-auto">
+                            <p class="text-xs text-slate-400 py-6 text-center">Carregando matriz de permissões...</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                     <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider mb-3">Usuários Ativos no Sistema</h3>
@@ -164,25 +180,6 @@ export const renderizarLayoutAbasAdmin = (container) => {
                 </div>
             </div>
 
-            <!-- Conteúdo da Aba Permissões por Perfil (Isolado em sua própria aba) -->
-            <div id="aba-permissoes-perfil" class="tab-pane hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Matriz de Permissões por Perfil</h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Padrão de cada perfil. Para liberar ou bloquear uma permissão específica, use a aba "Permissões" na lista de usuários. Superadmins sempre tem acesso total.</p>
-                        </div>
-                        <button id="btn-atualizar-permissoes-perfil" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
-                            ${ico('refresh', 'w-3.5 h-3.5')} Atualizar
-                        </button>
-                    </div>
-                    <div id="container-matriz-permissoes-perfil" class="overflow-x-auto">
-                        <p class="text-xs text-slate-400 py-6 text-center">Carregando matriz de permissões...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Outras Abas -->
             <div id="aba-unidades" class="tab-pane hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
@@ -197,24 +194,104 @@ export const renderizarLayoutAbasAdmin = (container) => {
             </div>
 
             <div id="aba-auditoria" class="tab-pane hidden space-y-6">
-                <!-- Auditoria -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Auditoria de Operações e Logs</h3>
+                        <div class="flex gap-2">
+                            <button id="view-audit-logs-btn" class="bg-slate-900 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Carregar Logs</button>
+                            <button id="export-audit-pdf-btn" class="hidden bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Exportar PDF</button>
+                        </div>
+                    </div>
+                    <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                        <select id="filter-log-user" class="p-2 border rounded-xl bg-white"><option value="all">Todos os usuários</option></select>
+                        <select id="filter-log-action" class="p-2 border rounded-xl bg-white"><option value="all">Todas as ações</option></select>
+                        <input type="date" id="filter-log-start" class="p-2 border rounded-xl bg-white">
+                        <input type="date" id="filter-log-end" class="p-2 border rounded-xl bg-white">
+                    </div>
+                    <div id="search-logs" class="hidden"></div>
+                    <div id="audit-logs-container" class="hidden overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                <tr><th class="p-3">Data / Hora</th><th class="p-3">Usuário</th><th class="p-3 text-center">Ação</th><th class="p-3">Detalhes</th></tr>
+                            </thead>
+                            <tbody id="audit-logs-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="pagination-logs" class="hidden"></div>
+                    <div id="page-size-logs" class="mt-2"></div>
+                </div>
             </div>
 
             <div id="aba-bi" class="tab-pane hidden space-y-6">
-                <!-- BI -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider">Inteligência Operacional (BI)</h3>
+                        <button id="cleanup-old-data-btn" class="bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm">Compactar Dados (7+ dias)</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <input type="date" id="stats-filter-start" class="p-2.5 border rounded-xl bg-white">
+                        <input type="date" id="stats-filter-end" class="p-2.5 border rounded-xl bg-white">
+                        <select id="stats-filter-user" class="p-2.5 border rounded-xl bg-white"><option value="all">Todos os usuários</option></select>
+                    </div>
+                    <button id="btn-load-dashboard" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider shadow-sm">Calcular Indicadores</button>
+                    <div id="dashboard-results" class="hidden pt-4"></div>
+                </div>
             </div>
 
             <div id="aba-seguranca" class="tab-pane hidden space-y-6">
-                <!-- Segurança -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">${ico('shield', 'w-4 h-4')} Monitoramento de Tráfego e IPs</h3>
+                        <button id="btn-atualizar-monitoramento" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition">${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Acessos Registrados</p>
+                            <h3 id="kpi-total-acessos" class="text-2xl font-black text-slate-800 mt-1">Carregando...</h3>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Erros Capturados</p>
+                            <h3 id="kpi-total-erros" class="text-2xl font-black text-red-600 mt-1">Carregando...</h3>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Status do Servidor</p>
+                            <h3 id="status-servidor-txt" class="text-lg font-black text-emerald-600 mt-1 flex items-center gap-2">Verificando...</h3>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-600 border-b">
+                                <tr><th class="p-3">Usuário</th><th class="p-3">IP & Localidade</th><th class="p-3">Dispositivo</th><th class="p-3">Data e Hora</th></tr>
+                            </thead>
+                            <tbody id="tabela-monitoramento-acessos" class="divide-y divide-slate-100">
+                                <tr><td colspan="4" class="text-center py-6 text-slate-400">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div id="aba-ouvidoria" class="tab-pane hidden space-y-6">
-                <!-- Ouvidoria -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">${ico('megaphone', 'w-4 h-4')} Ouvidoria, Erros e Sugestões</h3>
+                        <button id="btn-atualizar-feedbacks" class="bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">${ico('refresh', 'w-3.5 h-3.5 inline')} Atualizar</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-600 border-b">
+                                <tr><th class="p-3">Data</th><th class="p-3">Tipo</th><th class="p-3">Origem</th><th class="p-3">Remetente</th><th class="p-3">Mensagem / Erro</th><th class="p-3 text-center">Ações</th></tr>
+                            </thead>
+                            <tbody id="tabela-feedbacks-body" class="divide-y divide-slate-100">
+                                <tr><td colspan="6" class="text-center py-6 text-slate-400">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
-    // Gerenciador de cliques das abas
     container.querySelectorAll('.tab-admin-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.target;
@@ -230,30 +307,21 @@ export const renderizarLayoutAbasAdmin = (container) => {
 
             const db = globalApp?.db;
             if (!db) return;
-
             if (targetId === 'aba-auditoria' && cachedLogs.length === 0) loadAuditLogs(db);
             if (targetId === 'aba-seguranca') carregarPainelMonitoramentoSeguranca(db);
             if (targetId === 'aba-ouvidoria') carregarFeedbacksSistema(db);
-            
-            // Aqui é onde a mágica acontece: carrega a matriz exata na aba correta
             if (targetId === 'aba-permissoes-perfil') {
                 const containerMatriz = document.getElementById('container-matriz-permissoes-perfil');
                 if (containerMatriz && window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
                     PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, containerMatriz);
                 }
             }
+
+            
         });
     });
-
-    document.getElementById('btn-atualizar-permissoes-perfil')?.addEventListener('click', () => {
-        const db = globalApp?.db;
-        const containerMatriz = document.getElementById('container-matriz-permissoes-perfil');
-        if (db && containerMatriz && window.PermissoesService && typeof PermissoesService.renderizarMatrizAdmin === 'function') {
-            PermissoesService.renderizarMatrizAdmin(db, globalApp?.currentUser?.orgaoId, containerMatriz);
-            showNotification("Matriz atualizada.", "success");
-        }
-    });
 };
+
 // ==========================================
 // PAINEL DE MONITORAMENTO, TRÁFEGO E IPs (OTIMIZADO)
 // ==========================================
