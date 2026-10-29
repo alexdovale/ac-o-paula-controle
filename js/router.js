@@ -4,9 +4,9 @@
 // Principais garantias:
 //  - Navegações são enfileiradas (nenhuma é descartada) e os redirecionamentos internos funcionam.
 //  - O botão "voltar" do navegador passa pelas mesmas regras de acesso (guard) das demais navegações.
-//  - Rotas de modal (estatísticas, totem, colaboradores...) abrem e FECHAM de verdade:
+//  - Rotas de modal (estatísticas, totem, colaboradores, monitor, puxadas, pausados...) abrem e FECHAM de verdade:
 //    fechar o modal volta a URL para a pauta; sair da rota fecha o modal.
-//  - Telas Admin e Coletas passam pelo router, com limpeza ao sair.
+//  - Telas Admin, Coletas e Atendimento Externo passam pelo router, com limpeza completa de listeners e modais ao sair.
 
 export const ROUTES = {
     LOGIN:                  'login',
@@ -26,7 +26,7 @@ export const ROUTES = {
     CONFIGURACAO_PAUTA:     'configuracao-pauta',
     FILTRO_PAUTA:           'filtro-pauta',
 
-    // --- ROTAS DO MENU DE AÇÕES (abrem modais dentro da pauta) ---
+    // --- ROTAS DO MENU DE AÇÕES E TOPO DA PAUTA (abrem modais dentro da pauta) ---
     MONITOR_EQUIPE:         'monitor-equipe',
     COMPARTILHAMENTO:       'compartilhamento',     // link público da pauta
     TOTEM:                  'totem',
@@ -34,7 +34,10 @@ export const ROUTES = {
     EDITAR_NOME_PAUTA:      'editar-nome-pauta',
     COMPARTILHAR_PAUTA:     'compartilhar-pauta',   // convidar membros
     COLABORADORES_PAUTA:    'colaboradores-pauta',
-    ANOTACOES_PAUTA:        'anotacoes-pauta'
+    ANOTACOES_PAUTA:        'anotacoes-pauta',
+    CONFIG_TV:              'config-tv',            // configurador da Smart TV na pauta
+    GESTAO_PUXADAS:         'gestao-puxadas',       // modal de solicitações de puxada
+    LISTA_PAUSADOS:         'lista-pausados'        // modal de colaboradores em pausa
 };
 
 // perm: chave em permissoes.js (configurável no Painel Administrador)
@@ -63,12 +66,14 @@ const ROUTE_GUARDS = {
     [ROUTES.EDITAR_NOME_PAUTA]:   { requiresAuth: true, perm: 'renomearPauta' },
     [ROUTES.COMPARTILHAR_PAUTA]:  { requiresAuth: true, perm: 'membros' },
     [ROUTES.COLABORADORES_PAUTA]: { requiresAuth: true, perm: 'colaboradores' },
-    [ROUTES.ANOTACOES_PAUTA]:     { requiresAuth: true, perm: 'anotacoes' }
+    [ROUTES.ANOTACOES_PAUTA]:     { requiresAuth: true, perm: 'anotacoes' },
+    [ROUTES.CONFIG_TV]:           { requiresAuth: true },
+    [ROUTES.GESTAO_PUXADAS]:      { requiresAuth: true },
+    [ROUTES.LISTA_PAUSADOS]:      { requiresAuth: true }
 };
 
 // Rotas que abrem um modal sobre a pauta.
-// modalIds: quando todos ficam ocultos, a URL volta para a pauta.
-// (sem modalIds = ação pontual, como abrir o totem em outra aba)
+// modalIds: quando todos ficam ocultos ou são removidos do DOM, a URL volta para a pauta.
 const MODAL_ROUTES = {
     [ROUTES.MONITOR_EQUIPE]:      { modalIds: ['painel-geral-externo-modal'] },
     [ROUTES.COMPARTILHAMENTO]:    { modalIds: ['share-modal'] },
@@ -78,7 +83,10 @@ const MODAL_ROUTES = {
     [ROUTES.COMPARTILHAR_PAUTA]:  { modalIds: ['members-modal'] },
     [ROUTES.COLABORADORES_PAUTA]: { modalIds: ['collaborators-modal'] },
     [ROUTES.ANOTACOES_PAUTA]:     { modalIds: ['notes-modal'] },
-    [ROUTES.CONFIGURACAO_PAUTA]:  { modalIds: ['edit-pauta-config-modal'] }
+    [ROUTES.CONFIGURACAO_PAUTA]:  { modalIds: ['edit-pauta-config-modal'] },
+    [ROUTES.CONFIG_TV]:           { modalIds: ['modal-config-tv-individual'] },
+    [ROUTES.GESTAO_PUXADAS]:      { modalIds: ['modal-gestao-puxadas'] },
+    [ROUTES.LISTA_PAUSADOS]:      { modalIds: ['modal-lista-pausados'] }
 };
 
 const ALL_SCREEN_IDS = [
@@ -96,8 +104,32 @@ const ALL_SCREEN_IDS = [
     'assisted-details-modal'
 ];
 
+// IDs de modais dinâmicos criados em tempo de execução que devem ser limpos ao trocar de tela
+const DYNAMIC_MODAL_IDS = [
+    'modal-gestao-puxadas',
+    'modal-lista-pausados',
+    'modal-config-tv-individual',
+    'modal-definir-local-delegar',
+    'modal-chamada-tv-global',
+    'modal-senha-painel-tv',
+    'modal-definir-pausa',
+    'modal-confirmar-retorno',
+    'modal-solicitar-puxada',
+    'overlay-linha-tempo',
+    'overlay-historico-rapido',
+    'overlay-pauta-completa'
+];
+
 // Telas que podem ser restauradas depois de um F5
-const RESTAURAVEIS = ['pauta-selection', 'dashboard', 'recepcao-central', 'admin', 'coletas', 'meu-perfil'];
+const RESTAURAVEIS = [
+    'pauta-selection',
+    'dashboard',
+    'recepcao-central',
+    'admin',
+    'coletas',
+    'meu-perfil',
+    'atendimento-externo'
+];
 
 export class SIGEPRouter {
     constructor(app, deps) {
@@ -123,7 +155,8 @@ export class SIGEPRouter {
         window.addEventListener('popstate', (e) => {
             let route, params;
             if (e.state?.route) {
-                route = e.state.route; params = e.state.params || {};
+                route = e.state.route;
+                params = e.state.params || {};
             } else {
                 const qs = new URLSearchParams(window.location.search);
                 route = qs.get('r') || ROUTES.MODO_SELECTION;
@@ -149,13 +182,13 @@ export class SIGEPRouter {
     async _navegar(route, params, modo) {
         if (!ROUTE_GUARDS[route]) {
             console.warn(`[SIGEPRouter] Rota desconhecida "${route}". Indo para a seleção de pautas.`);
-            route = ROUTES.PAUTA_SELECTION; params = {};
+            route = ROUTES.PAUTA_SELECTION;
+            params = {};
             if (modo === 'push') modo = 'replace';
         }
 
         const redirecionar = this._guard(route);
         if (redirecionar) {
-            // Redirecionamento substitui a entrada atual do histórico
             return this._navegar(redirecionar, {}, 'replace');
         }
 
@@ -173,9 +206,29 @@ export class SIGEPRouter {
         if (origem === ROUTES.COLETAS) {
             try { app.fecharColetas?.(); } catch (e) { console.warn(e); }
         }
+
+        if (origem === ROUTES.ATENDIMENTO_EXTERNO) {
+            try {
+                if (window.AtendimentoExternoService?._cancelarListeners) {
+                    window.AtendimentoExternoService._cancelarListeners();
+                }
+                document.getElementById('btn-pausa-mesa-digital')?.remove();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
         if (MODAL_ROUTES[origem]) {
             this._pararVigia();
             try { app.closePautaModals?.(); } catch (e) { console.warn(e); }
+        }
+
+        // Se saiu do contexto da pauta (APP ou sub-rotas da pauta) para uma rota externa, limpa modais dinâmicos
+        const eraContextoPauta = origem === ROUTES.APP || !!MODAL_ROUTES[origem] || origem === ROUTES.DETALHES_CASO;
+        const vaiParaContextoPauta = destino === ROUTES.APP || !!MODAL_ROUTES[destino] || destino === ROUTES.DETALHES_CASO;
+
+        if (eraContextoPauta && !vaiParaContextoPauta) {
+            DYNAMIC_MODAL_IDS.forEach(id => document.getElementById(id)?.remove());
         }
     }
 
@@ -212,6 +265,15 @@ export class SIGEPRouter {
                     await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
                 }
                 return;
+            }
+            if (savedScreen === 'atendimento-externo') {
+                const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
+                const colab   = urlParams.get('colab')   || localStorage.getItem('lastColabName');
+                const assistidoId = urlParams.get('assistidoId') || null;
+                if (pautaId) {
+                    await this.navigate(ROUTES.ATENDIMENTO_EXTERNO, { pautaId, colab, assistidoId }, true);
+                    return;
+                }
             }
             if (RESTAURAVEIS.includes(savedScreen) && ROUTE_GUARDS[savedScreen]) {
                 await this.navigate(savedScreen, {}, true);
@@ -266,7 +328,6 @@ export class SIGEPRouter {
         if (guard.requiresAuth) {
             const ehSuper = user?.role === 'superadmin' || user?.role === 'superadmin_global';
             if (!ehSuper) {
-                // Permissão configurável no Painel Administrador tem prioridade
                 const perm = this._deps.Permissoes;
                 const negado = (guard.perm && perm)
                     ? !perm.can(user, guard.perm)
@@ -291,13 +352,17 @@ export class SIGEPRouter {
 
     _buildUrl(route, params) {
         const base = window.location.pathname;
-        const qs   = new URLSearchParams(window.location.search);
+        const qs   = new URLSearchParams();
         qs.set('r', route);
-        Object.keys(params).forEach(key => {
+
+        Object.keys(params || {}).forEach(key => {
             if (key === 'r') return;
-            if (params[key] !== undefined && params[key] !== null && params[key] !== '') qs.set(key, params[key]);
-            else if (params[key] === null) qs.delete(key);
+            const val = params[key];
+            if (val !== undefined && val !== null && val !== '') {
+                qs.set(key, val);
+            }
         });
+
         return `${base}?${qs.toString()}`;
     }
 
@@ -340,6 +405,11 @@ export class SIGEPRouter {
             localStorage.setItem('lastPautaId',   params.pautaId);
             localStorage.setItem('lastPautaName', params.pautaName || '');
             localStorage.setItem('lastPautaType', params.pautaType || 'normal');
+        }
+
+        if (route === ROUTES.ATENDIMENTO_EXTERNO) {
+            if (params.pautaId) localStorage.setItem('lastPautaId', params.pautaId);
+            if (params.colab)   localStorage.setItem('lastColabName', params.colab);
         }
     }
 
@@ -436,7 +506,6 @@ export class SIGEPRouter {
                     }
                     this._showScreen('app-container');
                 } else {
-                    // Sem pauta: redireciona dentro do mesmo ciclo (não é descartado)
                     await this._navegar(ROUTES.PAUTA_SELECTION, {}, 'replace');
                 }
             },
@@ -473,37 +542,36 @@ export class SIGEPRouter {
                 if (deps.PerfilService) await deps.PerfilService.carregarDados(app);
             },
 
-            [ROUTES.ATENDIMENTO_EXTERNO]: async (params) => {
+            [ROUTES.ATENDIMENTO_EXTERNO]: async (params = {}) => {
                 this._showScreen('atendimento-externo-container');
                 const { AtendimentoExternoService } = await import('./atendimentoExternoService.js');
-                AtendimentoExternoService.db = app.db;
-                AtendimentoExternoService.auth = app.auth;
-                AtendimentoExternoService.pautaId = params.pautaId || localStorage.getItem('lastPautaId');
-                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName');
-                AtendimentoExternoService.modoVisualizacao = params.modo || 'abas';
+                AtendimentoExternoService.pautaId = params.pautaId || params.pid || localStorage.getItem('lastPautaId');
+                AtendimentoExternoService.assistidoId = params.assistidoId || params.aid || null;
+                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName') || null;
                 await AtendimentoExternoService.init();
             },
 
-            [ROUTES.DETALHES_CASO]: async (params) => {
+            [ROUTES.DETALHES_CASO]: async (params = {}) => {
                 await this._handlers[ROUTES.APP](params);
                 if (params.assistidoId && window.openDetailsModal) {
                     window.openDetailsModal({
                         assistedId: params.assistidoId,
-                        pautaId: params.pautaId,
+                        pautaId: params.pautaId || app.currentPauta?.id,
                         allAssisted: app.allAssisted,
                         db: app.db
                     });
                 }
             },
 
-            [ROUTES.FILTRO_PAUTA]: async (params) => {
+            [ROUTES.FILTRO_PAUTA]: async (params = {}) => {
+                this._showScreen('pauta-selection-container');
                 if (params.filter && app) {
                     app.currentPautaFilter = params.filter;
                     await app.loadPautasWithFilter();
                 }
             },
 
-            // --- Rotas do menu de Ações: abrem e fecham o modal de verdade ---
+            // --- Rotas do menu de Ações e Modais da Pauta ---
             [ROUTES.MONITOR_EQUIPE]:      rotaModal(ROUTES.MONITOR_EQUIPE),
             [ROUTES.COMPARTILHAMENTO]:    rotaModal(ROUTES.COMPARTILHAMENTO),
             [ROUTES.TOTEM]:               rotaModal(ROUTES.TOTEM),
@@ -512,7 +580,10 @@ export class SIGEPRouter {
             [ROUTES.COMPARTILHAR_PAUTA]:  rotaModal(ROUTES.COMPARTILHAR_PAUTA),
             [ROUTES.COLABORADORES_PAUTA]: rotaModal(ROUTES.COLABORADORES_PAUTA),
             [ROUTES.ANOTACOES_PAUTA]:     rotaModal(ROUTES.ANOTACOES_PAUTA),
-            [ROUTES.CONFIGURACAO_PAUTA]:  rotaModal(ROUTES.CONFIGURACAO_PAUTA)
+            [ROUTES.CONFIGURACAO_PAUTA]:  rotaModal(ROUTES.CONFIGURACAO_PAUTA),
+            [ROUTES.CONFIG_TV]:           rotaModal(ROUTES.CONFIG_TV),
+            [ROUTES.GESTAO_PUXADAS]:      rotaModal(ROUTES.GESTAO_PUXADAS),
+            [ROUTES.LISTA_PAUSADOS]:      rotaModal(ROUTES.LISTA_PAUSADOS)
         };
     }
 }
