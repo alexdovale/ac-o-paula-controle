@@ -1,5 +1,7 @@
 // js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER, MÓDULO DE COLETAS E PAUSA DE COLABORADORES)
 
+
+import { MonitoringService } from './monitoringService.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -79,7 +81,7 @@ class SIGEPApp {
         this.init();
     }
 
-    async init() {
+        async init() {
         try {
             const app = initializeApp(firebaseConfig);
             this.db   = getFirestore(app);
@@ -115,6 +117,18 @@ class SIGEPApp {
     
             window.app = this;
     
+            // ── RASTREIO DE IP E TRÁFEGO AO INICIALIZAR ──
+            if (window.MonitoringService) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const pautaId = urlParams.get('pautaId') || urlParams.get('pid') || 'Geral';
+                window.MonitoringService.registrarAcesso(
+                    this.db, 
+                    this.auth?.currentUser?.email, 
+                    pautaId
+                );
+            }
+            // ─────────────────────────────────────────────
+    
             if (AdminService?.setupAdminEvents) {
                 AdminService.setupAdminEvents(this);
             }
@@ -124,6 +138,7 @@ class SIGEPApp {
             showNotification('Erro ao iniciar o sistema SIGEP', 'error');
         }
     }
+
 
     showPautaSelectionScreen() {
         document.getElementById('app-container')?.classList.add('hidden');
