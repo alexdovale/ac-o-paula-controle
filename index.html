@@ -1,4 +1,9 @@
-
+Aqui tens o teu ficheiro index.html completo, Alex!
+Fiz a integração de todas as melhorias que combinámos:
+ * Seleção de Pautas: Design super elegante, pesquisa refinada, botão "Mesa Digital" destacado a azul e os restantes botões escuros, e a logo horizontal gigante no topo.
+ * Painéis Internos (Dashboard, Perfil, Admin, Coletas): Logo vertical grande e centralizada (h-32 sm:h-48), sem sombreamento.
+ * Gestão da Pauta (Kanban / App Principal): Logo vertical com altura elegante (h-16 sm:h-20), substituindo os textos antigos.
+Basta copiares tudo isto e colares por cima do teu index.html atual:
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -295,7 +300,7 @@
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
-                <!-- LOGIN CONTAINER (IDÊNTICO À MESA DIGITAL) -->
+        <!-- LOGIN CONTAINER -->
         <div id="login-container" class="hidden w-full min-h-[85vh] flex items-center justify-center p-2">
             <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden w-full max-w-md mt-10 sm:mt-0">
                 <div class="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
@@ -440,107 +445,121 @@
         </div>
 
         <!-- TELA DE SELEÇÃO DE PAUTAS -->
-        <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
-            <div class="flex flex-col justify-center items-center w-full relative mb-6 sm:mb-8 pt-2">
-                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="w-72 sm:w-96 md:w-[420px] h-auto object-contain mb-3 drop-shadow-sm">
+        <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-4 sm:px-6">
+            
+            <!-- LOGO HORIZONTAL GIGANTE -->
+            <div class="flex flex-col justify-center items-center w-full relative mb-8 pt-4">
+                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="w-72 sm:w-96 md:w-[420px] h-auto object-contain drop-shadow-sm">
             </div>
             
-            <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
-                <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
-                <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
-                    Instalar App
+            <div id="install-container" class="hidden my-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-center shadow-sm">
+                <p class="text-sm text-emerald-800 font-bold mb-3">Leve o gerenciador de pautas com você!</p>
+                <button id="install-button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-2.5 text-xs uppercase tracking-widest rounded-xl shadow-md transition-all active:scale-95 w-full sm:w-auto">
+                    Instalar App (PWA)
                 </button>
             </div>
 
-            <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-6">
-                <button id="btn-mesa-digital" onclick="window.open('mesa_digital.html', '_blank')" title="Acesse sua Mesa Digital para chamar os assistidos da sua pauta." class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md text-sm flex items-center gap-2 justify-center">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <!-- MENU DE MÓDULOS -->
+            <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-10">
+                <button id="btn-mesa-digital" onclick="window.open('mesa_digital.html', '_blank')" title="Acesse sua Mesa Digital." class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
                     Mesa Digital
                 </button>
-                <button id="btn-recepcao-central" title="Acesse a visão geral da recepção para gerenciar a chegada dos assistidos nas unidades." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                <button id="btn-recepcao-central" title="Acesse a visão geral da recepção." class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
                     Recepção Central
                 </button>
-                <button id="admin-panel-btn" title="Área restrita para gerenciamento de usuários, unidades e auditoria do sistema." class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
-                    Painel do Administrador
+                <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
+                    Administrador
                 </button>
-                <button id="view-dashboard-btn" title="Visualize gráficos e métricas de desempenho das pautas e atendimentos da sua unidade." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
-                    Ver Dashboard
+                <button id="view-dashboard-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
+                    Dashboard
                 </button>
-                <button id="btn-modulo-coletas" title="Crie formulários e gerencie coletas estatísticas avançadas integradas com o PowerBI." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
-                    Módulo Coletas & BI
+                <button id="btn-modulo-coletas" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
+                    Coletas & BI
                 </button>
-                <button id="btn-trocar-unidade" title="Alterne a unidade de atuação para visualizar outras pautas." class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                <button id="btn-trocar-unidade" class="hidden w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
                     Trocar Unidade
                 </button>
-                <button id="btn-trocar-modo" title="Alterne entre o Modo Normal (Rotina Diária) e o Modo Evento (Mutirões e Ações Sociais)." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                <button id="btn-trocar-modo" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
                     Trocar Modo
                 </button>
-                <button id="open-user-preferences-btn" title="Gerencie seus dados pessoais, senha e preferências de notificação do sistema." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                <button id="open-user-preferences-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-6 rounded-xl transition shadow-md text-xs uppercase tracking-wider flex items-center gap-2 justify-center active:scale-95">
                     Meu Perfil
                 </button>
             </div>
             
             <div id="invitations-container" class="hidden mb-8">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4">Convites Pendentes</h2>
+                <h2 class="text-xl font-black text-slate-800 mb-4 tracking-tight">Convites Pendentes</h2>
                 <div id="pending-invitations-list" class="space-y-4"></div>
             </div>
             
-            <div id="filters-container" class="mb-4"></div>
-            
-            <div class="mb-6 flex justify-end w-full">
-                <div class="relative w-full sm:w-96">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <!-- CABEÇALHO DA LISTA E PESQUISA ELEGANTES -->
+            <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4 border-b border-slate-200 pb-6">
+                <div class="w-full md:w-auto">
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-none">Pautas de Atendimento</h2>
+                    <p class="text-sm font-bold text-slate-400 mt-1.5 uppercase tracking-widest">Selecione ou pesquise o fluxo de trabalho</p>
+                </div>
+                
+                <div class="w-full md:w-96 relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <input type="search" id="search-pautas-input" autocomplete="new-password" oninput="window.app && window.app.loadPautasWithFilter()" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm text-sm transition-all">
+                    <input type="search" id="search-pautas-input" autocomplete="new-password" oninput="window.app && window.app.loadPautasWithFilter()" placeholder="Buscar pauta..." class="w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm text-sm font-bold transition-all placeholder-slate-400 text-slate-700">
                 </div>
             </div>
+
+            <div id="filters-container" class="mb-6 flex gap-2 overflow-x-auto custom-scrollbar pb-2"></div>
             
-            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"></div>
-            <div class="mt-6 w-full">
-                <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
+            <!-- GRID DE CARDS -->
+            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 w-full mb-10"></div>
+            
+            <!-- BOTÃO CRIAR PAUTA ELEGANTE -->
+            <div class="mt-4 w-full flex justify-center pb-12">
+                <button id="create-pauta-btn" class="w-full max-w-md bg-slate-900 hover:bg-slate-950 text-white font-black py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Criar Nova Pauta
+                </button>
             </div>
         </div>
 
-                 <!-- DASHBOARD -->
+        <!-- DASHBOARD -->
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="dashboard-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 
-                <!-- Logo Vertical: Tamanho duplicado e sem sombreamento -->
                 <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
                      alt="Logo SIGEP Vertical" 
-                     class="h-32 sm:h-40 w-auto object-contain mb-6">
+                     class="h-32 sm:h-48 w-auto object-contain mb-6">
                 
                 <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
                      Seu Dashboard
                 </h2>
-                <p class="text-slate-500 mt-2 text-sm font-medium text-center"></p>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">
+                </p>
             </div>
+            <div id="dashboard-content">
+                <div class="loader-small mx-auto my-12"></div>
+                <p class="text-center text-slate-500 mt-4">Carregando dados do Dashboard...</p>
+            </div>
+        </div>
 
-
-
-                 <!-- MEU PERFIL E PREFERÊNCIAS -->
+        <!-- MEU PERFIL E PREFERÊNCIAS -->
         <div id="meu-perfil-container" class="hidden w-full max-w-5xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 
-                <!-- Logo Vertical: Tamanho duplicado e sem sombreamento -->
                 <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
                      alt="Logo SIGEP Vertical" 
-                     class="h-32 sm:h-40 w-auto object-contain mb-6">
+                     class="h-32 sm:h-48 w-auto object-contain mb-6">
                 
                 <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 text-center">
                     Meu Perfil e Preferências
                 </h2>
                 <p class="text-slate-500 mt-2 text-sm font-medium text-center">Gerencie seus dados, acesso, unidades e notificações</p>
             </div>
-
-
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
@@ -620,22 +639,22 @@
             </div>
         </div>
 
-                <!-- ADMIN -->
+        <!-- ADMIN -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 
-                <!-- Logo Vertical: Tamanho duplicado e sem sombreamento -->
                 <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
                      alt="Logo SIGEP Vertical" 
-                     class="h-32 sm:h-40 w-auto object-contain mb-6">
+                     class="h-32 sm:h-48 w-auto object-contain mb-6">
                 
                 <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
                     Painel do Administrador
                 </h2>
-                <p class="text-slate-500 mt-2 text-sm font-medium text-center"></p>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">
+                </p>
             </div>
             <div id="admin-content">
                 <div class="loader-small mx-auto my-12"></div>
@@ -643,24 +662,22 @@
             </div>
         </div>
 
-                <!-- MÓDULO DE COLETAS & BI -->
+        <!-- MÓDULO DE COLETAS & BI -->
         <div id="coletas-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="coletas-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 
-                <!-- Logo Vertical: Tamanho duplicado e sem sombreamento -->
                 <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
                      alt="Logo SIGEP Vertical" 
-                     class="h-32 sm:h-40 w-auto object-contain mb-6">
+                     class="h-32 sm:h-48 w-auto object-contain mb-6">
                 
                 <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
                     Central de Coletas e Relatórios
                 </h2>
                 <p class="text-slate-500 mt-2 text-sm font-medium text-center">Crie formulários, gere links externos e consolide seus dados estatísticos.</p>
             </div>
-
 
             <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[50vh]">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b pb-4">
@@ -682,13 +699,15 @@
         <div id="recepcao-central-container" class="hidden w-full max-w-7xl mx-auto px-2 sm:px-4 py-4"></div>
         <div id="atendimento-externo-container" class="hidden w-full flex-1 bg-slate-100 p-2 sm:p-4"></div>
 
-                <!-- APP PRINCIPAL (PAUTA) -->
+        <!-- APP PRINCIPAL (PAUTA) -->
         <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
             <header class="mb-4 sm:mb-6 space-y-4">
                 
-                <!-- AQUI ENTRA A LOGO HORIZONTAL QUE PEDISTE, GIGANTE E CENTRALIZADA -->
-                <div class="flex justify-center items-center w-full relative mb-4 mt-2">
-                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="w-72 sm:w-96 md:w-[420px] h-auto object-contain drop-shadow-sm">
+                <!-- LOGO VERTICAL ATUALIZADA (DENTRO DA GESTÃO DA PAUTA) -->
+                <div class="flex justify-center items-center w-full relative mb-2">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
+                         alt="Logo SIGEP Vertical" 
+                         class="h-16 sm:h-20 w-auto object-contain drop-shadow-sm">
                 </div>
 
                 <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-4">
@@ -876,7 +895,6 @@
                     <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
                 </div>
             </header>
-
 
             <div id="app-content" class="w-full">
                 <div class="mb-4 sm:mb-6">
