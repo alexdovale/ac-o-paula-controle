@@ -1,12 +1,6 @@
-
 import { ico } from './icons.js';
 // js/pdfService.js - SIGEP
-// Visual unificado: cabeçalho com logo, resumo (KPIs), tabelas padronizadas e rodapé "Página X de Y" em todas as páginas.
-// A ATA e o DEMONSTRATIVO DE DESPESAS (documentos oficiais) mantêm o layout original.
 
-// ========================================================
-// UTILITÁRIOS
-// ========================================================
 const loadScript = (src) => new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
@@ -25,28 +19,7 @@ const ensureJsPDF = async () => {
     }
 };
 
-const ensureQRCode = async () => {
-    if (typeof window.qrcode === 'undefined') {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js");
-    }
-};
-
-const drawQR = (doc, texto, x, y, tamanho) => {
-    const qr = window.qrcode(0, 'M');
-    qr.addData(String(texto));
-    qr.make();
-    const n = qr.getModuleCount();
-    const cell = tamanho / n;
-    doc.setFillColor(0, 0, 0);
-    for (let r = 0; r < n; r++) {
-        for (let c = 0; c < n; c++) {
-            if (qr.isDark(r, c)) doc.rect(x + c * cell, y + r * cell, cell + 0.15, cell + 0.15, 'F');
-        }
-    }
-};
-
 const yieldThread = () => new Promise(resolve => setTimeout(resolve, 50));
-
 const cleanString = (str) => String(str || '').replace(/"/g, '');
 
 const getSafeDate = (timeValue) => {
@@ -126,8 +99,20 @@ const pesoCargo = (cargo) => {
 // IDENTIDADE VISUAL
 // ========================================================
 const LOGO_ATA_RAW = "https://raw.githubusercontent.com/alexdovale/Calculadora-de-Acervo-Documental/main/logo%20(2).png";
-const LOGO_DEMAIS_PDF_RAW = "https://raw.githubusercontent.com/alexdovale/ponto.codoc/main/imagem.png";
 const LOGO_DEFENSORIA_RATIO = 535 / 120;
+
+const LOGOS = {
+    horizontal: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-horizontal.PNG?alt=media&token=42175606-cfa5-419d-b327-da1a6aa91137",
+    vertical: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302",
+    marcaDagua: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da",
+    checklist: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5"
+};
+
+const LOGO_DIM = {
+    horizontal: { maxW: 130, maxH: 38 },
+    vertical:   { maxW: 80,  maxH: 64 },
+    checklist:  { maxW: 150, maxH: 42 }
+};
 
 const C = {
     verde: [22, 163, 74],
@@ -160,44 +145,64 @@ const loadImageSafe = async (url) => {
     return imgCache[url];
 };
 
-const logoSize = (img) => {
+const logoSize = (img, { maxW = 52, maxH = 36 } = {}) => {
     if (!img) return { w: 0, h: 0 };
     const ratio = img.width / img.height;
-    let w = 52, h = w / ratio;
-    if (h > 36) { h = 36; w = h * ratio; }
+    let w = maxW, h = w / ratio;
+    if (h > maxH) { h = maxH; w = h * ratio; }
     return { w, h };
 };
 
-const drawHeader = (doc, logo, { title, lines = [], margin = 40 }) => {
+const drawHeader = (doc, logo, { title, lines = [], margin = 40, logoOpts, centralizado = false, corTitulo }) => {
     const W = doc.internal.pageSize.getWidth();
     const top = 28;
-    const { w, h } = logoSize(logo);
+    const { w, h } = logoSize(logo, logoOpts);
     if (logo) { try { doc.addImage(logo, 'PNG', margin, top, w, h); } catch (e) { } }
 
     const textX = margin + (logo ? w + 14 : 0);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(17);
-    doc.setTextColor(...C.verdeEscuro);
-    doc.text(title, textX, top + 14);
+    doc.setTextColor(...(corTitulo || C.verdeEscuro));
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...C.cinza);
     let ly = top + 28;
-    lines.forEach(l => {
-        const wrapped = doc.splitTextToSize(String(l), W - textX - margin - 110);
-        doc.text(wrapped, textX, ly);
-        ly += wrapped.length * 12;
-    });
-
-    doc.setFontSize(8);
-    doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, W - margin, top + 8, { align: 'right' });
+    if (centralizado) {
+        const cx = W / 2;
+        const larg = W - (margin + w + 14) * 2;
+        doc.text(title, cx, top + 14, { align: 'center' });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(...C.cinza);
+        lines.forEach(l => {
+            const wrapped = doc.splitTextToSize(String(l), larg);
+            doc.text(wrapped, cx, ly, { align: 'center' });
+            ly += wrapped.length * 12;
+        });
+    } else {
+        doc.text(title, textX, top + 14);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(...C.cinza);
+        lines.forEach(l => {
+            const wrapped = doc.splitTextToSize(String(l), W - textX - margin - 110);
+            doc.text(wrapped, textX, ly);
+            ly += wrapped.length * 12;
+        });
+        doc.setFontSize(8);
+        doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, W - margin, top + 8, { align: 'right' });
+    }
 
     const lineY = Math.max(top + h, ly) + 6;
     doc.setDrawColor(...C.verde);
     doc.setLineWidth(1.5);
     doc.line(margin, lineY, W - margin, lineY);
     doc.setLineWidth(0.2);
+
+    if (centralizado) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...C.cinza);
+        doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, W - margin, lineY + 11, { align: 'right' });
+    }
     return lineY + 14;
 };
 
@@ -224,39 +229,36 @@ const drawKpis = (doc, y, items, margin = 40) => {
     return y + h + 16;
 };
 
-const drawWatermark = (doc, texto) => {
-    if (!texto || !PDFService.options.marcaDagua) return;
+// Marca d'água: imagem ampliada e centralizada
+const drawWatermark = (doc, img) => {
+    if (!img || !PDFService.options.marcaDagua) return;
     try {
         const W = doc.internal.pageSize.getWidth();
         const H = doc.internal.pageSize.getHeight();
-        let t = String(texto).toUpperCase();
-        if (t.length > 32) t = t.slice(0, 31) + '…';
-        let tamanho = 54;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(tamanho);
-        while (doc.getTextWidth(t) > W * 0.78 && tamanho > 20) { tamanho -= 4; doc.setFontSize(tamanho); }
+        const ratio = img.width / img.height;
+        let w = W * 0.8, h = w / ratio;
+        if (h > H * 0.7) { h = H * 0.7; w = h * ratio; }
         doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: 0.06 }));
-        doc.setTextColor(...C.verde);
-        doc.text(t, W / 2, H / 2, { align: 'center', angle: 35 });
+        doc.setGState(new doc.GState({ opacity: 0.07 }));
+        doc.addImage(img, 'PNG', (W - w) / 2, (H - h) / 2, w, h);
         doc.restoreGraphicsState();
-    } catch (e) { }
+    } catch (e) { console.warn('watermark', e); }
 };
 
-const applyFooters = (doc, marca = '') => {
+const applyFooters = (doc, { marcaDagua = null, textoSistema = true } = {}) => {
     const total = doc.internal.getNumberOfPages();
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
     for (let i = 1; i <= total; i++) {
         doc.setPage(i);
-        drawWatermark(doc, marca);
+        drawWatermark(doc, marcaDagua);
         doc.setDrawColor(...C.linha);
         doc.setLineWidth(0.5);
         doc.line(40, H - 28, W - 40, H - 28);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
+        if (textoSistema) doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
         doc.text(`Página ${i} de ${total}`, W - 40, H - 16, { align: 'right' });
     }
 };
@@ -271,7 +273,7 @@ const tableBase = (extra = {}) => ({
 });
 
 // ========================================================
-// ATA AÇÃO SOCIAL
+// ATA AÇÃO SOCIAL (inalterada)
 // ========================================================
 const ataTabelaPessoas = (doc, startY, titulo, labelId, lista, larguras) => {
     doc.autoTable({
@@ -383,7 +385,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 // PDF SERVICE
 // ========================================================
 export const PDFService = {
-    options: { marcaDagua: true, qrCode: true },
+    options: { marcaDagua: true },
 
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         if (window.showNotification) window.showNotification("Gerando demonstrativo, aguarde...", "info");
@@ -581,7 +583,7 @@ export const PDFService = {
 
                 const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
                 const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
-                
+
                 let pautaNome = 'Geral';
                 if (typeof arg1 === 'string') pautaNome = arg1;
                 else if (typeof arg2 === 'string') pautaNome = arg2;
@@ -594,12 +596,13 @@ export const PDFService = {
         });
     },
 
-        async _buildAtendidosPDF(atendidosList, pautaNome, selectedColumns) {
+    async _buildAtendidosPDF(atendidosList, pautaNome, selectedColumns) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
-            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
+            const logo = await loadImageSafe(LOGOS.horizontal);
+            const marca = await loadImageSafe(LOGOS.marcaDagua);
 
             atendidosList = [...(atendidosList || [])].sort(sortByScheduledTime);
 
@@ -650,7 +653,6 @@ export const PDFService = {
                 const demandasStr = item.demandas?.descricoes?.length ? item.demandas.descricoes.join(', ') : '---';
                 const processoStr = item.numeroProcesso || item.idCasoVerde || item.processo || '---';
 
-                // Tratamento de Resultado e Motivo
                 const motivoStr = item.motivoEncerramento || '';
                 let resultadoTexto = 'ATENDIDO';
                 if (motivoStr.toLowerCase().startsWith('reagendado')) {
@@ -681,8 +683,7 @@ export const PDFService = {
                 body.push([{ content: "Nenhum atendimento finalizado nesta pauta até o momento.", colSpan: activeCols.length + 1, styles: { halign: 'center', fontStyle: 'italic', textColor: C.cinza } }]);
             }
 
-            // CORREÇÃO APLICADA AQUI (pautaNome em vez de pautaName)
-            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos e Status', lines: [`Pauta: ${pautaNome}`] });
+            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos e Status', lines: [`Pauta: ${pautaNome}`], logoOpts: LOGO_DIM.horizontal });
             y = drawKpis(doc, y, [
                 { label: 'Concluídos', valor: totalConcluidos },
                 { label: 'Reagendados', valor: totalReagendados, cor: [245, 158, 11] },
@@ -702,11 +703,9 @@ export const PDFService = {
             });
 
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
-            
-            // CORREÇÃO APLICADA AQUI (pautaNome)
-            applyFooters(doc, pautaNome);
 
-            // CORREÇÃO APLICADA AQUI (pautaNome)
+            applyFooters(doc, { marcaDagua: marca });
+
             doc.save(`Relatorio_Atendidos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
@@ -717,25 +716,25 @@ export const PDFService = {
         }
     },
 
-
     async generateFaltososPDF(arg1, arg2) {
         if (window.showNotification) window.showNotification("Gerando lista de faltosos, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
+            const logo = await loadImageSafe(LOGOS.horizontal);
+            const marca = await loadImageSafe(LOGOS.marcaDagua);
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
-            
+
             let pautaNome = 'Geral';
             if (typeof arg1 === 'string') pautaNome = arg1;
             else if (typeof arg2 === 'string') pautaNome = arg2;
             else if (window.app && window.app.currentPauta && window.app.currentPauta.name) pautaNome = window.app.currentPauta.name;
-            
+
             faltososList = [...(faltososList || [])].sort(sortByScheduledTime);
 
-            let y = drawHeader(doc, logo, { title: 'Relatório de Faltosos', lines: [`Pauta: ${pautaNome}`] });
+            let y = drawHeader(doc, logo, { title: 'Relatório de Faltosos', lines: [`Pauta: ${pautaNome}`], logoOpts: LOGO_DIM.horizontal });
             y = drawKpis(doc, y, [{ label: 'Total de ausências', valor: faltososList.length, cor: C.vermelho }]);
 
             await yieldThread();
@@ -769,7 +768,7 @@ export const PDFService = {
                 }
             }));
 
-            applyFooters(doc, pautaNome);
+            applyFooters(doc, { marcaDagua: marca });
             doc.save(`faltosos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
@@ -791,7 +790,7 @@ export const PDFService = {
                 colaboradores = arg1;
                 if (typeof arg2 === 'string') pautaNome = arg2;
             }
-            
+
             if (pautaNome === 'Geral' && window.app && window.app.currentPauta && window.app.currentPauta.name) {
                 pautaNome = window.app.currentPauta.name;
             }
@@ -851,7 +850,7 @@ export const PDFService = {
                 btn.disabled = true;
 
                 const selectedColumns = ['nome', ...Array.from(document.querySelectorAll('#pdf-colab-checkboxes input:checked:not([disabled])')).map(cb => cb.value)];
-                
+
                 const success = await PDFService._buildCollaboratorsPDF(colaboradores, pautaNome, selectedColumns);
                 modal.remove();
                 resolve(success);
@@ -863,9 +862,10 @@ export const PDFService = {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            
+
             const doc = new jsPDF({ orientation: colunas.length > 5 ? 'l' : 'p', unit: 'pt', format: 'a4' });
-            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
+            const logo = await loadImageSafe(LOGOS.vertical);
+            const marca = await loadImageSafe(LOGOS.marcaDagua);
 
             const colMap = {
                 nome: { label: 'Membro da equipe', get: (c) => c.nome || '' },
@@ -915,8 +915,8 @@ export const PDFService = {
             const defensores = colaboradores.filter(c => pesoCargo(c.cargo) === 1).length;
             const servidores = colaboradores.filter(c => pesoCargo(c.cargo) === 2).length;
 
-            let y = drawHeader(doc, logo, { title: 'Lista das Equipes', lines: [`Pauta: ${pautaNome}`] });
-            
+            let y = drawHeader(doc, logo, { title: 'Lista das Equipes', lines: [`Pauta: ${pautaNome}`], logoOpts: LOGO_DIM.vertical });
+
             y = drawKpis(doc, y, [
                 { label: 'Total de membros', valor: colaboradores.length },
                 { label: 'Defensores(as)', valor: defensores, cor: [139, 92, 246] },
@@ -935,7 +935,7 @@ export const PDFService = {
                 styles: { ...tableBase().styles, halign: 'center' }
             }));
 
-            applyFooters(doc, pautaNome);
+            applyFooters(doc, { marcaDagua: marca });
             doc.save(`equipe_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("PDF da equipe gerado com sucesso!", "success");
             return true;
@@ -952,7 +952,8 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
+            const logo = await loadImageSafe(LOGOS.checklist);
+            const marca = await loadImageSafe(LOGOS.marcaDagua);
 
             const W = doc.internal.pageSize.getWidth();
             const H = doc.internal.pageSize.getHeight();
@@ -961,13 +962,14 @@ export const PDFService = {
 
             let y = drawHeader(doc, logo, {
                 title: 'Checklist de Atendimento',
-                lines: [`Assistido: ${String(assistedName).toUpperCase()}`, `Ação: ${actionTitle}`]
+                lines: [`Assistido: ${String(assistedName).toUpperCase()}`, `Ação: ${actionTitle}`],
+                logoOpts: LOGO_DIM.checklist
             });
 
             const ensure = (h) => {
                 if (y + h > H - 48) {
                     doc.addPage();
-                    const { w, h: lh } = logoSize(logo);
+                    const { w, h: lh } = logoSize(logo, LOGO_DIM.checklist);
                     if (logo) { try { doc.addImage(logo, 'PNG', m, 20, w * 0.7, lh * 0.7); } catch (e) { } }
                     y = 60;
                 }
@@ -987,13 +989,12 @@ export const PDFService = {
             };
 
             const checkItem = (texto, tag) => {
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(9.5);
-                doc.setTextColor(...C.texto);
                 doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
                 const tagW = tag ? doc.getTextWidth(tag) + 12 : 0;
                 doc.setFont("helvetica", "normal"); doc.setFontSize(9.5);
-                const linhas = doc.splitTextToSize(texto, contentW - 28 - (tagW ? tagW + 10 : 0));
+                doc.setTextColor(...C.texto);
+                const linhas = doc.splitTextToSize(texto, contentW - 28 - (tagW ? tagW + 8 : 0));
+                const lh = doc.getLineHeight();
                 const altura = Math.max(linhas.length * 12.5, 14);
                 ensure(altura + 6);
 
@@ -1008,13 +1009,15 @@ export const PDFService = {
                 doc.text(linhas, m + 26, y);
 
                 if (tag) {
-                    const bx = W - m - tagW;
+                    const ultima = linhas[linhas.length - 1];
+                    const bx = m + 26 + doc.getTextWidth(ultima) + 8;
+                    const by = y + (linhas.length - 1) * lh;
                     doc.setFillColor(...C.cinzaClaro);
-                    doc.roundedRect(bx, y - 10, tagW, 14, 3, 3, 'F');
+                    doc.roundedRect(bx, by - 10, tagW, 14, 3, 3, 'F');
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(7.5);
                     doc.setTextColor(...C.cinza);
-                    doc.text(tag, bx + tagW / 2, y - 0.5, { align: 'center' });
+                    doc.text(tag, bx + tagW / 2, by - 0.5, { align: 'center' });
                 }
                 y += altura + 6;
             };
@@ -1078,7 +1081,7 @@ export const PDFService = {
 
                 const formatMoeda = (num) => num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 const moradores = Math.max(1, parseInt(g.quantidadeMoradores || 1));
-                
+
                 const comuns = [
                     { id: 'aluguel', label: 'Aluguel Residencial' },
                     { id: 'condominio', label: 'Condomínio' },
@@ -1187,33 +1190,7 @@ export const PDFService = {
                 }
             }
 
-            if (PDFService.options.qrCode) {
-                try {
-                    await ensureQRCode();
-                    const url = checklistData.qrUrl;
-                    const conteudo = url || `SIGEP | Checklist | ${assistedName} | ${actionTitle} | ${new Date().toLocaleString('pt-BR')}`;
-                    ensure(96);
-                    doc.setFillColor(...C.cinzaClaro);
-                    doc.roundedRect(m, y, contentW, 82, 5, 5, 'F');
-                    drawQR(doc, conteudo, m + 10, y + 9, 64);
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(10);
-                    doc.setTextColor(...C.texto);
-                    doc.text("Código de conferência", m + 88, y + 28);
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(8.5);
-                    doc.setTextColor(...C.cinza);
-                    const legenda = url
-                        ? "Aponta para o registro deste atendimento no SIGEP."
-                        : "Contém o nome do assistido, a ação e a data/hora de emissão deste checklist.";
-                    doc.text(doc.splitTextToSize(legenda, contentW - 100), m + 88, y + 42);
-                    y += 96;
-                } catch (e) {
-                    console.warn("QR code não gerado:", e);
-                }
-            }
-
-            applyFooters(doc);
+            applyFooters(doc, { marcaDagua: marca });
             doc.save(`Checklist_SIGEP_${String(assistedName).replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Checklist exportado!", "success");
             return true;
@@ -1232,4 +1209,3 @@ export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPD
 
 export default PDFService;
 window.PDFService = PDFService;
-
