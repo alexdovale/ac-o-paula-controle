@@ -204,13 +204,16 @@
                     </div>
                 </div>
 
-                <!-- 3 Colunas Side-by-Side -->
+                <!-- 3 Colunas Side-by-Side com Ícones SVG Padronizados -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 pb-2">
                     
                     <!-- COLUNA 1: FILA DE ESPERA -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
-                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📥 Fila de Espera</h3>
+                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Fila de Espera
+                            </h3>
                             <span id="count-espera" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
                         </div>
                         <div id="kanban-espera" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
@@ -219,7 +222,10 @@
                     <!-- COLUNA 2: MINHA MESA -->
                     <div class="bg-white rounded-2xl shadow-sm border-2 border-blue-400 flex flex-col overflow-hidden ring-4 ring-blue-50 h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-blue-50 border-b border-blue-200 flex justify-between items-center shrink-0">
-                            <h3 class="font-black text-blue-800 uppercase tracking-widest text-[11px] flex items-center gap-2">💻 Minha Mesa</h3>
+                            <h3 class="font-black text-blue-800 uppercase tracking-widest text-[11px] flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                Minha Mesa
+                            </h3>
                             <span id="count-mesa" class="bg-blue-200 text-blue-800 px-2.5 py-1 rounded-lg text-[10px] font-black shadow-sm">0</span>
                         </div>
                         <div id="kanban-mesa" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-white">
@@ -233,7 +239,10 @@
                     <!-- COLUNA 3: CONCLUÍDOS -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
-                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Concluídos</h3>
+                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                Concluídos
+                            </h3>
                             <span id="count-auditoria" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
                         </div>
                         <div id="kanban-auditoria" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
