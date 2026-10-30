@@ -125,7 +125,8 @@ const C = {
     cinza: [100, 116, 139],
     cinzaClaro: [241, 245, 249],
     linha: [226, 232, 240],
-    zebra: [248, 250, 252]
+    zebra: [248, 250, 252],
+    cabBg: [241, 245, 249]
 };
 
 const loadImage = (url) => new Promise((resolve, reject) => {
@@ -239,36 +240,54 @@ const drawWatermark = (doc, img) => {
         let w = W * 0.8, h = w / ratio;
         if (h > H * 0.7) { h = H * 0.7; w = h * ratio; }
         doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: 0.07 }));
+        doc.setGState(new doc.GState({ opacity: 0.04 }));
         doc.addImage(img, 'PNG', (W - w) / 2, (H - h) / 2, w, h);
         doc.restoreGraphicsState();
     } catch (e) { console.warn('watermark', e); }
 };
 
-const applyFooters = (doc, { marcaDagua = null, textoSistema = true } = {}) => {
+// Desenha a marca d'água ao criar cada página, para ela ficar ATRÁS do conteúdo
+const fundoMarca = (doc, img) => {
+    const marcar = () => drawWatermark(doc, img);
+    const addPageOriginal = doc.addPage.bind(doc);
+    doc.addPage = (...args) => { const r = addPageOriginal(...args); marcar(); return r; };
+    marcar();
+};
+
+// Rodapé: linha + "Página X de Y" (sem nome do sistema)
+const applyFooters = (doc) => {
     const total = doc.internal.getNumberOfPages();
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
     for (let i = 1; i <= total; i++) {
         doc.setPage(i);
-        drawWatermark(doc, marcaDagua);
         doc.setDrawColor(...C.linha);
         doc.setLineWidth(0.5);
         doc.line(40, H - 28, W - 40, H - 28);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        if (textoSistema) doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
         doc.text(`Página ${i} de ${total}`, W - 40, H - 16, { align: 'right' });
     }
 };
 
+// Tabelas: sem grade, só linhas horizontais; cabeçalho cinza claro em caixa alta
 const tableBase = (extra = {}) => ({
-    theme: 'grid',
-    headStyles: { fillColor: C.verde, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.verde },
+    theme: 'plain',
+    headStyles: { fillColor: C.cabBg, textColor: C.texto, fontStyle: 'bold', halign: 'center', fontSize: 8 },
     alternateRowStyles: { fillColor: C.zebra },
-    styles: { fontSize: 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, lineColor: C.linha, lineWidth: 0.4, valign: 'middle', overflow: 'linebreak', textColor: C.texto },
+    styles: { fontSize: 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, lineColor: C.linha, lineWidth: 0, valign: 'middle', overflow: 'linebreak', textColor: C.texto },
     margin: { top: 45, left: 40, right: 40, bottom: 42 },
+    didParseCell: (d) => {
+        if (d.section === 'head') d.cell.text = d.cell.text.map(t => String(t).toUpperCase());
+    },
+    didDrawCell: (d) => {
+        const { x, y, width, height } = d.cell;
+        const linha = (yy, esp, cor) => { d.doc.setDrawColor(...cor); d.doc.setLineWidth(esp); d.doc.line(x, yy, x + width, yy); };
+        if (d.section === 'head') linha(y + height, 1.2, C.texto);
+        else if (d.section === 'body') linha(y + height, 0.5, C.linha);
+        d.doc.setLineWidth(0.2);
+    },
     ...extra
 });
 
@@ -603,6 +622,7 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGOS.horizontal);
             const marca = await loadImageSafe(LOGOS.marcaDagua);
+            fundoMarca(doc, marca);
 
             atendidosList = [...(atendidosList || [])].sort(sortByScheduledTime);
 
@@ -693,18 +713,19 @@ export const PDFService = {
 
             await yieldThread();
 
-            const fixas = { numAgendamento: 55, scheduledTime: 55, arrivalTime: 50, attendedTime: 60, duration: 55, numeroProcesso: 80 };
+            const fixas = { numAgendamento: 58, scheduledTime: 58, arrivalTime: 52, attendedTime: 72, duration: 54, numeroProcesso: 72 };
+            const minimas = { subject: 72, demandas: 72, resultado: 92, attendant: 72 };
             const columnStyles = { 0: { cellWidth: 24, halign: 'center', textColor: C.cinza } };
             activeCols.forEach((c, i) => {
                 const idx = i + 1;
-                if (c.key === 'name') columnStyles[idx] = { halign: 'left', fontStyle: 'bold' };
-                else if (['subject', 'demandas', 'resultado', 'attendant'].includes(c.key)) columnStyles[idx] = { halign: 'left' };
+                if (c.key === 'name') columnStyles[idx] = { halign: 'left', fontStyle: 'bold', minCellWidth: 110 };
+                else if (['subject', 'demandas', 'resultado', 'attendant'].includes(c.key)) columnStyles[idx] = { halign: 'left', minCellWidth: minimas[c.key] };
                 else columnStyles[idx] = { halign: 'center', cellWidth: fixas[c.key] || 'auto' };
             });
 
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
 
-            applyFooters(doc, { marcaDagua: marca });
+            applyFooters(doc);
 
             doc.save(`Relatorio_Atendidos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
@@ -724,6 +745,7 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGOS.horizontal);
             const marca = await loadImageSafe(LOGOS.marcaDagua);
+            fundoMarca(doc, marca);
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
 
@@ -757,8 +779,6 @@ export const PDFService = {
                 head: [["#", "Nome do assistido", "Agendado", "Assunto", "Falta às"]],
                 body,
                 startY: y,
-                headStyles: { fillColor: C.vermelho, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.vermelho },
-                alternateRowStyles: { fillColor: [254, 250, 250] },
                 columnStyles: {
                     0: { cellWidth: 26, halign: 'center', textColor: C.cinza },
                     1: { halign: 'left', fontStyle: 'bold' },
@@ -768,7 +788,7 @@ export const PDFService = {
                 }
             }));
 
-            applyFooters(doc, { marcaDagua: marca });
+            applyFooters(doc);
             doc.save(`faltosos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
@@ -866,6 +886,7 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: colunas.length > 5 ? 'l' : 'p', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGOS.vertical);
             const marca = await loadImageSafe(LOGOS.marcaDagua);
+            fundoMarca(doc, marca);
 
             const colMap = {
                 nome: { label: 'Membro da equipe', get: (c) => c.nome || '' },
@@ -935,7 +956,7 @@ export const PDFService = {
                 styles: { ...tableBase().styles, halign: 'center' }
             }));
 
-            applyFooters(doc, { marcaDagua: marca });
+            applyFooters(doc);
             doc.save(`equipe_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("PDF da equipe gerado com sucesso!", "success");
             return true;
@@ -954,6 +975,7 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGOS.checklist);
             const marca = await loadImageSafe(LOGOS.marcaDagua);
+            fundoMarca(doc, marca);
 
             const W = doc.internal.pageSize.getWidth();
             const H = doc.internal.pageSize.getHeight();
@@ -1042,6 +1064,8 @@ export const PDFService = {
                     margin: { top: 60, left: m, right: m, bottom: 42 },
                     styles: { fontSize: 9, cellPadding: { top: 4, bottom: 4, left: 8, right: 8 }, textColor: C.texto, lineColor: C.linha, lineWidth: 0, overflow: 'linebreak' },
                     alternateRowStyles: { fillColor: C.zebra },
+                    didParseCell: undefined,
+                    didDrawCell: undefined,
                     columnStyles: { 0: { cellWidth: opts.w0 || 150, fontStyle: 'bold', textColor: C.cinza }, 1: { halign: opts.align1 || 'left' } },
                     ...(opts.extra || {})
                 }));
@@ -1190,7 +1214,7 @@ export const PDFService = {
                 }
             }
 
-            applyFooters(doc, { marcaDagua: marca });
+            applyFooters(doc);
             doc.save(`Checklist_SIGEP_${String(assistedName).replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Checklist exportado!", "success");
             return true;
