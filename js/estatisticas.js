@@ -1,14 +1,17 @@
-
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores coloridos minimalistas, barras, cartões por equipe)
  * - Ícones SVG (estilo Lucide) no lugar de emojis
  * - Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras, "Não definida" por último
  * - IDs estáveis (sem Math.random) e nomes protegidos contra HTML
- * - PDFs: Resumo Geral, Por Equipe, Só Grupos, Detalhado (com logo SIGEP e quebra de página)
+ * - PDFs: Resumo Geral, Por Equipe, Só Grupos, Detalhado, Gráficos
+ *   (logo vertical, título centralizado em preto, marca d'água em imagem, sem texto do sistema)
  */
 
-const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
+const LOGOS = {
+    vertical: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302",
+    marcaDagua: "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da"
+};
 
 // ---------- utilitários ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -91,23 +94,28 @@ const loadImageBase64 = async (url) => {
     }
 };
 
-const desenharMarcaDagua = (doc, texto) => {
-    if (!texto) return;
+// Cache das imagens (evita baixar de novo a cada PDF)
+const imgCache = {};
+const carregarImagem = async (url) => {
+    if (imgCache[url] === undefined) imgCache[url] = await loadImageBase64(url);
+    return imgCache[url];
+};
+
+// Marca d'água: imagem ampliada e centralizada, com baixa opacidade
+const desenharMarcaDagua = (doc, img) => {
+    if (!img) return;
     try {
         const W = doc.internal.pageSize.getWidth();
         const H = doc.internal.pageSize.getHeight();
-        let t = String(texto).toUpperCase();
-        if (t.length > 32) t = t.slice(0, 31) + '…';
-        let tamanho = 54;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(tamanho);
-        while (doc.getTextWidth(t) > W * 0.78 && tamanho > 20) { tamanho -= 4; doc.setFontSize(tamanho); }
+        const p = doc.getImageProperties(img);
+        const ratio = p.width / p.height;
+        let w = W * 0.8, h = w / ratio;
+        if (h > H * 0.7) { h = H * 0.7; w = h * ratio; }
         doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: 0.06 }));
-        doc.setTextColor(22, 163, 74);
-        doc.text(t, W / 2, H / 2, { align: 'center', angle: 35 });
+        doc.setGState(new doc.GState({ opacity: 0.07 }));
+        doc.addImage(img, 'PNG', (W - w) / 2, (H - h) / 2, w, h);
         doc.restoreGraphicsState();
-    } catch (e) { }
+    } catch (e) { console.warn('Marca d\'água não aplicada', e); }
 };
 
 const retanguloArred = (doc, x, y, w, h, r) => {
@@ -206,68 +214,82 @@ export const StatisticsService = {
         });
     },
 
-    async drawSigepHeader(doc, margin, startY) {
-        const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
-        if (logoBase64) {
-            try { doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - margin - 35, startY - 15, 35, 35); } catch (e) { }
-        }
-        doc.setFontSize(24);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("SIGEP", margin, startY);
-
-        doc.setFontSize(10);
-        doc.setTextColor(120, 120, 120);
-        doc.setFont("helvetica", "normal");
-        doc.text("Sistema de Gerenciamento de Pauta", margin, startY + 12);
-        return startY + 35;
-    },
-
+    // Cabeçalho: logo vertical à esquerda; título (preto) e dados centralizados. Sem o nome do sistema.
     async novoPDF(titulo, pautaName, totalGeral) {
-        this._marca = pautaName;
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 40;
 
-        let yPos = await this.drawSigepHeader(doc, margin, margin);
+        const [logo, marca] = await Promise.all([carregarImagem(LOGOS.vertical), carregarImagem(LOGOS.marcaDagua)]);
+        this._marca = marca;
 
-        doc.setFontSize(16);
-        doc.setTextColor(22, 163, 74);
+        const top = margin;
+        let logoBottom = top;
+        if (logo) {
+            try {
+                const p = doc.getImageProperties(logo);
+                const ratio = p.width / p.height;
+                let w = 80, h = w / ratio;
+                if (h > 64) { h = 64; w = h * ratio; }
+                doc.addImage(logo, 'PNG', margin, top, w, h);
+                logoBottom = top + h;
+            } catch (e) { console.warn('Logo não aplicada', e); }
+        }
+
+        const cx = pageWidth / 2;
+        let y = top + 16;
+
         doc.setFont("helvetica", "bold");
-        doc.text(titulo, margin, yPos);
-        yPos += 18;
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text(titulo, cx, y, { align: 'center' });
+        y += 18;
 
-        doc.setFontSize(12);
-        doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
-        const linhas = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - margin * 2);
-        doc.text(linhas, margin, yPos);
-        yPos += linhas.length * 15;
+        doc.setFontSize(11);
+        doc.setTextColor(60, 60, 60);
+        const linhas = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin + 100) * 2);
+        doc.text(linhas, cx, y, { align: 'center' });
+        y += linhas.length * 14;
+
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, cx, y, { align: 'center' });
+        y += 13;
 
         if (totalGeral !== undefined) {
-            doc.setFontSize(10);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-            yPos += 14;
             doc.setFont("helvetica", "bold");
-            doc.text(`Total de Atendimentos: ${totalGeral}`, margin, yPos);
-            yPos += 20;
-        } else {
-            yPos += 5;
+            doc.setFontSize(10);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`Total de Atendimentos: ${totalGeral}`, cx, y, { align: 'center' });
+            y += 13;
         }
-        return { doc, yPos, margin, pageWidth, pageHeight };
+
+        const lineY = Math.max(logoBottom, y) + 6;
+        doc.setDrawColor(22, 163, 74);
+        doc.setLineWidth(1.5);
+        doc.line(margin, lineY, pageWidth - margin, lineY);
+        doc.setLineWidth(0.2);
+
+        return { doc, yPos: lineY + 16, margin, pageWidth, pageHeight };
     },
 
+    // Rodapé: marca d'água (imagem) + linha + "Página X de Y" (sem nome do sistema)
     rodapePDF(doc, margin, pageHeight) {
         const total = doc.internal.getNumberOfPages();
+        const W = doc.internal.pageSize.getWidth();
         for (let i = 1; i <= total; i++) {
             doc.setPage(i);
             desenharMarcaDagua(doc, this._marca);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(margin, pageHeight - 30, W - margin, pageHeight - 30);
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${total}`, margin, pageHeight - 20);
+            doc.text(`Página ${i} de ${total}`, W - margin, pageHeight - 18, { align: 'right' });
         }
     },
 
@@ -1026,32 +1048,43 @@ export const StatisticsService = {
         let yPos = y0;
 
         const largura = pageWidth - margin * 2;
-        const GAP = 18;
-        const VERDE = [22, 163, 74];
-        const TXT = [30, 41, 59];
+
+        // Paleta sóbria: slate escuro nos cabeçalhos, verde só como detalhe, vermelho só em "Faltosos"
+        const P = {
+            cabecalho: [30, 41, 59],
+            texto: [30, 41, 59],
+            secundario: [71, 85, 105],
+            suave: [148, 163, 184],
+            zebra: [248, 250, 252],
+            linha: [203, 213, 225],
+            totalBg: [226, 232, 240],
+            verde: [22, 163, 74],
+            vermelho: [153, 27, 27],
+            cardBg: [241, 245, 249]
+        };
 
         const novaPaginaSe = (h) => {
             if (yPos + h > pageHeight - 50) { doc.addPage(); yPos = margin + 10; }
         };
 
-        const secao = (titulo, x = margin) => {
-            doc.setFillColor(...VERDE);
-            doc.roundedRect(x, yPos - 10, 3, 13, 1.5, 1.5, 'F');
+        const secao = (titulo) => {
+            doc.setFillColor(...P.verde);
+            doc.roundedRect(margin, yPos - 10, 3, 13, 1.5, 1.5, 'F');
             doc.setFont("helvetica", "bold");
             doc.setFontSize(12);
-            doc.setTextColor(...TXT);
-            doc.text(titulo, x + 9, yPos);
+            doc.setTextColor(...P.texto);
+            doc.text(titulo, margin + 9, yPos);
         };
 
         const base = {
             theme: 'grid',
-            styles: { fontSize: 8.5, cellPadding: 4.5, valign: 'middle', lineColor: [226, 232, 240], lineWidth: 0.4, textColor: [51, 65, 85] },
-            headStyles: { fillColor: VERDE, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
-            footStyles: { fillColor: [226, 232, 240], textColor: TXT, fontStyle: 'bold' }
+            styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle', lineColor: P.linha, lineWidth: 0.4, textColor: P.secundario },
+            headStyles: { fillColor: P.cabecalho, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5, halign: 'center', lineColor: P.cabecalho },
+            alternateRowStyles: { fillColor: P.zebra },
+            footStyles: { fillColor: P.totalBg, textColor: P.texto, fontStyle: 'bold', fontSize: 9.5 }
         };
 
-        const tabela = (config, margens) => {
+        const tabela = (config) => {
             doc.autoTable({
                 startY: yPos,
                 ...base,
@@ -1059,40 +1092,24 @@ export const StatisticsService = {
                 styles: { ...base.styles, ...(config.styles || {}) },
                 headStyles: { ...base.headStyles, ...(config.headStyles || {}) },
                 footStyles: { ...base.footStyles, ...(config.footStyles || {}) },
-                margin: margens || { left: margin, right: margin, top: margin, bottom: 45 }
+                margin: { left: margin, right: margin, top: margin, bottom: 45 }
             });
             return doc.lastAutoTable.finalY;
         };
 
-        const COR = {
-            slate:   { head: [51, 65, 85],   tint: [226, 232, 240], texto: [30, 41, 59] },
-            indigo:  { head: [79, 70, 229],  tint: [224, 231, 255], texto: [55, 48, 163] },
-            verde:   { head: [22, 163, 74],  tint: [220, 252, 231], texto: [21, 128, 61] },
-            esmeral: { head: [16, 185, 129], tint: [209, 250, 229], texto: [4, 120, 87] },
-            teal:    { head: [20, 184, 166], tint: [204, 251, 241], texto: [15, 118, 110] },
-            vermelho:{ head: [220, 38, 38],  tint: [254, 226, 226], texto: [185, 28, 28] },
-            azul:    { head: [37, 99, 235],  tint: [219, 234, 254], texto: [29, 78, 216] },
-            roxo:    { head: [147, 51, 234], tint: [243, 232, 255], texto: [107, 33, 168] }
-        };
-
-        const colorir = (cores) => (data) => {
-            const c = cores[data.column.index];
-            if (!c) return;
-            if (data.section === 'head') {
-                data.cell.styles.fillColor = c.head;
-                data.cell.styles.textColor = [255, 255, 255];
-            } else if (data.section === 'body' && data.column.index > 0) {
+        // Números em negrito; zeros em cinza claro; colunas de destaque (ex.: faltosos) em vermelho escuro
+        const estilizar = (destaques = {}) => (data) => {
+            if (data.section === 'body' && data.column.index > 0) {
                 const vazio = data.cell.raw === 0 || data.cell.raw === '-' || data.cell.raw === '0%';
-                data.cell.styles.textColor = vazio ? [148, 163, 184] : c.texto;
+                data.cell.styles.textColor = vazio ? P.suave : (destaques[data.column.index] || P.texto);
                 data.cell.styles.fontStyle = 'bold';
             } else if (data.section === 'foot') {
                 const primeira = data.column.index === 0;
-                data.cell.styles.fillColor = primeira ? [30, 41, 59] : c.tint;
-                data.cell.styles.textColor = primeira ? [255, 255, 255] : c.texto;
-                data.cell.styles.fontStyle = 'bold';
-                data.cell.styles.fontSize = 10;
-                data.cell.styles.lineColor = primeira ? [30, 41, 59] : c.head;
-                data.cell.styles.lineWidth = 0.8;
+                data.cell.styles.fillColor = primeira ? P.cabecalho : P.totalBg;
+                data.cell.styles.textColor = primeira ? [255, 255, 255] : (destaques[data.column.index] || P.texto);
+                data.cell.styles.lineColor = P.cabecalho;
+                data.cell.styles.lineWidth = 0.6;
+                data.cell.styles.halign = primeira ? 'left' : 'center';
             }
         };
 
@@ -1101,25 +1118,27 @@ export const StatisticsService = {
             yPos += 14;
             const totalPres = (s.atendidosCount || 0) + (s.faltososCount || 0);
             const cards = [
-                { v: String(s.atendidosCount || 0), l: "Atendimentos", bg: [240, 253, 244], fg: [22, 163, 74] },
-                { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", bg: [236, 253, 245], fg: [16, 185, 129] },
-                { v: String(s.atendidosSemAgendaCount || 0), l: "Efetivados", bg: [240, 253, 250], fg: [20, 184, 166] },
-                { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] },
-                { v: pct(s.atendidosCount || 0, totalPres) + '%', l: "Presença", bg: [239, 246, 255], fg: [37, 99, 235] }
+                { v: String(s.atendidosCount || 0), l: "Atendimentos", cor: P.verde },
+                { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", cor: P.secundario },
+                { v: String(s.atendidosSemAgendaCount || 0), l: "Efetivados", cor: P.secundario },
+                { v: String(s.faltososCount || 0), l: "Faltosos", cor: P.vermelho },
+                { v: pct(s.atendidosCount || 0, totalPres) + '%', l: "Presença", cor: P.cabecalho }
             ];
             const cw = (largura - 8 * (cards.length - 1)) / cards.length;
             cards.forEach((c, i) => {
                 const x = margin + i * (cw + 8);
-                doc.setFillColor(...c.bg);
-                doc.roundedRect(x, yPos, cw, 54, 6, 6, 'F');
+                doc.setFillColor(...P.cardBg);
+                doc.roundedRect(x, yPos, cw, 54, 4, 4, 'F');
+                doc.setFillColor(...c.cor);
+                doc.roundedRect(x, yPos + 8, 3, 38, 1.5, 1.5, 'F');
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(20);
-                doc.setTextColor(...c.fg);
-                doc.text(c.v, x + cw / 2, yPos + 27, { align: 'center' });
+                doc.setFontSize(19);
+                doc.setTextColor(...P.texto);
+                doc.text(c.v, x + 14, yPos + 29);
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(8);
-                doc.setTextColor(71, 85, 105);
-                doc.text(c.l, x + cw / 2, yPos + 43, { align: 'center' });
+                doc.setTextColor(100, 116, 139);
+                doc.text(c.l, x + 14, yPos + 44);
             });
             yPos += 54 + 28;
         }
@@ -1141,12 +1160,12 @@ export const StatisticsService = {
                 body: equipes,
                 foot: [['TOTAL', somaMemb, somaAtend, pctF(somaAtend, s.atendidosCount) + '%']],
                 columnStyles: {
-                    0: { halign: 'left', fontStyle: 'bold', textColor: [30, 41, 59] },
+                    0: { halign: 'left', fontStyle: 'bold', textColor: P.texto },
                     1: { halign: 'center', cellWidth: 90 },
                     2: { halign: 'center', cellWidth: 110 },
                     3: { halign: 'center', cellWidth: 90 }
                 },
-                didParseCell: colorir([COR.slate, COR.roxo, COR.verde, COR.azul])
+                didParseCell: estilizar()
             }) + 26;
         }
 
@@ -1160,9 +1179,9 @@ export const StatisticsService = {
         juntar(s.statsByTimeFaltosos, 'fa');
         const horas = Object.keys(mapa).sort();
         const cols = [
-            { k: 'ag', nome: 'Agendados', on: exportScheduledTime, cor: COR.indigo },
-            { k: 'at', nome: 'Atendidos', on: exportTimes, cor: COR.verde },
-            { k: 'fa', nome: 'Faltosos', on: exportAbsenteesTime, cor: COR.vermelho }
+            { k: 'ag', nome: 'Agendados', on: exportScheduledTime },
+            { k: 'at', nome: 'Atendidos', on: exportTimes },
+            { k: 'fa', nome: 'Faltosos', on: exportAbsenteesTime }
         ].filter(c => c.on);
         const mostrarPres = exportTimes && exportAbsenteesTime;
 
@@ -1171,7 +1190,6 @@ export const StatisticsService = {
             secao("Movimento por Horário");
             yPos += 10;
             const head = ['Horário', ...cols.map(c => c.nome), ...(mostrarPres ? ['Presença'] : [])];
-            const cores = [COR.slate, ...cols.map(c => c.cor), ...(mostrarPres ? [COR.azul] : [])];
             const body = horas.map(h => {
                 const m = mapa[h];
                 const linha = [h, ...cols.map(c => m[c.k])];
@@ -1182,14 +1200,17 @@ export const StatisticsService = {
             const foot = ['TOTAL', ...cols.map(c => tot[c.k]), ...(mostrarPres ? [pct(tot.at, tot.at + tot.fa) + '%'] : [])];
 
             const colStyles = {};
-            head.forEach((_, i) => { colStyles[i] = { halign: 'center', ...(i === 0 ? { fontStyle: 'bold', textColor: [30, 41, 59] } : {}) }; });
+            head.forEach((_, i) => { colStyles[i] = { halign: 'center', ...(i === 0 ? { fontStyle: 'bold', textColor: P.texto } : {}) }; });
+
+            const idxFaltosos = cols.findIndex(c => c.k === 'fa');
+            const destaques = idxFaltosos >= 0 ? { [idxFaltosos + 1]: P.vermelho } : {};
 
             yPos = tabela({
                 head: [head],
                 body,
                 foot: [foot],
                 columnStyles: colStyles,
-                didParseCell: colorir(cores)
+                didParseCell: estilizar(destaques)
             }) + 26;
         }
 
@@ -1206,13 +1227,13 @@ export const StatisticsService = {
                 body: subjects,
                 foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
                 columnStyles: {
-                    0: { halign: 'left', cellWidth: 'auto', textColor: [30, 41, 59] },
+                    0: { halign: 'left', cellWidth: 'auto', textColor: P.texto },
                     1: { halign: 'center', cellWidth: 55 },
                     2: { halign: 'center', cellWidth: 75 },
                     3: { halign: 'center', cellWidth: 75 },
                     4: { halign: 'center', cellWidth: 65 }
                 },
-                didParseCell: colorir([COR.slate, COR.slate, COR.esmeral, COR.teal, COR.vermelho])
+                didParseCell: estilizar({ 4: P.vermelho })
             }) + 20;
         }
 
@@ -1228,4 +1249,3 @@ export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
-
