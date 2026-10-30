@@ -258,39 +258,9 @@ export const AtendimentoExternoService = {
         this._injetarBotaoPausaHeader();
     },
 
-    // ─── BOTÃO E MODAIS DE PAUSA NA HEADER DA MESA DIGITAL ──────────────────────
-
-    _    _injetarBotaoPausaHeader() {
-        const headerRight = document.querySelector('#header-bg > div:last-child');
-        if (!headerRight) return;
-
-        document.getElementById('btn-pausa-mesa-digital')?.remove();
-
-        const estaPausado = this.colaboradorAtual?.status === 'pausado';
-
-        const btnPausa = document.createElement('button');
-        btnPausa.id = 'btn-pausa-mesa-digital';
-        btnPausa.type = 'button';
-
-        if (estaPausado) {
-            btnPausa.className = 'bg-amber-500 hover:bg-amber-600 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all animate-pulse shrink-0 cursor-pointer active:scale-95';
-            btnPausa.innerHTML = `
-                <svg class="w-4 h-4 shrink-0 inline-block align-middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
-                <span>Pausado</span><span class="hidden md:inline font-normal lowercase italic text-amber-100">(${escapeHTML(this.colaboradorAtual?.motivoPausa || 'ausente')})</span> • <span class="underline">Retornar?</span>`;
-            btnPausa.onclick = () => this._abrirModalConfirmarRetorno();
-        } else {
-            btnPausa.className = 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95';
-            btnPausa.innerHTML = `
-                <svg class="w-4 h-4 shrink-0 inline-block align-middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-                <span>Pausar / Ausente</span>`;
-            btnPausa.onclick = () => this._abrirModalDefinirPausa();
-        }
-
-        headerRight.prepend(btnPausa);
-    },
 
 
-    _abrirModalDefinirPausa() {
+    // ─── BOTÃO E MODAIS DE PAUSA NA HEADER DA MESA DIGITAL ─────────────── //    _abrirModalDefinirPausa() {
         document.getElementById('modal-definir-pausa')?.remove();
 
         const modal = document.createElement('div');
@@ -302,7 +272,7 @@ export const AtendimentoExternoService = {
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
                 <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm shadow-sm"></span>
+                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm shadow-sm font-bold">⏸</span>
                         <div>
                             <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Registrar Pausa</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Informe sua ausência temporária</p>
@@ -315,13 +285,13 @@ export const AtendimentoExternoService = {
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Motivos Rápidos</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <button type="button" class="btn-preset-pausa text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Almoço">
+                            <button type="button" class="btn-preset-pausa text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Almoço">
                                 Almoço
                             </button>
-                            <button type="button" class="btn-preset-pausa text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Banheiro / Café">
+                            <button type="button" class="btn-preset-pausa text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Banheiro / Café">
                                 Banheiro / Café
                             </button>
-                            <button type="button" class="btn-preset-pausa sm:col-span-2 text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento Externo / Diligência">
+                            <button type="button" class="btn-preset-pausa sm:col-span-2 text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento Externo / Diligência">
                                 Atendimento Externo / Diligência
                             </button>
                         </div>
@@ -360,6 +330,7 @@ export const AtendimentoExternoService = {
             await this._executarPausa(motivo);
         };
     },
+
 
     async _executarPausa(motivo) {
         if (!this.colaboradorAtual?.id) return;
