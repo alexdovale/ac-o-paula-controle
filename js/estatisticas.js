@@ -112,7 +112,7 @@ const desenharMarcaDagua = (doc, img) => {
         let w = W * 0.8, h = w / ratio;
         if (h > H * 0.7) { h = H * 0.7; w = h * ratio; }
         doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: 0.07 }));
+        doc.setGState(new doc.GState({ opacity: 0.04 }));
         doc.addImage(img, 'PNG', (W - w) / 2, (H - h) / 2, w, h);
         doc.restoreGraphicsState();
     } catch (e) { console.warn('Marca d\'água não aplicada', e); }
@@ -225,6 +225,12 @@ export const StatisticsService = {
         const [logo, marca] = await Promise.all([carregarImagem(LOGOS.vertical), carregarImagem(LOGOS.marcaDagua)]);
         this._marca = marca;
 
+        // Marca d'água desenhada ao criar cada página (fica ATRÁS do conteúdo)
+        const marcar = () => desenharMarcaDagua(doc, marca);
+        const addPageOriginal = doc.addPage.bind(doc);
+        doc.addPage = (...args) => { const r = addPageOriginal(...args); marcar(); return r; };
+        marcar();
+
         const top = margin;
         let logoBottom = top;
         if (logo) {
@@ -276,13 +282,12 @@ export const StatisticsService = {
         return { doc, yPos: lineY + 16, margin, pageWidth, pageHeight };
     },
 
-    // Rodapé: marca d'água (imagem) + linha + "Página X de Y" (sem nome do sistema)
+    // Rodapé: linha + "Página X de Y" (sem nome do sistema)
     rodapePDF(doc, margin, pageHeight) {
         const total = doc.internal.getNumberOfPages();
         const W = doc.internal.pageSize.getWidth();
         for (let i = 1; i <= total; i++) {
             doc.setPage(i);
-            desenharMarcaDagua(doc, this._marca);
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.5);
             doc.line(margin, pageHeight - 30, W - margin, pageHeight - 30);
@@ -1052,6 +1057,7 @@ export const StatisticsService = {
         // Paleta sóbria: slate escuro nos cabeçalhos, verde só como detalhe, vermelho só em "Faltosos"
         const P = {
             cabecalho: [30, 41, 59],
+            cabBg: [241, 245, 249],
             texto: [30, 41, 59],
             secundario: [71, 85, 105],
             suave: [148, 163, 184],
@@ -1077,11 +1083,10 @@ export const StatisticsService = {
         };
 
         const base = {
-            theme: 'grid',
-            styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle', lineColor: P.linha, lineWidth: 0.4, textColor: P.secundario },
-            headStyles: { fillColor: P.cabecalho, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5, halign: 'center', lineColor: P.cabecalho },
-            alternateRowStyles: { fillColor: P.zebra },
-            footStyles: { fillColor: P.totalBg, textColor: P.texto, fontStyle: 'bold', fontSize: 9.5 }
+            theme: 'plain',
+            styles: { fontSize: 8.5, cellPadding: { top: 6, bottom: 6, left: 6, right: 6 }, valign: 'middle', lineColor: P.linha, lineWidth: 0, textColor: P.secundario },
+            headStyles: { fillColor: P.cabBg, textColor: P.texto, fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
+            footStyles: { fillColor: [255, 255, 255], textColor: P.texto, fontStyle: 'bold', fontSize: 9.5 }
         };
 
         const tabela = (config) => {
@@ -1092,28 +1097,63 @@ export const StatisticsService = {
                 styles: { ...base.styles, ...(config.styles || {}) },
                 headStyles: { ...base.headStyles, ...(config.headStyles || {}) },
                 footStyles: { ...base.footStyles, ...(config.footStyles || {}) },
-                margin: { left: margin, right: margin, top: margin, bottom: 45 }
+                margin: { left: margin, right: margin, top: margin, bottom: 45 },
+                // Só linhas horizontais: fina entre as linhas, grossa sob o cabeçalho e sobre o total
+                didDrawCell: (d) => {
+                    const { x, y, width, height } = d.cell;
+                    const linha = (yy, esp, cor) => { doc.setDrawColor(...cor); doc.setLineWidth(esp); doc.line(x, yy, x + width, yy); };
+                    if (d.section === 'head') linha(y + height, 1.2, P.cabecalho);
+                    else if (d.section === 'body') linha(y + height, 0.5, P.linha);
+                    else if (d.section === 'foot') { linha(y, 1.2, P.cabecalho); linha(y + height, 0.5, P.linha); }
+                    doc.setLineWidth(0.2);
+                }
             });
             return doc.lastAutoTable.finalY;
         };
 
-        // Números em negrito; zeros em cinza claro; colunas de destaque (ex.: faltosos) em vermelho escuro
+        // Cabeçalho em caixa alta; números em negrito; zeros em cinza claro; destaque (faltosos) em vermelho escuro
         const estilizar = (destaques = {}) => (data) => {
-            if (data.section === 'body' && data.column.index > 0) {
+            if (data.section === 'head') {
+                data.cell.text = data.cell.text.map(t => String(t).toUpperCase());
+            } else if (data.section === 'body' && data.column.index > 0) {
                 const vazio = data.cell.raw === 0 || data.cell.raw === '-' || data.cell.raw === '0%';
                 data.cell.styles.textColor = vazio ? P.suave : (destaques[data.column.index] || P.texto);
                 data.cell.styles.fontStyle = 'bold';
             } else if (data.section === 'foot') {
                 const primeira = data.column.index === 0;
-                data.cell.styles.fillColor = primeira ? P.cabecalho : P.totalBg;
-                data.cell.styles.textColor = primeira ? [255, 255, 255] : (destaques[data.column.index] || P.texto);
-                data.cell.styles.lineColor = P.cabecalho;
-                data.cell.styles.lineWidth = 0.6;
+                data.cell.styles.textColor = primeira ? P.texto : (destaques[data.column.index] || P.texto);
                 data.cell.styles.halign = primeira ? 'left' : 'center';
             }
         };
 
         if (exportGeneral) {
+            // Quadro de identificação da pauta
+            const dadosPauta = [
+                ['Agendados', String(s.agendadosCount ?? '-')],
+                ['Cancelados', String(s.canceladosCount ?? 0)],
+                ['Extra-pauta', String(s.extraPautaCount ?? 0)],
+                ['Tempo médio de atendimento', (s.avgTimeDirect || 0) + ' min']
+            ];
+            doc.setDrawColor(...P.linha);
+            doc.setLineWidth(0.6);
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(margin, yPos, largura, 42, 3, 3, 'FD');
+            const colW = largura / dadosPauta.length;
+            dadosPauta.forEach(([rot, val], i) => {
+                const x = margin + i * colW;
+                if (i > 0) doc.line(x, yPos + 8, x, yPos + 34);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(100, 116, 139);
+                doc.text(rot.toUpperCase(), x + 12, yPos + 16);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.setTextColor(...P.texto);
+                doc.text(val, x + 12, yPos + 32);
+            });
+            doc.setLineWidth(0.2);
+            yPos += 42 + 24;
+
             secao("Resumo Geral");
             yPos += 14;
             const totalPres = (s.atendidosCount || 0) + (s.faltososCount || 0);
@@ -1236,6 +1276,31 @@ export const StatisticsService = {
                 didParseCell: estilizar({ 4: P.vermelho })
             }) + 20;
         }
+
+        // Notas sobre os critérios
+        const notas = [
+            'Presença = atendidos ÷ (atendidos + faltosos).',
+            'Agendados não inclui atendimentos cancelados.',
+            'Agend/Reag = atendidos por ação rápida de agendamento ou reagendamento; Efetivados = demais atendidos.',
+            'Tempo médio = intervalo entre a chegada e a finalização do atendimento.',
+            'Um mesmo atendimento pode gerar mais de uma demanda; por isso o total de demandas pode superar o de atendidos.'
+        ];
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        const linhasNotas = notas.flatMap(n => doc.splitTextToSize('•  ' + n, largura - 8));
+        novaPaginaSe(linhasNotas.length * 10 + 30);
+        doc.setDrawColor(...P.linha);
+        doc.line(margin, yPos, margin + largura, yPos);
+        yPos += 14;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...P.texto);
+        doc.text('NOTAS', margin, yPos);
+        yPos += 11;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(linhasNotas, margin, yPos);
 
         this.rodapePDF(doc, margin, pageHeight);
         doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
