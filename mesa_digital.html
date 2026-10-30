@@ -33,10 +33,10 @@
 </head>
 <body class="flex flex-col min-h-screen pt-14">
 
-    <!-- MENU SUPERIOR FIXO (Agora visível sempre que autenticado) -->
+    <!-- MENU SUPERIOR FIXO -->
     <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[999] flex justify-between items-center px-4 sm:px-6 py-2 shadow-md h-12">
         <div class="flex items-center gap-3">
-            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da" alt="Logo SIGEP" class="h-7 w-auto object-contain drop-shadow-sm">
+            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" alt="Logo SIGEP" class="h-8 w-auto object-contain drop-shadow-sm">
             <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest">
                 Mesa Digital
             </span>
@@ -49,7 +49,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <!-- Menu Retrátil para Mobile (SVG clicável) -->
+            <!-- Menu Retrátil para Mobile -->
             <div class="relative lg:hidden">
                 <button onclick="document.getElementById('mobile-menu-dropdown').classList.toggle('hidden')" class="bg-slate-800 text-slate-300 p-2 rounded-lg border border-slate-700 hover:text-white flex items-center justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
@@ -88,7 +88,7 @@
     <!-- WRAPPER PRINCIPAL -->
     <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-start sm:justify-center w-full px-2 sm:px-6">
         
-        <!-- TELA DE LOGIN (COM LOGO VERTICAL EXTENSO 2X MAIOR) -->
+        <!-- TELA DE LOGIN (COM LOGO 4X MAIOR) -->
         <div id="login-container" class="w-full max-w-md hidden animate-fade-in my-auto min-h-[70vh]">
             <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden w-full mt-10 sm:mt-0">
                 <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
@@ -96,7 +96,7 @@
                 </div>
                 
                 <div class="flex justify-center mb-6 mt-4">
-                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="Logo SIGEP Vertical Extenso" class="h-28 sm:h-36 w-auto object-contain drop-shadow-sm">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="Logo SIGEP Vertical Extenso" class="h-40 sm:h-48 w-auto object-contain drop-shadow-sm">
                 </div>
                 
                 <div class="flex border-b border-slate-200 mb-6">
@@ -130,10 +130,10 @@
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS (PORTAL EXTERNO COM LOGO HORIZONTAL ACIMA DO TÍTULO) -->
+        <!-- TELA DE SELEÇÃO DE PAUTAS (LOGO 4X MAIOR ALINHADA À ESQUERDA) -->
         <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto py-6 sm:py-10 hidden animate-fade-in my-auto">
-            <div class="flex flex-col items-center justify-center mb-6">
-                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="h-12 sm:h-16 w-auto object-contain mb-3 drop-shadow-sm">
+            <div class="w-full px-2 sm:px-0 mb-4">
+                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="h-24 sm:h-32 w-auto object-contain mb-3 drop-shadow-sm">
             </div>
             
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 w-full px-2 sm:px-0">
@@ -225,7 +225,7 @@
                     </div>
                 </div>
 
-                <!-- 3 Colunas Side-by-Side com Ícones SVG Corrigidos -->
+                <!-- 3 Colunas Side-by-Side -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 pb-2">
                     
                     <!-- COLUNA 1: FILA DE ESPERA -->
@@ -384,7 +384,7 @@
 
         function showUI(element) {
             Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
-            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); // Sempre exibe o menu fixo se logado
+            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); 
             if (element && element.classList) {
                 element.classList.remove('hidden');
                 if (element.id === 'shell-atendimento') element.style.display = 'flex';
