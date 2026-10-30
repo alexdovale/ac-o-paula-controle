@@ -295,37 +295,62 @@
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
-        <!-- LOGIN CONTAINER -->
+                <!-- LOGIN CONTAINER (IDÊNTICO À MESA DIGITAL) -->
         <div id="login-container" class="hidden w-full min-h-[85vh] flex items-center justify-center p-2">
-            <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
-                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6 object-contain">
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
-                <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden text-sm" role="alert"></div>
-                <div class="flex border-b border-slate-200 mb-6">
-                    <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600 text-sm sm:text-base">Login</button>
-                    <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-slate-500 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Cadastrar</button>
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden w-full max-w-md mt-10 sm:mt-0">
+                <div class="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
+                    Portal SIGEP
                 </div>
                 
-                <form id="login-form" class="space-y-4">
-                    <div><label for="login-email" class="block text-sm font-medium text-slate-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="login-password" class="block text-sm font-medium text-slate-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div class="text-right">
-                        <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
+                <div class="flex justify-center mb-6 mt-4">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="Logo SIGEP Vertical Extenso" class="h-40 sm:h-48 w-auto object-contain drop-shadow-sm">
+                </div>
+                
+                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 hidden text-xs font-bold text-center"></div>
+                
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600 text-sm sm:text-base transition-colors pointer-events-none">Login</button>
+                    <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Cadastrar</button>
+                </div>
+                
+                <form id="login-form" class="space-y-5">
+                    <div>
+                        <label for="login-email" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">E-mail Cadastrado</label>
+                        <input type="email" id="login-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
                     </div>
-                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
+                    <div>
+                        <label for="login-password" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Senha</label>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div class="text-right mt-2">
+                        <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline font-bold">Esqueci minha senha</a>
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-black text-white bg-green-600 hover:bg-green-700 transition-colors uppercase tracking-widest mt-2 active:scale-95">
+                        Acessar Portal
+                    </button>
                 </form>
-                <form id="register-form" class="hidden space-y-4">
-                    <div><label for="register-name" class="block text-sm font-medium text-slate-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-email" class="block text-sm font-medium text-slate-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-password" class="block text-sm font-medium text-slate-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Criar Conta</button>
+                
+                <form id="register-form" class="hidden space-y-5">
+                    <div>
+                        <label for="register-name" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Nome Completo</label>
+                        <input type="text" id="register-name" required placeholder="Digite seu nome completo" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="register-email" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">E-mail Corporativo</label>
+                        <input type="email" id="register-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Criar Senha</label>
+                        <input type="password" id="register-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-black text-white bg-green-600 hover:bg-green-700 transition-colors uppercase tracking-widest mt-2 active:scale-95">
+                        Criar Conta
+                    </button>
                 </form>
-
-                <div class="mt-6 text-center text-xs text-slate-500">
-                    Ao entrar ou se cadastrar, você concorda com nossos 
-                    <a href="termos.html" target="_blank" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</a> 
-                    e 
-                    <a href="politica.html" target="_blank" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Política de Privacidade</a>.
+                
+                <div class="mt-8 text-center text-xs text-slate-400 font-medium leading-relaxed">
+                    Ao entrar, você concorda com nossos <br>
+                    <a href="termos.html" target="_blank" class="text-green-500 font-bold hover:underline">Termos de Uso</a> e <a href="politica.html" target="_blank" class="text-green-500 font-bold hover:underline">Política de Privacidade</a>.
                 </div>
             </div>
         </div>
