@@ -1,5 +1,6 @@
+
 // js/atendimentoExternoService.js - MESA DIGITAL COMPLETA (COM FILTRO DE PAUTAS ATIVAS, LGPD, MODAL DE PUXADA, PAUSA RÁPIDA, SALVAMENTO VERDE/CNP E MOTIVO DE REAGENDAMENTO/CANCELAMENTO)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
@@ -27,7 +28,7 @@ const statusMap = {
     aguardandoAutorizacaoPuxada:{ cor: 'text-violet-700 border-violet-200 bg-violet-50',   txt: 'Puxada pendente' },
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -148,7 +149,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── NAVEGAÇÃO SEGURA DE RETORNO (CORREÇÃO DO ERRO DO PRINT) ──────────────
+    // ─── NAVEGAÇÃO SEGURA DE RETORNO ──────────────────────────────────────────
 
     voltarParaDashboard() {
         const btnVoltar = document.getElementById('btn-voltar-dashboard') || document.getElementById('btn-voltar-portal');
@@ -258,9 +259,38 @@ export const AtendimentoExternoService = {
         this._injetarBotaoPausaHeader();
     },
 
+    // ─── BOTÃO E MODAIS DE PAUSA NA HEADER DA MESA DIGITAL ──────────────────────
 
+    _injetarBotaoPausaHeader() {
+        const headerRight = document.querySelector('#header-bg > div:last-child');
+        if (!headerRight) return;
 
-    // ─── BOTÃO E MODAIS DE PAUSA NA HEADER DA MESA DIGITAL ─────────────── //    _abrirModalDefinirPausa() {
+        document.getElementById('btn-pausa-mesa-digital')?.remove();
+
+        const estaPausado = this.colaboradorAtual?.status === 'pausado';
+
+        const btnPausa = document.createElement('button');
+        btnPausa.id = 'btn-pausa-mesa-digital';
+        btnPausa.type = 'button';
+
+        if (estaPausado) {
+            btnPausa.className = 'bg-amber-500 hover:bg-amber-600 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all animate-pulse shrink-0 cursor-pointer active:scale-95';
+            btnPausa.innerHTML = `
+                <svg class="w-4 h-4 shrink-0 inline-block align-middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+                <span>Pausado</span><span class="hidden md:inline font-normal lowercase italic text-amber-100">(${escapeHTML(this.colaboradorAtual?.motivoPausa || 'ausente')})</span> • <span class="underline">Retornar?</span>`;
+            btnPausa.onclick = () => this._abrirModalConfirmarRetorno();
+        } else {
+            btnPausa.className = 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] sm:text-xs font-black px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg shadow-sm uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95';
+            btnPausa.innerHTML = `
+                <svg class="w-4 h-4 shrink-0 inline-block align-middle" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+                <span>Pausar / Ausente</span>`;
+            btnPausa.onclick = () => this._abrirModalDefinirPausa();
+        }
+
+        headerRight.prepend(btnPausa);
+    },
+
+    _abrirModalDefinirPausa() {
         document.getElementById('modal-definir-pausa')?.remove();
 
         const modal = document.createElement('div');
@@ -272,7 +302,9 @@ export const AtendimentoExternoService = {
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
                 <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm shadow-sm font-bold">⏸</span>
+                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+                        </span>
                         <div>
                             <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Registrar Pausa</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Informe sua ausência temporária</p>
@@ -331,7 +363,6 @@ export const AtendimentoExternoService = {
         };
     },
 
-
     async _executarPausa(motivo) {
         if (!this.colaboradorAtual?.id) return;
         try {
@@ -373,7 +404,9 @@ export const AtendimentoExternoService = {
                 </div>
 
                 <div class="p-5 text-center">
-                    <span class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center text-xl mb-3">✅</span>
+                    <span class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </span>
                     <p class="text-sm font-bold text-slate-800 leading-snug">Você está pausado no momento.</p>
                     <p class="text-xs text-slate-500 mt-1">Deseja finalizar sua pausa e retornar ao status disponível?</p>
                 </div>
@@ -557,7 +590,7 @@ export const AtendimentoExternoService = {
         return (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || this._ehPendenteDoDefensor(a);
     },
 
-    // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
+    // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS E SVGS PADRONIZADOS ───────────────
 
     _ajustarGrelhaKanban() {
         const grid = document.querySelector('#view-dashboard .grid');
@@ -569,7 +602,10 @@ export const AtendimentoExternoService = {
                 col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
                 col4.innerHTML = `
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
+                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">
+                            <svg class="w-4 h-4 text-slate-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            Pauta Geral
+                        </h3>
                         <div class="flex items-center gap-2">
                             <button id="btn-pauta-completa" class="bg-slate-800 hover:bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition active:scale-95">Ver completa</button>
                             <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
@@ -582,7 +618,12 @@ export const AtendimentoExternoService = {
             }
 
             const titleCol3 = document.querySelector('#kanban-auditoria')?.previousElementSibling?.querySelector('h3');
-            if (titleCol3) titleCol3.innerHTML = '✅ Meus Concluídos';
+            if (titleCol3) {
+                titleCol3.innerHTML = `
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    Meus Concluídos
+                `;
+            }
         }
     },
 
@@ -882,7 +923,9 @@ export const AtendimentoExternoService = {
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" onclick="event.stopPropagation()">
                 <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm font-bold">📥</span>
+                        <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </span>
                         <div>
                             <h3 class="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wide leading-tight">Puxar Atendimento</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate max-w-[220px] sm:max-w-xs">${escapeHTML(nomeAssistido)}</p>
@@ -895,14 +938,14 @@ export const AtendimentoExternoService = {
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Motivos Rápidos</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <button type="button" class="btn-preset-puxada text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento prioritário / Urgência">
-                                🚨 Urgência / Prioridade
+                            <button type="button" class="btn-preset-puxada text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Atendimento prioritário / Urgência">
+                                Urgência / Prioridade
                             </button>
-                            <button type="button" class="btn-preset-puxada text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Assistido presente no guichê">
-                                📍 Presente no guichê
+                            <button type="button" class="btn-preset-puxada text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Assistido presente no guichê">
+                                Presente no guichê
                             </button>
-                            <button type="button" class="btn-preset-puxada sm:col-span-2 text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Retorno / Continuidade de caso">
-                                🔄 Continuidade de atendimento
+                            <button type="button" class="btn-preset-puxada sm:col-span-2 text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs font-bold text-slate-700 transition" data-motivo="Retorno / Continuidade de caso">
+                                Continuidade de atendimento
                             </button>
                         </div>
                     </div>
@@ -1332,7 +1375,7 @@ export const AtendimentoExternoService = {
             html += `
                 <div class="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
-                    <div class="bg-amber-100 p-2 rounded-lg shrink-0 text-amber-700">📌</div>
+                    <div class="bg-amber-100 p-2 rounded-lg shrink-0 text-amber-700">${ico('alertCircle', 'w-5 h-5')}</div>
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Motivo Registrado</p>
                         <p class="text-xs font-bold leading-relaxed text-slate-700">${escapeHTML(assistido.motivoEncerramento)}</p>
@@ -1738,7 +1781,6 @@ export const AtendimentoExternoService = {
             processarValor(colarTexto);
         });
 
-        // Sincroniza se o usuário digitar no campo CNP do Finalizar
         if (inputCnpDireto) {
             inputCnpDireto.addEventListener('input', (e) => {
                 const limpo = e.target.value.replace(/\D/g, '');
@@ -1746,7 +1788,6 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // Botão para salvar o ID/Link do VERDE imediatamente para todos os colaboradores e Defensor terem acesso
         if (btnSalvar) {
             btnSalvar.onclick = async () => {
                 const valor = inputId.value.trim();
@@ -1860,19 +1901,18 @@ export const AtendimentoExternoService = {
                 <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
             </div>
 
-            <!-- APARECE SOMENTE QUANDO CLICAR EM FINALIZAR PROTOCOLO -->
             <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Resultado da Finalização</label>
                     <div class="grid grid-cols-3 gap-2">
                         <button type="button" data-subfluxo="normal" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-800 font-black text-[10px] uppercase tracking-wider transition">
-                            ✅ Atendido
+                            Atendido
                         </button>
                         <button type="button" data-subfluxo="reagendar" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-amber-50 font-black text-[10px] uppercase tracking-wider transition">
-                            📅 Reagendar
+                            Reagendar
                         </button>
                         <button type="button" data-subfluxo="cancelar" class="btn-subfluxo-direto py-2.5 px-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-rose-50 font-black text-[10px] uppercase tracking-wider transition">
-                            ❌ Cancelar
+                            Cancelar
                         </button>
                     </div>
                 </div>
@@ -1956,7 +1996,6 @@ export const AtendimentoExternoService = {
         this.fluxoSelecionado = 'direto';
         this.subFluxoDireto = 'normal';
 
-        // Alternância entre Concluir Normal, Reagendar e Cancelar dentro de Finalizar
         const botoesSubFluxo = aba.querySelectorAll('.btn-subfluxo-direto');
         const boxCnp = document.getElementById('box-cnp-finalizar');
         const boxMotivo = document.getElementById('box-motivo-reagendar-cancelar');
@@ -2114,7 +2153,6 @@ export const AtendimentoExternoService = {
 
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
-        // Captura unificada do CNP / ID do Caso no VERDE
         const numProcessoSeguro = (
             document.getElementById('input-numero-caso')?.value.trim() ||
             document.getElementById('input-id-caso-verde')?.value.trim() ||
@@ -2126,7 +2164,6 @@ export const AtendimentoExternoService = {
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
-        // Validação de motivo obrigatório caso seja Reagendar ou Cancelar
         if (this.fluxoSelecionado === 'direto' && (this.subFluxoDireto === 'reagendar' || this.subFluxoDireto === 'cancelar')) {
             const motivoDigitado = document.getElementById('input-motivo-reagendar-cancelar')?.value.trim() || '';
             if (!motivoDigitado) {
@@ -2470,3 +2507,5 @@ export const AtendimentoExternoService = {
 
 export default AtendimentoExternoService;
 window.AtendimentoExternoService = AtendimentoExternoService;
+
+
