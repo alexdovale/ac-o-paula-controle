@@ -33,7 +33,7 @@
 </head>
 <body class="flex flex-col min-h-screen pt-14">
 
-    <!-- MENU SUPERIOR FIXO -->
+    <!-- MENU SUPERIOR FIXO (Agora visível sempre que autenticado) -->
     <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[999] flex justify-between items-center px-4 sm:px-6 py-2 shadow-md h-12">
         <div class="flex items-center gap-3">
             <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da" alt="Logo SIGEP" class="h-7 w-auto object-contain drop-shadow-sm">
@@ -88,7 +88,7 @@
     <!-- WRAPPER PRINCIPAL -->
     <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-start sm:justify-center w-full px-2 sm:px-6">
         
-        <!-- TELA DE LOGIN (COM LOGO HORIZONTAL SEM FUNDO 2X MAIOR) -->
+        <!-- TELA DE LOGIN (COM LOGO VERTICAL EXTENSO 2X MAIOR) -->
         <div id="login-container" class="w-full max-w-md hidden animate-fade-in my-auto min-h-[70vh]">
             <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden w-full mt-10 sm:mt-0">
                 <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
@@ -96,7 +96,7 @@
                 </div>
                 
                 <div class="flex justify-center mb-6 mt-4">
-                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal Ampliada" class="h-24 sm:h-28 w-auto object-contain drop-shadow-sm">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="Logo SIGEP Vertical Extenso" class="h-28 sm:h-36 w-auto object-contain drop-shadow-sm">
                 </div>
                 
                 <div class="flex border-b border-slate-200 mb-6">
@@ -130,8 +130,12 @@
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS (PORTAL EXTERNO) -->
+        <!-- TELA DE SELEÇÃO DE PAUTAS (PORTAL EXTERNO COM LOGO HORIZONTAL ACIMA DO TÍTULO) -->
         <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto py-6 sm:py-10 hidden animate-fade-in my-auto">
+            <div class="flex flex-col items-center justify-center mb-6">
+                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" alt="Logo SIGEP Horizontal" class="h-12 sm:h-16 w-auto object-contain mb-3 drop-shadow-sm">
+            </div>
+            
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 w-full px-2 sm:px-0">
                 <div class="w-full md:w-1/2">
                     <h2 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Ativas</h2>
@@ -253,7 +257,7 @@
                         </div>
                     </div>
 
-                    <!-- COLUNA 3: CONCLUÍDOS (CORRIGIDO) -->
+                    <!-- COLUNA 3: CONCLUÍDOS -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
                         <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                             <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">
@@ -380,7 +384,7 @@
 
         function showUI(element) {
             Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
-            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); 
+            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); // Sempre exibe o menu fixo se logado
             if (element && element.classList) {
                 element.classList.remove('hidden');
                 if (element.id === 'shell-atendimento') element.style.display = 'flex';
