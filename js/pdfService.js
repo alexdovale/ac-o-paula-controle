@@ -594,7 +594,7 @@ export const PDFService = {
         });
     },
 
-    async _buildAtendidosPDF(atendidosList, pautaNome, selectedColumns) {
+        async _buildAtendidosPDF(atendidosList, pautaNome, selectedColumns) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -681,7 +681,8 @@ export const PDFService = {
                 body.push([{ content: "Nenhum atendimento finalizado nesta pauta até o momento.", colSpan: activeCols.length + 1, styles: { halign: 'center', fontStyle: 'italic', textColor: C.cinza } }]);
             }
 
-            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos e Status', lines: [`Pauta: ${pautaName}`] });
+            // CORREÇÃO APLICADA AQUI (pautaNome em vez de pautaName)
+            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos e Status', lines: [`Pauta: ${pautaNome}`] });
             y = drawKpis(doc, y, [
                 { label: 'Concluídos', valor: totalConcluidos },
                 { label: 'Reagendados', valor: totalReagendados, cor: [245, 158, 11] },
@@ -701,9 +702,12 @@ export const PDFService = {
             });
 
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
-            applyFooters(doc, pautaName);
+            
+            // CORREÇÃO APLICADA AQUI (pautaNome)
+            applyFooters(doc, pautaNome);
 
-            doc.save(`Relatorio_Atendidos_${(pautaName || 'Pauta').replace(/\s+/g, '_')}.pdf`);
+            // CORREÇÃO APLICADA AQUI (pautaNome)
+            doc.save(`Relatorio_Atendidos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
         } catch (error) {
@@ -712,6 +716,7 @@ export const PDFService = {
             return false;
         }
     },
+
 
     async generateFaltososPDF(arg1, arg2) {
         if (window.showNotification) window.showNotification("Gerando lista de faltosos, aguarde...", "info");
