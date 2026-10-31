@@ -2,14 +2,18 @@
 // js/recepcaoCentral.js - DASHBOARD EXECUTIVO (UI REFINADA + MULTI-TENANT)
 
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc
+    collection, doc, onSnapshot, updateDoc, setDoc, runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    getStorage, ref as storageRef, uploadString, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { flatSubjects } from './assuntos.js';
 import { injetarEstilos, ico } from './rcDesign.js';
+import { LOGOS } from './logos.js';
 
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
 
@@ -26,9 +30,25 @@ const estado = {
     recepcoesDisponiveis: [],
 };
 
-const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
-
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
+
+// localStorage com proteção contra JSON corrompido / storage indisponível
+const lerJSON = (chave, padrao) => {
+    try {
+        const v = JSON.parse(localStorage.getItem(chave));
+        return v ?? padrao;
+    } catch { return padrao; }
+};
+const gravarJSON = (chave, valor) => {
+    try { localStorage.setItem(chave, JSON.stringify(valor)); } catch { /* sem espaço / bloqueado */ }
+};
+
+// Esconde imagens que falharam ao carregar (logo quebrada não aparece como ícone feio)
+function ligarFallbackImagens(raiz) {
+    raiz?.querySelectorAll('img[data-rc-logo]').forEach(img => {
+        img.addEventListener('error', () => { img.style.display = 'none'; }, { once: true });
+    });
+}
 
 function statusLabel(status) {
     const map = {
@@ -113,16 +133,40 @@ function criarModal({ id, titulo, subtitulo = '', corpo, rodape = '', largura = 
     return { modal: backdrop, close };
 }
 
-function htmlLogo(altura = 40) {
-    const LOGO_VERTICAL_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e";
-    
-    return `
-    <div class="flex items-center justify-center shrink-0 w-full mb-4">
-        <img src="${LOGO_VERTICAL_URL}" 
-             alt="Logo Sistema de Gerenciamento de Pauta" 
-             style="height: 128px; width: auto; object-fit: contain;" 
-             class="sm:h-40 md:h-48 drop-shadow-sm">
-    </div>`;
+// Confirmação no padrão visual do sistema (substitui o confirm() do navegador).
+// Resolve true ao confirmar e false ao cancelar / ESC / clicar fora.
+function confirmarModal({ titulo, mensagem, confirmarTxt = 'Confirmar', perigo = false }) {
+    return new Promise((resolve) => {
+        let resolvido = false;
+        const finalizar = (v) => { if (!resolvido) { resolvido = true; resolve(v); } };
+
+        const { modal, close } = criarModal({
+            id: 'rc-modal-confirmar',
+            titulo: escapeHTML(titulo),
+            largura: '400px',
+            z: 300,
+            corpo: `<div class="rc-modal-body"><p class="text-sm" style="color:var(--rc-muted)">${escapeHTML(mensagem)}</p></div>`,
+            rodape: `
+                <div class="rc-modal-foot">
+                    <button type="button" class="rc-btn" data-rc-close>Cancelar</button>
+                    <button type="button" id="rc-confirmar-ok" class="rc-btn ${perigo ? 'rc-btn--danger' : 'rc-btn--primary'}">${escapeHTML(confirmarTxt)}</button>
+                </div>`,
+        });
+
+        modal.querySelector('#rc-confirmar-ok').addEventListener('click', () => { finalizar(true); close(); });
+
+        // Qualquer outro fechamento (cancelar, ESC, clique fora) remove o modal do DOM
+        const obs = new MutationObserver(() => {
+            if (!document.body.contains(modal)) { obs.disconnect(); finalizar(false); }
+        });
+        obs.observe(document.body, { childList: true });
+    });
+}
+
+function htmlLogo(altura = 128) {
+    return `<img src="${LOGOS.siglaTextoVertical}" data-rc-logo
+        alt="Logo Sistema de Gerenciamento de Pauta"
+        style="height:${altura}px;width:auto;object-fit:contain" class="drop-shadow-sm">`;
 }
 
 // ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
@@ -130,6 +174,9 @@ function htmlLogo(altura = 40) {
 export const RecepcaoCentralService = {
 
     _chamadosRegistrados: new Set(),
+    _pendentes: new Set(),
+    _rafId: null,
+    _cargaId: 0,
 
     // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 
@@ -208,6 +255,7 @@ export const RecepcaoCentralService = {
                 </div>
             </div>
         `;
+        ligarFallbackImagens(container);
 
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -230,6 +278,7 @@ export const RecepcaoCentralService = {
 
     async _carregarPautasPorRecepcao() {
         const app = this._app;
+        const token = ++this._cargaId;   // descarta respostas antigas se o usuário trocar de filtro rápido
 
         this._mostrarLoading();
 
@@ -239,6 +288,7 @@ export const RecepcaoCentralService = {
             app.currentUser.email,
             app.currentUser.role
         );
+        if (token !== this._cargaId) return;
 
         pautas.sort((a, b) => {
             const dataA = new Date(a.dataAtuacao || a.data || a.createdAt || 0).getTime();
@@ -252,16 +302,19 @@ export const RecepcaoCentralService = {
             );
         }
 
+        // Sem fallback: se nenhuma pauta pertence à recepção, a tela fica vazia
+        // (antes, mostrava pautas de outros setores).
         if (this._recepcaoAtual) {
-            const pautasFiltradasPorRecepcao = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
-            if (pautasFiltradasPorRecepcao.length > 0) {
-                pautas = pautasFiltradasPorRecepcao;
-            }
+            pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
 
         estado.pautasHoje = pautas;
+        // Descarta dados de pautas que não estão mais na tela (evita somas erradas no resumo)
+        estado.assistidosPorPauta = {};
+        estado.colaboradoresPorPauta = {};
 
         await this._iniciarListeners();
+        if (token !== this._cargaId) return;
         this._renderTelaComContexto();
     },
 
@@ -292,22 +345,14 @@ export const RecepcaoCentralService = {
             const refAt  = collection(app.db, "pautas", pauta.id, "attendances");
             const unsubAt = onSnapshot(refAt, (snap) => {
                 estado.assistidosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (estado.modoVisao === 'grade') {
-                    this._atualizarCardPauta(pauta.id);
-                } else if (estado.pautaFocadaId === pauta.id) {
-                    this._renderFoco(pauta.id);
-                }
+                this._agendarAtualizacao(pauta.id);
                 this._atualizarPainelPublicoUltimoChamado(pauta.id);
             });
 
             const refCo  = collection(app.db, "pautas", pauta.id, "collaborators");
             const unsubCo = onSnapshot(refCo, (snap) => {
                 estado.colaboradoresPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (estado.modoVisao === 'grade') {
-                    this._atualizarCardPauta(pauta.id);
-                } else if (estado.pautaFocadaId === pauta.id) {
-                    this._renderFoco(pauta.id);
-                }
+                this._agendarAtualizacao(pauta.id);
             });
 
             estado.unsubscribers.push(unsubAt, unsubCo);
@@ -317,6 +362,26 @@ export const RecepcaoCentralService = {
     _cancelarListeners() {
         estado.unsubscribers.forEach(u => u && u());
         estado.unsubscribers = [];
+        if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+        this._pendentes.clear();
+    },
+
+    // Junta vários snapshots no mesmo quadro: uma única renderização por pauta
+    _agendarAtualizacao(pautaId) {
+        this._pendentes.add(pautaId);
+        if (this._rafId) return;
+        this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            const ids = [...this._pendentes];
+            this._pendentes.clear();
+
+            if (estado.modoVisao === 'grade') {
+                ids.forEach(id => this._atualizarCardPauta(id, false));
+                this._renderSumario();
+            } else if (estado.pautaFocadaId && ids.includes(estado.pautaFocadaId)) {
+                this._renderFoco(estado.pautaFocadaId);
+            }
+        });
     },
 
     // ── RENDER TELA PRINCIPAL ──────────────────────────────────────────────────
@@ -340,14 +405,15 @@ export const RecepcaoCentralService = {
                 <div id="rc-header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div class="flex items-center gap-4 min-w-0">
                         <button id="rc-btn-voltar-home" class="rc-btn rc-btn--icon shrink-0" title="Voltar ao início" aria-label="Voltar ao início">${ico('back', 18)}</button>
-                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" alt="Logo SIGEP" class="h-10 sm:h-12 w-auto object-contain shrink-0">
+                        <img src="${LOGOS.siglaTextoVertical}" data-rc-logo alt="Logo SIGEP" class="h-10 sm:h-12 w-auto object-contain shrink-0">
                         <div class="min-w-0">
-                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight truncate">${contexto.titulo}</h1>
-                            <p class="text-sm truncate" style="color:var(--rc-muted)">${contexto.subtitulo}</p>
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight truncate">${escapeHTML(contexto.titulo)}</h1>
+                            <p class="text-sm truncate" style="color:var(--rc-muted)">${escapeHTML(contexto.subtitulo)}</p>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-2">
+                        <button id="rc-btn-relatorios" class="rc-btn flex-1 sm:flex-none">${ico('list', 15)} Relatórios</button>
                         <button id="rc-trocar-recepcao" class="rc-btn flex-1 sm:flex-none">${ico('swap', 15)} Trocar setor</button>
                         <button id="rc-btn-configurar-tv" class="rc-btn rc-btn--primary flex-1 sm:flex-none">${ico('tv', 15)} Painel TV</button>
                     </div>
@@ -383,6 +449,7 @@ export const RecepcaoCentralService = {
                 <div id="rc-painel-foco" class="hidden"></div>
             </div>
         `;
+        ligarFallbackImagens(container);
 
         this._renderGrade();
         this._renderSumario();
@@ -396,6 +463,7 @@ export const RecepcaoCentralService = {
         });
 
         document.getElementById('rc-btn-voltar-home')?.addEventListener('click', () => this.fechar());
+        document.getElementById('rc-btn-relatorios')?.addEventListener('click', () => this._abrirModalRelatorios());
     },
 
     // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
@@ -405,11 +473,14 @@ export const RecepcaoCentralService = {
         if (!grade) return;
 
         if (estado.pautasHoje.length === 0) {
+            const msg = this._recepcaoAtual
+                ? 'Nenhuma pauta vinculada a esta recepção hoje. Confira o vínculo das pautas com o setor ou os filtros selecionados.'
+                : 'Verifique os filtros selecionados ou crie uma nova pauta no sistema principal.';
             grade.innerHTML = `
                 <div class="col-span-full rc-empty">
                     <div class="mx-auto mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:#f1f5f9;color:var(--rc-faint)">${ico('folder', 22)}</div>
                     <p class="font-bold" style="color:var(--rc-text)">Nenhuma pauta ativa encontrada</p>
-                    <p class="text-sm mt-1" style="color:var(--rc-muted)">Verifique os filtros selecionados ou crie uma nova pauta no sistema principal.</p>
+                    <p class="text-sm mt-1" style="color:var(--rc-muted)">${msg}</p>
                 </div>
             `;
             return;
@@ -438,7 +509,7 @@ export const RecepcaoCentralService = {
                     <span class="rc-rank" style="width:22px;height:22px;font-size:10.5px">${i + 1}</span>
                     <p class="text-[13px] font-semibold truncate flex-1 min-w-0">${escapeHTML(a.name)}</p>
                     ${a.priority ? `<span class="rc-dot" style="background:var(--rc-danger)" title="Prioridade"></span>` : ''}
-                    <span class="text-[11px] tabular-nums shrink-0" style="color:var(--rc-faint)">${a.scheduledTime || '—'}</span>
+                    <span class="text-[11px] tabular-nums shrink-0" style="color:var(--rc-faint)">${escapeHTML(a.scheduledTime || '—')}</span>
                 </div>
             `).join('')
             + (aguardando.length > 4
@@ -492,13 +563,13 @@ export const RecepcaoCentralService = {
         `;
     },
 
-    _atualizarCardPauta(pautaId) {
+    _atualizarCardPauta(pautaId, atualizarSumario = true) {
         const card = document.getElementById(`rc-card-${pautaId}`);
         if (!card) return;
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
         card.outerHTML = this._htmlCardPauta(pauta);
-        this._renderSumario();
+        if (atualizarSumario) this._renderSumario();
     },
 
     // ── SUMÁRIO GERAL ──────────────────────────────────────────────────────────
@@ -508,8 +579,9 @@ export const RecepcaoCentralService = {
         if (!el) return;
 
         let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0, totalNaPauta = 0;
-        for (const assistidos of Object.values(estado.assistidosPorPauta)) {
-            const c = contadores(assistidos);
+        // Soma só as pautas que estão na tela (e não tudo o que já passou pelo estado)
+        for (const pauta of estado.pautasHoje) {
+            const c = contadores(estado.assistidosPorPauta[pauta.id] || []);
             totalNaPauta += c.naPauta;
             totalAg   += c.aguardando;
             totalAt   += c.atendidos;
@@ -550,14 +622,17 @@ export const RecepcaoCentralService = {
         estado.pautaFocadaId = null;
         estado.modoVisao     = 'grade';
         this._alternarVisibilidadeGrade(true);
+        // Durante o foco a grade não era atualizada: refaz agora para não mostrar dados velhos
+        this._renderGrade();
+        this._renderSumario();
     },
 
     // Card de assistido reutilizado nas 3 colunas
     _htmlAssistidoCard(a, pautaId, tipo, posicao = 0) {
-        const busca = normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''));
+        const busca = escapeHTML(normalizeText([a.name, a.cpf, a.numAgendamento, a.subject].filter(Boolean).join(' ')));
         const num = a.numAgendamento ? `<span class="rc-badge rc-badge--mono shrink-0">#${escapeHTML(String(a.numAgendamento))}</span>` : '';
         const hora = a.scheduledTime
-            ? `<span class="font-semibold tabular-nums" style="color:${tipo === 'fila' ? 'var(--rc-warn)' : 'var(--rc-text)'}">${a.scheduledTime}</span> · `
+            ? `<span class="font-semibold tabular-nums" style="color:${tipo === 'fila' ? 'var(--rc-warn)' : 'var(--rc-text)'}">${escapeHTML(a.scheduledTime)}</span> · `
             : '';
         const prio = a.priority
             ? `<span class="rc-badge rc-badge--danger mt-2">${ico('star', 11)} ${escapeHTML(a.priorityReason || a.priority)}</span>`
@@ -637,8 +712,12 @@ export const RecepcaoCentralService = {
                 <span class="rc-count">${qtd}</span>
             </div>`;
 
-        // Preserva a busca digitada durante re-renderizações em tempo real
-        const termoAnterior = document.getElementById('rc-foco-input-busca')?.value || '';
+        // Preserva busca digitada, foco do campo e posição de rolagem entre re-renderizações em tempo real
+        const campoBusca = document.getElementById('rc-foco-input-busca');
+        const termoAnterior = campoBusca?.value || '';
+        const buscaTinhaFoco = !!campoBusca && document.activeElement === campoBusca;
+        const cursor = buscaTinhaFoco ? campoBusca.selectionStart : null;
+        const rolagens = Array.from(foco.querySelectorAll('.rc-col .rc-scroll'), el => el.scrollTop);
 
         foco.innerHTML = `
             <div class="rc-surface overflow-hidden flex flex-col" style="height:calc(100vh - 48px);min-height:600px">
@@ -662,6 +741,7 @@ export const RecepcaoCentralService = {
                     </div>
 
                     <div class="flex gap-2 shrink-0">
+                        <button id="rc-foco-btn-relatorios" class="rc-btn">${ico('list', 15)} PDF</button>
                         <button id="rc-foco-btn-add-assistido" class="rc-btn">${ico('plus', 15)} Adicionar</button>
                         <button id="rc-foco-btn-chamar" class="rc-btn rc-btn--ok">${ico('megaphone', 15)} Chamar próximo</button>
                     </div>
@@ -714,6 +794,16 @@ export const RecepcaoCentralService = {
             </div>
         `;
 
+        // Restaura rolagem e foco do campo de busca
+        foco.querySelectorAll('.rc-col .rc-scroll').forEach((el, i) => { if (rolagens[i]) el.scrollTop = rolagens[i]; });
+        if (buscaTinhaFoco) {
+            const novo = document.getElementById('rc-foco-input-busca');
+            if (novo) {
+                novo.focus();
+                try { novo.setSelectionRange(cursor, cursor); } catch { /* tipo search pode não suportar */ }
+            }
+        }
+
         const aplicarFiltro = (valor) => {
             const termo = normalizeText((valor || '').trim());
             foco.querySelectorAll('.rc-assistido-card').forEach(card => {
@@ -724,6 +814,7 @@ export const RecepcaoCentralService = {
 
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
         document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', () => this._chamarProximo(pautaId));
+        document.getElementById('rc-foco-btn-relatorios')?.addEventListener('click', () => this._abrirModalRelatorios(pautaId));
         document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => {
             this._abrirModalAdicionarAssistido(pautaId, pauta.name);
         });
@@ -743,15 +834,106 @@ export const RecepcaoCentralService = {
         });
         foco.querySelectorAll('.rc-foco-remover-prioridade').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (confirm("Remover prioridade deste assistido?")) {
-                    await PautaService.updateStatus(
-                        this._app.db,
-                        btn.dataset.pauta,
-                        btn.dataset.id,
-                        { priority: null, priorityReason: null },
-                        this._app.currentUserName
-                    );
-                    showNotification("Prioridade removida", "info");
+                const ok = await confirmarModal({
+                    titulo: 'Remover prioridade',
+                    mensagem: 'Remover a prioridade deste assistido?',
+                    confirmarTxt: 'Remover',
+                    perigo: true
+                });
+                if (!ok) return;
+                await PautaService.updateStatus(
+                    this._app.db,
+                    btn.dataset.pauta,
+                    btn.dataset.id,
+                    { priority: null, priorityReason: null },
+                    this._app.currentUserName
+                );
+                showNotification("Prioridade removida", "info");
+            });
+        });
+    },
+
+    // ── RELATÓRIOS EM PDF (sob demanda) ────────────────────────────────────────
+
+    _abrirModalRelatorios(pautaIdInicial = '') {
+        if (estado.pautasHoje.length === 0) {
+            showNotification("Nenhuma pauta ativa nesta recepção.", "warning");
+            return;
+        }
+
+        const opcoesPauta = [
+            `<option value="">Todas as pautas desta recepção</option>`,
+            ...estado.pautasHoje.map(p => `<option value="${escapeHTML(p.id)}" ${p.id === pautaIdInicial ? 'selected' : ''}>${escapeHTML(p.name)}</option>`)
+        ].join('');
+
+        const itemBtn = (rel, titulo, desc) => `
+            <button type="button" class="rc-btn rc-btn--block rc-rel-btn" data-rel="${rel}" style="justify-content:flex-start;text-align:left;padding:14px 16px;height:auto">
+                <span class="flex flex-col"><b>${titulo}</b><span class="text-xs font-medium" style="color:var(--rc-muted)">${desc}</span></span>
+            </button>`;
+
+        const { modal, close } = criarModal({
+            id: 'rc-modal-relatorios',
+            titulo: 'Relatórios em PDF',
+            subtitulo: 'Gerados na hora, com os dados atuais da tela.',
+            largura: '460px',
+            corpo: `
+                <div class="rc-modal-body space-y-4">
+                    <div>
+                        <label class="rc-label" for="rc-rel-pauta">Pauta</label>
+                        <select id="rc-rel-pauta" class="rc-input">${opcoesPauta}</select>
+                    </div>
+                    <div class="space-y-2">
+                        ${itemBtn('atendidos', 'Atendidos e status', 'Concluídos, reagendados e cancelados, com colunas à escolha')}
+                        ${itemBtn('faltosos', 'Faltosos', 'Lista de ausências com horário agendado')}
+                        ${itemBtn('equipes', 'Lista das equipes', 'Colaboradores da pauta agrupados por equipe')}
+                    </div>
+                </div>`,
+            rodape: `<div class="rc-modal-foot"><button type="button" class="rc-btn" data-rc-close>Fechar</button></div>`,
+        });
+
+        const escopo = () => {
+            const id = modal.querySelector('#rc-rel-pauta').value;
+            const pautas = id ? estado.pautasHoje.filter(p => p.id === id) : estado.pautasHoje;
+            const nome = id ? (pautas[0]?.name || 'Pauta') : (this._recepcaoAtual?.nome || 'Recepção Central');
+            const assistidos = pautas.flatMap(p => estado.assistidosPorPauta[p.id] || []);
+
+            const vistos = new Set();
+            const colaboradores = pautas.flatMap(p => estado.colaboradoresPorPauta[p.id] || []).filter(c => {
+                const chave = String(c.nome || c.id || '').trim().toLowerCase();
+                if (!chave || vistos.has(chave)) return false;
+                vistos.add(chave);
+                return true;
+            });
+            return { nome, assistidos, colaboradores };
+        };
+
+        modal.querySelectorAll('.rc-rel-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const { nome, assistidos, colaboradores } = escopo();
+                const tipo = btn.dataset.rel;
+
+                try {
+                    if (tipo === 'atendidos') {
+                        const lista = assistidos.filter(a => a.status === 'atendido' || a.status === 'cancelado');
+                        if (lista.length === 0) { showNotification("Nenhum atendimento finalizado até o momento.", "info"); return; }
+                        close();
+                        const { PDFService } = await import('./pdfService.js');
+                        await PDFService.generateAtendidosPDF(lista, nome);
+                    } else if (tipo === 'faltosos') {
+                        const lista = assistidos.filter(a => a.status === 'faltoso');
+                        if (lista.length === 0) { showNotification("Nenhum faltoso registrado.", "info"); return; }
+                        close();
+                        const { PDFService } = await import('./pdfService.js');
+                        await PDFService.generateFaltososPDF(lista, nome);
+                    } else if (tipo === 'equipes') {
+                        if (colaboradores.length === 0) { showNotification("Nenhum colaborador encontrado.", "info"); return; }
+                        close();
+                        const { PDFService } = await import('./pdfService.js');
+                        await PDFService.generateCollaboratorsPDF({ colaboradores, pautaNome: nome });
+                    }
+                } catch (e) {
+                    console.error("Erro ao gerar relatório:", e);
+                    showNotification("Não foi possível gerar o PDF.", "error");
                 }
             });
         });
@@ -889,6 +1071,13 @@ export const RecepcaoCentralService = {
         document.getElementById('rc-form-add-assistido').onsubmit = async (e) => {
             e.preventDefault();
 
+            // Multi-tenant: sem órgão identificado, não grava (antes assumia 'padrao_dprj')
+            const orgaoId = this._app.currentUser?.orgaoId;
+            if (!orgaoId) {
+                showNotification("Seu usuário não está vinculado a um órgão. Fale com o administrador.", "error");
+                return;
+            }
+
             const btn = document.getElementById('rc-btn-add-salvar');
             btn.disabled = true;
             btn.textContent = 'Salvando…';
@@ -907,8 +1096,7 @@ export const RecepcaoCentralService = {
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
                 priority: prioridadeSelecionada || null,
-                // GARANTIA DE INJEÇÃO DO ÓRGÃO (MULTI-TENANT)
-                orgaoId: this._app.currentUser?.orgaoId || 'padrao_dprj'
+                orgaoId
             };
 
             const app = this._app;
@@ -936,7 +1124,8 @@ export const RecepcaoCentralService = {
         if (!input) return;
 
         input.addEventListener('input', () => {
-            const termo      = normalizeText(input.value.trim());
+            const bruto      = input.value.trim();
+            const termo      = normalizeText(bruto);
             const resultados = document.getElementById('rc-resultados-busca');
             if (!resultados) return;
 
@@ -950,8 +1139,8 @@ export const RecepcaoCentralService = {
                 const assistidos = estado.assistidosPorPauta[pauta.id] || [];
                 for (const a of assistidos) {
                     const matchNome = normalizeText(a.name || '').includes(termo);
-                    const matchNum  = (a.numAgendamento || '').includes(input.value.trim());
-                    const matchCpf  = (a.cpf || '').includes(input.value.trim());
+                    const matchNum  = String(a.numAgendamento ?? '').includes(bruto);
+                    const matchCpf  = String(a.cpf ?? '').includes(bruto);
                     if (matchNome || matchNum || matchCpf) {
                         encontrados.push({ pauta, assistido: a });
                     }
@@ -975,11 +1164,11 @@ export const RecepcaoCentralService = {
                             </div>
                             <p class="text-xs truncate" style="color:var(--rc-muted)">
                                 <span class="font-semibold" style="color:var(--rc-brand)">${escapeHTML(pauta.name)}</span>
-                                ${a.scheduledTime ? ` · ${a.scheduledTime}` : ''}${escapeHTML(a.subject ? ` · ${a.subject}` : '')}
+                                ${a.scheduledTime ? ` · ${escapeHTML(a.scheduledTime)}` : ''}${escapeHTML(a.subject ? ` · ${a.subject}` : '')}
                             </p>
                         </div>
                         <div class="flex items-center gap-3 shrink-0">
-                            <span class="${sl.cor}">${sl.txt}</span>
+                            <span class="${sl.cor}">${escapeHTML(sl.txt)}</span>
                             ${podeCheckin ? `<button class="rc-btn rc-btn--warn rc-btn--sm rc-busca-checkin" data-pauta="${pauta.id}" data-id="${a.id}">${ico('check', 14)} Check-in</button>` : ''}
                         </div>
                     </div>
@@ -1110,8 +1299,7 @@ export const RecepcaoCentralService = {
     _abrirModalChamada(pautaId, assistido, colaboradores, pauta) {
         const ROTULOS = ['Sala', 'Recepção', 'Vara', 'Guichê', 'Mesa', 'Balcão'];
         const chave = `sigep_local_chamada_${pautaId}`;
-        let salvo = null;
-        try { salvo = JSON.parse(localStorage.getItem(chave)); } catch { salvo = null; }
+        const salvo = lerJSON(chave, null);
 
         const rotuloInicial = salvo?.rotulo || 'Sala';
         const ehPadrao = ROTULOS.includes(rotuloInicial);
@@ -1125,7 +1313,7 @@ export const RecepcaoCentralService = {
         });
         const opcoesColab = ordenados.map(c => {
             const livre = c.status === 'disponivel' || !c.status;
-            return `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
+            return `<option value="${escapeHTML(c.id)}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
         }).join('');
 
         const { close } = criarModal({
@@ -1191,9 +1379,13 @@ export const RecepcaoCentralService = {
         inpValor.focus();
         inpValor.select();
 
+        let enviando = false;
         const confirmar = async () => {
+            if (enviando) return;
+            enviando = true;
+
             const local = lerLocal();
-            try { localStorage.setItem(chave, JSON.stringify(local)); } catch { /* ignora */ }
+            gravarJSON(chave, local);
 
             const select = document.getElementById('rc-select-colaborador-destino');
             let colaboradorObj = null;
@@ -1208,6 +1400,22 @@ export const RecepcaoCentralService = {
         inpValor.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmar(); } });
     },
 
+    // Reserva o chamado de forma atômica: só um usuário consegue tirar o assistido da fila.
+    async _reivindicarChamada(pautaId, assistidoId, updates) {
+        const ref = doc(this._app.db, "pautas", pautaId, "attendances", assistidoId);
+        try {
+            await runTransaction(this._app.db, async (tx) => {
+                const snap = await tx.get(ref);
+                if (!snap.exists()) throw new Error('inexistente');
+                if (snap.data().status !== 'aguardando') throw new Error('ja-chamado');
+                tx.update(ref, updates);
+            });
+            return { ok: true };
+        } catch (e) {
+            return { ok: false, motivo: e?.message || 'erro' };
+        }
+    },
+
     async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj, local = null) {
         const app = this._app;
         const inAttendanceTime = new Date().toISOString();
@@ -1218,10 +1426,23 @@ export const RecepcaoCentralService = {
             updates.assignedCollaborator = { id: colaboradorDestinoObj.id, name: colaboradorDestinoObj.name };
         }
 
+        // 1) Reserva atômica: se outro recepcionista já chamou, para aqui
+        const reserva = await this._reivindicarChamada(pautaId, assistido.id, updates);
+        if (!reserva.ok) {
+            showNotification(
+                reserva.motivo === 'ja-chamado'
+                    ? `${assistido.name} já foi chamado por outro usuário.`
+                    : 'Não foi possível chamar agora. Tente novamente.',
+                'warning'
+            );
+            return;
+        }
+
         // Marca como já registrado: evita que o listener republique o chamado (e a TV toque de novo)
         this._chamadosRegistrados.add(`${assistido.id}:${inAttendanceTime}`);
         this._registrarUltimoChamado(pautaId, assistido, pauta.name, updates.localChamada || null);
 
+        // 2) Mantém o fluxo padrão (histórico/log) com os mesmos valores já reservados
         await PautaService.updateStatus(app.db, pautaId, assistido.id, updates, app.currentUserName);
 
         if (colaboradorDestinoObj && colaboradorDestinoObj.id) {
@@ -1259,12 +1480,12 @@ export const RecepcaoCentralService = {
         };
 
         const chave = `sigep_chamados_${pautaId}`;
-        let historico = [];
-        try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
+        let historico = lerJSON(chave, []);
+        if (!Array.isArray(historico)) historico = [];
         historico.unshift(chamado);
         if (historico.length > 5) historico = historico.slice(0, 5);
-        localStorage.setItem(chave, JSON.stringify(historico));
-        localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
+        gravarJSON(chave, historico);
+        gravarJSON('sigep_ultimo_chamado_global', chamado);
 
         try {
             await setDoc(doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado"),
@@ -1345,11 +1566,20 @@ export const RecepcaoCentralService = {
 
     // ── MODAL DE CONFIGURAÇÃO DA TV ────────────────────────────────────────────
 
+    // Envia a logo ao Storage e devolve a URL pública (evita guardar base64 em cada pauta)
+    async _enviarLogoParaStorage(dataUrl, recepcaoId) {
+        const orgaoId = this._app.currentUser?.orgaoId || 'sem-orgao';
+        const storage = this._app.storage || getStorage();
+        const arquivo = storageRef(storage, `paineis/${orgaoId}/${recepcaoId}/logo_${Date.now()}`);
+        await uploadString(arquivo, dataUrl, 'data_url');
+        return await getDownloadURL(arquivo);
+    },
+
     _abrirModalConfigTV() {
         const recepcao = this._recepcaoAtual;
         if (!recepcao) return;
 
-        const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${recepcao.id}`) || '{}');
+        const cacheConfig = lerJSON(`sigep_tv_config_${recepcao.id}`, {});
         const modoAtual  = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
         const videoAtual = cacheConfig.video !== undefined ? cacheConfig.video : (recepcao.videoUrl || '');
         const somAtual   = cacheConfig.som !== undefined ? cacheConfig.som : true;
@@ -1511,7 +1741,18 @@ export const RecepcaoCentralService = {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
 
-            localStorage.setItem(`sigep_tv_config_${recepcao.id}`, JSON.stringify(configToSave));
+            gravarJSON(`sigep_tv_config_${recepcao.id}`, configToSave);
+
+            // Logo nova (data URL) vai para o Storage; no Firestore fica só a URL
+            if (logoAtual.startsWith('data:')) {
+                try {
+                    logoAtual = await this._enviarLogoParaStorage(logoAtual, recepcao.id);
+                    desenharPreview();
+                } catch (err) {
+                    console.warn('Falha ao enviar a logo ao Storage; mantendo cópia embutida.', err);
+                    showNotification('Não foi possível enviar a logo ao armazenamento; usando cópia local.', 'warning');
+                }
+            }
 
             try {
                 await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
@@ -1563,12 +1804,12 @@ export const RecepcaoCentralService = {
                    <p class="text-sm font-semibold" style="color:var(--rc-muted)">Todos os agendados já chegaram.</p>
                </div>`
             : naPauta.map(a => `
-                <div class="rc-person flex items-center justify-between gap-3 rc-linha" data-nome="${normalizeText(a.name)}">
+                <div class="rc-person flex items-center justify-between gap-3 rc-linha" data-nome="${escapeHTML(normalizeText(a.name || ''))}">
                     <div class="min-w-0 flex-1">
                         <p class="font-bold text-sm truncate">${escapeHTML(a.name)}</p>
                         <p class="text-xs truncate mt-0.5" style="color:var(--rc-muted)">
                             ${a.numAgendamento ? `<span class="rc-badge rc-badge--mono mr-1">#${escapeHTML(String(a.numAgendamento))}</span>` : ''}
-                            ${a.scheduledTime ? `<b class="tabular-nums" style="color:var(--rc-warn)">${a.scheduledTime}</b> · ` : ''}${escapeHTML(a.subject || 'Sem assunto')}
+                            ${a.scheduledTime ? `<b class="tabular-nums" style="color:var(--rc-warn)">${escapeHTML(a.scheduledTime)}</b> · ` : ''}${escapeHTML(a.subject || 'Sem assunto')}
                         </p>
                     </div>
                     <button class="rc-btn rc-btn--warn rc-btn--sm rc-modal-checkin-btn shrink-0" data-id="${a.id}">Check-in</button>
@@ -1635,4 +1876,3 @@ export const RecepcaoCentralService = {
 
 export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
-
