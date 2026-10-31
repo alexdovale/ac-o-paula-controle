@@ -1,8 +1,7 @@
-
 // js/recepcaoCentral.js - DASHBOARD EXECUTIVO (UI REFINADA + MULTI-TENANT)
 
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc, runTransaction
+    collection, doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import {
     getStorage, ref as storageRef, uploadString, getDownloadURL
@@ -169,6 +168,44 @@ function htmlLogo(altura = 128) {
         style="height:${altura}px;width:auto;object-fit:contain" class="drop-shadow-sm">`;
 }
 
+// ─── TOTEM: utilitários ────────────────────────────────────────────────────────
+
+const COR_PADRAO_PRIMARIA = '#16a34a';
+const COR_PADRAO_DESTAQUE = '#15803d';
+const corHexValida = (c) => /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '';
+const hojeISO = () => new Date().toLocaleDateString('sv-SE');   // AAAA-MM-DD no fuso do navegador
+
+function gerarToken() {
+    const b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+}
+
+function carregarScript(src) {
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Falha ao carregar ' + src));
+        document.head.appendChild(s);
+    });
+}
+
+async function desenharQR(container, texto) {
+    try {
+        if (typeof window.qrcode === 'undefined') {
+            await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
+        }
+        const qr = window.qrcode(0, 'M');
+        qr.addData(String(texto));
+        qr.make();
+        container.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+        const svg = container.querySelector('svg');
+        if (svg) { svg.style.width = '100%'; svg.style.height = 'auto'; }
+    } catch (e) {
+        console.warn('QR code indisponível:', e);
+        container.textContent = 'QR code indisponível';
+    }
+}
+
 // ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
 
 export const RecepcaoCentralService = {
@@ -296,19 +333,24 @@ export const RecepcaoCentralService = {
             return dataB - dataA;
         });
 
-        if (this._filtroTipo && this._filtroTipo !== 'todos') {
-            pautas = pautas.filter(p =>
-                (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
-            );
-        }
-
         // Sem fallback: se nenhuma pauta pertence à recepção, a tela fica vazia
         // (antes, mostrava pautas de outros setores).
         if (this._recepcaoAtual) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
 
+        // O totem atende TODAS as pautas da recepção no dia, independentemente do filtro de tipo da tela
+        this._pautasTotem = pautas.map(p => ({ id: p.id, name: p.name || '' }));
+
+        if (this._filtroTipo && this._filtroTipo !== 'todos') {
+            pautas = pautas.filter(p =>
+                (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
+            );
+        }
+
         estado.pautasHoje = pautas;
+        // Ativa o totem do dia (não bloqueia a tela se falhar)
+        this._sincronizarTotem().catch(e => console.warn('Totem não sincronizado:', e?.message || e));
         // Descarta dados de pautas que não estão mais na tela (evita somas erradas no resumo)
         estado.assistidosPorPauta = {};
         estado.colaboradoresPorPauta = {};
@@ -413,6 +455,7 @@ export const RecepcaoCentralService = {
                     </div>
 
                     <div class="flex items-center gap-2">
+                        <button id="rc-btn-totem" class="rc-btn flex-1 sm:flex-none">${ico('check', 15)} Totem</button>
                         <button id="rc-btn-relatorios" class="rc-btn flex-1 sm:flex-none">${ico('list', 15)} Relatórios</button>
                         <button id="rc-trocar-recepcao" class="rc-btn flex-1 sm:flex-none">${ico('swap', 15)} Trocar setor</button>
                         <button id="rc-btn-configurar-tv" class="rc-btn rc-btn--primary flex-1 sm:flex-none">${ico('tv', 15)} Painel TV</button>
@@ -464,6 +507,7 @@ export const RecepcaoCentralService = {
 
         document.getElementById('rc-btn-voltar-home')?.addEventListener('click', () => this.fechar());
         document.getElementById('rc-btn-relatorios')?.addEventListener('click', () => this._abrirModalRelatorios());
+        document.getElementById('rc-btn-totem')?.addEventListener('click', () => this._abrirModalTotem());
     },
 
     // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
@@ -741,6 +785,7 @@ export const RecepcaoCentralService = {
                     </div>
 
                     <div class="flex gap-2 shrink-0">
+                        <button id="rc-foco-btn-totem" class="rc-btn">${ico('check', 15)} Totem</button>
                         <button id="rc-foco-btn-relatorios" class="rc-btn">${ico('list', 15)} PDF</button>
                         <button id="rc-foco-btn-add-assistido" class="rc-btn">${ico('plus', 15)} Adicionar</button>
                         <button id="rc-foco-btn-chamar" class="rc-btn rc-btn--ok">${ico('megaphone', 15)} Chamar próximo</button>
@@ -815,6 +860,7 @@ export const RecepcaoCentralService = {
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
         document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', () => this._chamarProximo(pautaId));
         document.getElementById('rc-foco-btn-relatorios')?.addEventListener('click', () => this._abrirModalRelatorios(pautaId));
+        document.getElementById('rc-foco-btn-totem')?.addEventListener('click', () => this._abrirModalTotem(pautaId));
         document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => {
             this._abrirModalAdicionarAssistido(pautaId, pauta.name);
         });
@@ -850,6 +896,144 @@ export const RecepcaoCentralService = {
                 );
                 showNotification("Prioridade removida", "info");
             });
+        });
+    },
+
+    // ── TOTEM DE AUTOATENDIMENTO ───────────────────────────────────────────────
+
+    // Publica em totens/{recepcaoId} o que a Cloud Function precisa: token do link, dia, pautas e identidade.
+    // O totem só funciona no dia em que a recepção foi aberta (campo "dia").
+    async _sincronizarTotem({ novoToken = false } = {}) {
+        const rec = this._recepcaoAtual;
+        if (!rec?.id || !this._app?.db) return null;
+        const ref = doc(this._app.db, 'totens', rec.id);
+
+        let token = null;
+        if (!novoToken) {
+            token = this._totemToken?.rec === rec.id ? this._totemToken.valor : null;
+            if (!token) {
+                try {
+                    const s = await getDoc(ref);
+                    token = s.exists() ? (s.data().token || null) : null;
+                } catch (e) { console.warn('Não foi possível ler o totem atual:', e?.message || e); }
+            }
+        }
+        if (!token) token = gerarToken();
+
+        await setDoc(ref, {
+            recepcaoId: rec.id,
+            orgaoId: this._app.currentUser?.orgaoId || null,
+            token,
+            dia: hojeISO(),
+            pautas: (this._pautasTotem || estado.pautasHoje.map(p => ({ id: p.id, name: p.name || '' }))),
+            nomeOrgao: rec.nomeOrgao || '',
+            logoUrl: rec.logoPainel || '',
+            corPrimaria: corHexValida(rec.corPrimaria),
+            corDestaque: corHexValida(rec.corDestaque),
+            atualizadoEm: new Date().toISOString()
+        }, { merge: true });
+
+        this._totemToken = { rec: rec.id, valor: token };
+        return token;
+    },
+
+    // pautaId vazio = totem geral (todas as pautas da recepção no dia); com pautaId = totem só dessa pauta
+    async _abrirModalTotem(pautaId = '') {
+        const rec = this._recepcaoAtual;
+        if (!rec?.id) { showNotification("Selecione uma recepção primeiro.", "warning"); return; }
+        if ((this._pautasTotem || []).length === 0) {
+            showNotification("Nenhuma pauta ativa nesta recepção hoje.", "warning");
+            return;
+        }
+
+        let token;
+        try { token = await this._sincronizarTotem(); }
+        catch (e) {
+            console.error(e);
+            showNotification("Não foi possível ativar o totem. Confira as regras do Firestore para a coleção 'totens'.", "error");
+            return;
+        }
+
+        const pauta = pautaId ? this._pautasTotem.find(p => p.id === pautaId) : null;
+        const montarLink = (tk) => {
+            const u = new URL('totem.html', window.location.href);
+            u.search = ''; u.hash = '';
+            u.searchParams.set('rec', rec.id);
+            u.searchParams.set('t', tk);
+            if (pautaId) u.searchParams.set('pauta', pautaId);
+            return u.toString();
+        };
+        let link = montarLink(token);
+
+        const incluidas = pauta ? [pauta] : this._pautasTotem;
+        const { modal, close } = criarModal({
+            id: 'rc-modal-totem',
+            titulo: 'Totem de autoatendimento',
+            subtitulo: pauta ? escapeHTML(pauta.name) : `Todas as pautas ativas hoje (${incluidas.length})`,
+            largura: '560px',
+            corpo: `
+                <div class="rc-modal-body space-y-5">
+                    <p class="text-sm" style="color:var(--rc-muted)">
+                        ${pauta
+                            ? 'O assistido confirma presença apenas nesta pauta.'
+                            : 'O assistido digita o CPF (ou nome + agendamento) e o totem procura em todas as pautas abaixo. Se achar em mais de uma, ele escolhe.'}
+                        O totem usa a logo, as cores e o nome do órgão configurados em <b>Painel TV</b>.
+                    </p>
+
+                    <div class="flex items-start gap-4">
+                        <div id="rc-totem-qr" class="shrink-0 rc-surface flex items-center justify-center text-xs" style="width:132px;height:132px;padding:6px;background:#fff;color:var(--rc-muted)">Gerando QR…</div>
+                        <div class="flex-1 min-w-0">
+                            <span class="rc-label">Link do totem</span>
+                            <textarea id="rc-totem-link" readonly class="rc-input" style="height:88px;resize:none;font-family:ui-monospace,monospace;font-size:12px"></textarea>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rc-label">Pautas incluídas</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${incluidas.map(p => `<span class="rc-badge">${escapeHTML(p.name || p.id)}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <p class="text-xs" style="color:var(--rc-faint)">
+                        O totem é ativado automaticamente quando esta recepção é aberta e vale somente para hoje.
+                        Pautas criadas depois entram assim que a recepção for recarregada.
+                    </p>
+                </div>`,
+            rodape: `
+                <div class="rc-modal-foot flex-col sm:flex-row">
+                    <button type="button" id="rc-totem-novo" class="rc-btn rc-btn--ghost">Gerar novo link</button>
+                    <button type="button" id="rc-totem-abrir" class="rc-btn">${ico('tv', 15)} Abrir totem</button>
+                    <button type="button" id="rc-totem-copiar" class="rc-btn rc-btn--primary">Copiar link</button>
+                </div>`,
+        });
+
+        const caixa = modal.querySelector('#rc-totem-link');
+        const atualizar = () => { caixa.value = link; desenharQR(modal.querySelector('#rc-totem-qr'), link); };
+        atualizar();
+
+        modal.querySelector('#rc-totem-copiar').addEventListener('click', () => {
+            navigator.clipboard.writeText(link)
+                .then(() => showNotification("Link do totem copiado!", "success"))
+                .catch(() => showNotification("Não foi possível copiar. Selecione o texto e copie manualmente.", "error"));
+        });
+        modal.querySelector('#rc-totem-abrir').addEventListener('click', () => window.open(link, '_blank'));
+        modal.querySelector('#rc-totem-novo').addEventListener('click', async () => {
+            const ok = await confirmarModal({
+                titulo: 'Gerar novo link',
+                mensagem: 'O link atual e o QR code já impressos deixarão de funcionar. Use isso se o link vazou ou se o totem foi trocado de lugar.',
+                confirmarTxt: 'Gerar novo link',
+                perigo: true
+            });
+            if (!ok) return;
+            try {
+                link = montarLink(await this._sincronizarTotem({ novoToken: true }));
+                atualizar();
+                showNotification("Novo link gerado. O anterior foi desativado.", "success");
+            } catch (e) {
+                console.error(e);
+                showNotification("Não foi possível gerar um novo link.", "error");
+            }
         });
     },
 
@@ -1592,7 +1776,7 @@ export const RecepcaoCentralService = {
 
         const { modal, close } = criarModal({
             id: 'rc-modal-config-tv',
-            titulo: 'Configurar TV / painel',
+            titulo: 'Configurar TV, totem e identidade',
             subtitulo: escapeHTML(recepcao.nome || 'Recepção Central'),
             largura: '640px',
             corpo: `
@@ -1627,7 +1811,7 @@ export const RecepcaoCentralService = {
                     </div>
 
                     <div>
-                        <span class="rc-label">Logo do painel público</span>
+                        <span class="rc-label">Logo do órgão (painel e totem)</span>
                         <div class="flex items-center gap-4 rc-surface" style="padding:14px">
                             <div id="tv-logo-preview" class="flex items-center justify-center shrink-0" style="width:150px;height:64px;border-radius:10px;background:#f8fafc;border:1px dashed var(--rc-line);overflow:hidden"></div>
                             <div class="flex-1 min-w-0">
@@ -1637,6 +1821,28 @@ export const RecepcaoCentralService = {
                                     <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
                                 </div>
                                 <p class="text-xs mt-2" style="color:var(--rc-muted)">PNG, JPG, WebP ou SVG. A marca "Tecnologia SIGEP" continua aparecendo abaixo da logo do órgão.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rc-label">Identidade do órgão (totem e senha impressa)</span>
+                        <div class="rc-surface" style="padding:14px">
+                            <label class="rc-label" for="id-nome-orgao">Nome do órgão</label>
+                            <input type="text" id="id-nome-orgao" class="rc-input" maxlength="80" value="${escapeHTML(recepcao.nomeOrgao || '')}" placeholder="Ex.: Defensoria Pública do Estado">
+                            <div class="grid grid-cols-2 gap-3" style="margin-top:12px">
+                                <div>
+                                    <label class="rc-label" for="id-cor-primaria">Cor principal</label>
+                                    <input type="color" id="id-cor-primaria" class="rc-input" style="height:44px;padding:4px;cursor:pointer">
+                                </div>
+                                <div>
+                                    <label class="rc-label" for="id-cor-destaque">Cor de destaque</label>
+                                    <input type="color" id="id-cor-destaque" class="rc-input" style="height:44px;padding:4px;cursor:pointer">
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between gap-3" style="margin-top:12px">
+                                <p class="text-xs" style="color:var(--rc-muted)">A cor do texto sobre os botões é ajustada automaticamente para ficar legível.</p>
+                                <button type="button" id="id-cores-padrao" class="rc-btn rc-btn--ghost rc-btn--sm shrink-0">Cores padrão</button>
                             </div>
                         </div>
                     </div>
@@ -1737,6 +1943,22 @@ export const RecepcaoCentralService = {
         });
         document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); });
 
+        // ── Identidade (nome e cores) ─────────────────────────────────────────
+        let corPrimaria = corHexValida(recepcao.corPrimaria);
+        let corDestaque = corHexValida(recepcao.corDestaque);
+        const inpCorP = document.getElementById('id-cor-primaria');
+        const inpCorD = document.getElementById('id-cor-destaque');
+        const mostrarCores = () => {
+            inpCorP.value = corPrimaria || COR_PADRAO_PRIMARIA;
+            inpCorD.value = corDestaque || COR_PADRAO_DESTAQUE;
+        };
+        mostrarCores();
+        inpCorP.addEventListener('input', () => { corPrimaria = inpCorP.value; });
+        inpCorD.addEventListener('input', () => { corDestaque = inpCorD.value; });
+        document.getElementById('id-cores-padrao').addEventListener('click', () => {
+            corPrimaria = ''; corDestaque = ''; mostrarCores();
+        });
+
         const saveConfig = async () => {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
@@ -1754,20 +1976,33 @@ export const RecepcaoCentralService = {
                 }
             }
 
+            // Identidade guardada no objeto local primeiro: o totem a recebe mesmo que o update da recepção falhe
+            const nomeOrgao = document.getElementById('id-nome-orgao').value.trim().slice(0, 80);
+            recepcao.logoPainel = logoAtual || '';
+            recepcao.nomeOrgao = nomeOrgao;
+            recepcao.corPrimaria = corPrimaria;
+            recepcao.corDestaque = corDestaque;
+
             try {
                 await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
                     modoVisualizacao: configToSave.modo,
                     videoUrl: configToSave.video,
-                    logoPainel: logoAtual || null
+                    logoPainel: logoAtual || null,
+                    nomeOrgao: nomeOrgao || null,
+                    corPrimaria: corPrimaria || null,
+                    corDestaque: corDestaque || null
                 });
-                recepcao.logoPainel = logoAtual || '';
             } catch (e) { /* configuração local já salva */ }
+
+            // Atualiza o totem com a nova identidade
+            try { await this._sincronizarTotem(); }
+            catch (e) { console.warn('Totem não atualizado com a nova identidade:', e?.message || e); }
 
             // O painel público lê a logo de pautas/{id}/painel/config (mesmo local do "último chamado")
             const orgaoId = this._app.currentUser?.orgaoId || null;
             await Promise.all(estado.pautasHoje.map(p =>
                 setDoc(doc(this._app.db, "pautas", p.id, "painel", "config"),
-                    { logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() }, { merge: true })
+                    { logoUrl: logoAtual || '', nomeOrgao, corPrimaria, corDestaque, orgaoId, atualizadoEm: new Date().toISOString() }, { merge: true })
                     .catch(err => console.warn('Falha ao salvar logo do painel:', err))
             ));
 
