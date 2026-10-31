@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -41,7 +42,7 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 
 /* LOGO SEM BORDA E MAIOR */
 .logo{background:transparent !important;border:none !important;border-radius:0 !important;padding:0 !important;display:flex;align-items:center}
-.logo img{height:clamp(48px,6.5vw,88px);width:auto;max-height:none !important}
+.logo img{height:clamp(48px,8vw,110px);width:auto;max-height:none !important;object-fit:contain}
 
 .brand-txt{padding-left:14px;border-left:1px solid var(--line)}
 .brand-txt h1{font-size:var(--fs-md);font-weight:700;letter-spacing:-.02em;line-height:1.2}
@@ -139,8 +140,8 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 .item-hist span:last-child{white-space:nowrap;font-size:clamp(18px,2.2vw,32px);font-weight:900;color:var(--ok2)}
 .tv-foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(14px,2vw,24px);background:var(--navy);color:#fff}
 
-/* LOGO DO RODAPÉ TAMBÉM SEM BORDA */
-.tv-foot img{height:clamp(56px,8vw,110px);width:auto;opacity:.95;background:transparent !important;border:none !important}
+/* LOGO DO RODAPÉ TAMBÉM SEM BORDA E MAIOR */
+.tv-foot img{height:clamp(70px,10vw,140px);width:auto;opacity:.95;background:transparent !important;border:none !important;object-fit:contain}
 
 #data-hora-tv{font-size:clamp(16px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.05em}
 #recepcao-nome-tv{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
@@ -166,7 +167,8 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 <div id="modo-fila" class="hidden">
   <header class="topbar">
     <div class="brand">
-      <div class="logo"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="SIGEP"></div>
+      <!-- LOGO VERTICAL EXTENSA NO MODO FILA -->
+      <div class="logo"><img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="SIGEP"></div>
       <div class="brand-txt"><h1>Painel de Atendimento</h1><h2 id="recepcao-nome-fila">—</h2></div>
     </div>
     <div class="metrics">
@@ -229,7 +231,8 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
     <div class="hist-head"><span>Nome</span><span>Local</span></div>
     <div id="lista-historico-tv"></div>
     <div class="tv-foot">
-      <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="SIGEP">
+      <!-- LOGO VERTICAL EXTENSA NO MODO TV -->
+      <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="SIGEP">
       <div id="data-hora-tv"></div>
       <div id="recepcao-nome-tv">Recepção</div>
     </div>
@@ -592,3 +595,4 @@ init();
 </script>
 </body>
 </html>
+
