@@ -2215,18 +2215,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         modal.innerHTML = `
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
                 <div class="p-6 text-center">
-                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div class="w-16 h-16 bg-red-100 text-red-700 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta expirada</h3>
                     <p class="text-sm text-slate-500 mb-6 leading-relaxed">
                         A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
-                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
+                        Você não pode mais alterá-la, mas os dados estão salvos.
                     </p>
                     <div class="flex flex-col gap-3">
-                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
+                        <button id="expired-stats-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
                             <span class="text-lg"></span> Abrir Estatísticas e PDFs
                         </button>
                         <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
@@ -2289,6 +2289,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             let dataCriacaoStr = '---';
             let dataExpiracaoStr = '';
             let isExpired = false;
+            let daysLeft = null;
 
             if (pauta.createdAt) {
                 const creationDate = new Date(pauta.createdAt);
@@ -2297,34 +2298,59 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 expirationDate.setDate(creationDate.getDate() + 7);
                 dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
                 isExpired = new Date() > expirationDate;
+                daysLeft = Math.ceil((expirationDate - new Date()) / 86400000);
             }
 
             const card = document.createElement('div');
-            card.className = `relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'} ${isClosed ? 'opacity-60' : ''}`;
+            const cardTone = isExpired
+                ? 'bg-red-50 border-red-200'
+                : (daysLeft !== null && daysLeft <= 3 ? 'bg-white border-amber-200' : 'bg-white border-gray-200');
+            card.className = `relative rounded-xl shadow-md overflow-hidden border transition-all cursor-pointer hover:shadow-lg ${cardTone} ${isClosed ? 'opacity-60' : ''}`;
+
+            // Cor por tipo de pauta (mesmo mapa usado no seletor "Tipo de Evento")
+            const TIPOS = {
+                'mutirao':      { label: 'Mutirão',     cls: 'bg-amber-100 text-amber-700' },
+                'plantao':      { label: 'Plantão',     cls: 'bg-indigo-100 text-indigo-800' },
+                'acao_social':  { label: 'Ação Social', cls: 'bg-teal-100 text-teal-800' }
+            };
+            const pillBase = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide';
 
             let originHtml = '';
             if (isEvento) {
-                const tipoLabel = {
-                    'mutirao': 'Mutirão',
-                    'mutirão': ' Mutirão',
-                    'plantao': ' Plantão',
-                    'acao_social': ' Ação Social'
-                }[String(pauta.tipo || '').toLowerCase()] || ' Evento';
-                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span></span> ${tipoLabel}</h2>`;
+                const tipoKey = String(pauta.tipo || '').toLowerCase().replace('mutirão', 'mutirao');
+                const t = TIPOS[tipoKey] || { label: 'Evento', cls: 'bg-slate-100 text-slate-700' };
+                originHtml = `<span class="${pillBase} ${t.cls}">${t.label}</span>`;
             } else {
                 const nomeUnidade = pauta.unidadeNome || pauta.origin || pauta.orgao;
                 originHtml = nomeUnidade
-                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span></span> ${escapeHTML(nomeUnidade)}</h2>`
-                    : `<h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1"><span> </span> Pauta Normal</h2>`;
+                    ? `<span class="${pillBase} bg-slate-100 text-slate-700">${escapeHTML(nomeUnidade)}</span>`
+                    : `<span class="${pillBase} bg-slate-100 text-slate-600">Pauta Normal</span>`;
             }
+
+            // Selo de status: Expirado (vermelho), expira em breve (âmbar), ativo (verde)
+            let statusHtml = '';
+            if (isExpired) {
+                statusHtml = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Expirado</span>`;
+            } else if (daysLeft !== null && daysLeft <= 3) {
+                statusHtml = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Expira em ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}</span>`;
+            } else if (daysLeft !== null) {
+                statusHtml = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Ativo</span>`;
+            }
+
+            const footTone = isExpired ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100';
+            const footLabel = isExpired ? 'text-red-700' : 'text-gray-500';
+            const footDate = isExpired ? 'text-red-800' : 'text-gray-700';
 
             card.innerHTML = `
                 <!-- Conteúdo Principal -->
                 <div class="p-5">
-                    <div class="flex justify-between items-start">
-                        ${originHtml}
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${originHtml}
+                            ${statusHtml}
+                        </div>
                         ${isOwner ? `
-                        <button class="delete-pauta-btn text-gray-400 hover:text-red-500 transition-colors z-20">
+                        <button class="delete-pauta-btn -m-2 p-2 text-gray-400 hover:text-red-500 transition-colors z-20" aria-label="Excluir pauta">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -2332,8 +2358,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ` : ''}
                     </div>
 
-                    <p class="text-gray-700 font-medium mt-2 break-words">${escapeHTML(pauta.name)}</p>
-                    <p class="text-sm text-gray-500 mt-1">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+                    <p class="text-slate-800 text-lg font-semibold mt-3 break-words leading-snug">${escapeHTML(pauta.name)}</p>
+                    <p class="text-sm text-slate-600 mt-1">Membros: ${pauta.members ? pauta.members.length : 1}</p>
 
                     <div class="mt-4">
                         ${isOwner ?
@@ -2348,14 +2374,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 </div>
 
                 <!-- Rodapé com Metadados -->
-                <div class="bg-gray-50 px-5 py-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+                <div class="${footTone} px-5 py-3 border-t grid grid-cols-2 gap-4">
                     <div>
-                        <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em</p>
-                        <p class="text-xs text-gray-600">${dataCriacaoStr}</p>
+                        <p class="text-[10px] ${footLabel} uppercase font-bold">Criada em</p>
+                        <p class="text-xs ${footDate}">${dataCriacaoStr}</p>
                     </div>
                     <div>
-                        <p class="text-[10px] ${isExpired ? 'text-red-500' : 'text-orange-500'} uppercase font-bold">Eliminação (7 dias)</p>
-                        <p class="text-xs text-gray-600">${dataExpiracaoStr}</p>
+                        <p class="text-[10px] ${isExpired ? 'text-red-700' : 'text-orange-600'} uppercase font-bold">Eliminação (7 dias)</p>
+                        <p class="text-xs ${footDate}">${dataExpiracaoStr}</p>
                     </div>
                 </div>
             `;
