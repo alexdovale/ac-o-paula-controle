@@ -1,7 +1,7 @@
 {
   "name": "sigep",
   "version": "1.0.0",
-  "description": "Sistema Integrado de Gestão e Pauta",
+  "description": "Sistema de Gerenciamento de Pauta",
   "private": true,
   "engines": {
     "node": "20.x"
