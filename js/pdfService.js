@@ -927,7 +927,7 @@ export const PDFService = {
                     tableData.push([{
                         content: `${nome.toUpperCase()}  ·  ${porEquipe[k]} membro${porEquipe[k] === 1 ? '' : 's'}`,
                         colSpan: colunas.length,
-                        styles: { fillColor: [220, 252, 231], textColor: C.verdeEscuro, fontStyle: 'bold', halign: 'left', fontSize: 9 }
+                        styles: { fillColor: [226, 232, 240], textColor: C.texto, fontStyle: 'bold', halign: 'left', fontSize: 9 }
                     }]);
                 }
                 tableData.push(colunas.map(key => colMap[key] ? colMap[key].get(c) : 'N/A'));
@@ -948,12 +948,18 @@ export const PDFService = {
             const columnStyles = {};
             if (idxNome >= 0) columnStyles[idxNome] = { halign: 'left', fontStyle: 'bold' };
 
+            // Tabela no formato original (grade completa, faixa por equipe), com a paleta nova (slate)
             doc.autoTable(tableBase({
+                theme: 'grid',
                 head: [colunas.map(key => colMap[key] ? colMap[key].label : key)],
                 body: tableData,
                 startY: y,
                 columnStyles,
-                styles: { ...tableBase().styles, halign: 'center' }
+                headStyles: { fillColor: C.texto, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.texto },
+                alternateRowStyles: { fillColor: C.zebra },
+                styles: { ...tableBase().styles, halign: 'center', lineWidth: 0.4, lineColor: C.linha },
+                didParseCell: undefined,
+                didDrawCell: undefined
             }));
 
             applyFooters(doc);
