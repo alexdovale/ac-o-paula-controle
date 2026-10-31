@@ -1,3 +1,4 @@
+
 // js/recepcaoCentral.js - DASHBOARD EXECUTIVO (UI REFINADA + MULTI-TENANT)
 
 import {
@@ -112,9 +113,15 @@ function criarModal({ id, titulo, subtitulo = '', corpo, rodape = '', largura = 
     return { modal: backdrop, close };
 }
 
-function htmlLogo(altura = 28) {
-    return `<div class="rounded-xl flex items-center justify-center shrink-0" style="background:#0d1117;padding:10px 12px;border:1px solid #1f2937">
-        <img src="${LOGO_URL}" alt="SIGEP" style="height:${altura}px;width:auto" class="object-contain">
+function htmlLogo(altura = 40) {
+    const LOGO_VERTICAL_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e";
+    
+    return `
+    <div class="flex items-center justify-center shrink-0 w-full mb-4">
+        <img src="${LOGO_VERTICAL_URL}" 
+             alt="Logo Sistema de Gerenciamento de Pauta" 
+             style="height: 128px; width: auto; object-fit: contain;" 
+             class="sm:h-40 md:h-48 drop-shadow-sm">
     </div>`;
 }
 
@@ -187,7 +194,7 @@ export const RecepcaoCentralService = {
 
         container.innerHTML = `
             <div class="rc-wrap max-w-5xl mx-auto px-4 py-14">
-                <div class="flex justify-center mb-7">${htmlLogo(34)}</div>
+                <div class="flex justify-center w-full mt-4 mb-8">${htmlLogo()}</div>
 
                 <div class="text-center mb-10">
                     <h2 class="text-3xl font-extrabold tracking-tight">Selecione sua recepção</h2>
@@ -333,7 +340,7 @@ export const RecepcaoCentralService = {
                 <div id="rc-header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div class="flex items-center gap-4 min-w-0">
                         <button id="rc-btn-voltar-home" class="rc-btn rc-btn--icon shrink-0" title="Voltar ao início" aria-label="Voltar ao início">${ico('back', 18)}</button>
-                        ${htmlLogo(24)}
+                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" alt="Logo SIGEP" class="h-10 sm:h-12 w-auto object-contain shrink-0">
                         <div class="min-w-0">
                             <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight truncate">${contexto.titulo}</h1>
                             <p class="text-sm truncate" style="color:var(--rc-muted)">${contexto.subtitulo}</p>
@@ -1628,3 +1635,4 @@ export const RecepcaoCentralService = {
 
 export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
+
