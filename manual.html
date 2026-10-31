@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
 <head>
@@ -53,18 +54,12 @@
     <header class="bg-white border-b h-16 flex items-center justify-between px-6 shadow-sm z-10 flex-shrink-0">
         <div class="flex items-center gap-3">
             <div class="flex items-center justify-center h-10 w-auto">
-                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                     alt="Logo SIGEP" 
-                     class="h-9 w-auto object-contain"
-                     onerror="this.onerror=null; this.src='assets/logo/logo_sigep.png';">
+                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-horizontal-sem-fundo.PNG?alt=media&token=633132d6-543f-41f2-82c3-cc39e1b563e5" 
+                     alt="Logo SIGEP Horizontal" 
+                     class="h-8 w-auto object-contain">
             </div>
-            <h1 class="text-xl font-extrabold tracking-tight text-slate-800">SIGEP <span class="text-gray-400 font-normal ml-1">| Wiki & Manual Completo</span></h1>
+            <h1 class="text-sm sm:text-lg font-bold tracking-tight text-gray-400 border-l border-gray-200 pl-3 ml-1">Wiki & Manual Completo</h1>
         </div>
-        <button onclick="window.close()" class="text-sm font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1 transition-colors">
-            <span>✕</span> Fechar
-        </button>
-    </header>
-
         <button onclick="window.close()" class="text-sm font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1 transition-colors">
             <span class="text-lg leading-none"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></span> Fechar
         </button>
@@ -116,7 +111,7 @@
                 <!-- INTRODUÇÃO -->
                 <div class="text-center mb-12">
                     <h2 class="text-4xl font-extrabold text-slate-800 mb-4">Bem-vindo ao SIGEP</h2>
-                    <p class="text-lg text-slate-600">O <strong>Sistema de Gerenciamento de Pauta</strong> foi desenhado para garantir que o atendimento ao assistido seja organizado, rápido, rastreável e totalmente seguro.</p>
+                    <p class="text-lg text-slate-600">O <strong>Sistema Integrado de Gestão de Pautas</strong> foi desenhado para garantir que o atendimento ao assistido seja organizado, rápido, rastreável e totalmente seguro.</p>
                 </div>
 
                 <!-- SEÇÃO 1: PERFIS -->
@@ -257,12 +252,12 @@
                     <p>A "Pauta" é o ambiente de trabalho diário. Ela representa um dia de atendimento, um mutirão, ou a rotina de uma vara/núcleo específico.</p>
 
                     <h3 class="sub-title">2.1. Criando uma Nova Pauta</h3>
-                    <p>Ao clicar no botão verde <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho em 3 passos (Tipo → Ordem de Atendimento → Fluxo de Delegação/Distribuição):</p>
+                    <p>Ao clicar no botão escuro <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho em 3 passos (Tipo → Ordem de Atendimento → Fluxo de Delegação/Distribuição):</p>
                     <ul>
                         <li><strong>Tipo de Pauta:</strong> <em>Atendimento Agendado</em> (hora marcada), <em>Atendimento Avulso</em> (ordem de chegada) ou <em>Multi-Salas</em> (permite cadastrar salas ou locais personalizados, como "Vara de Família", "Sala 1", agrupando a fila de espera em gavetas recolhíveis com busca própria por sala).</li>
                         <li><strong>Fluxo de Delegação:</strong> Se ativado, utiliza a coluna "Em Atendimento" para atribuir casos a colaboradores específicos. Se desativado ("Não, finalizar diretamente"), pula a coluna Em Atendimento.</li>
                         <li><strong>Fila de Distribuição:</strong> Se ativada, cria a etapa de envio ao Defensor(a) para assinatura, avaliação ou protocolo.</li>
-                        <li><strong>Tolerância de Atraso:</strong> Define quantos minutos de atraso o assistido agendado pode ter antes de virar encaixe (padrão de 15 minutos). O valor aparece em uma etiqueta amarela <code>Tolerância de Atraso: X Minutos</code> no topo da pauta.</li>
+                        <li><strong>Tolerância de Atraso:</strong> Define quantos minutos de atraso o assistido agendado pode ter antes de virar encaixe (padrão de 15 minutos). O valor aparece em uma etiqueta amarela no topo da pauta.</li>
                     </ul>
 
                     <h3 class="sub-title">2.2. As 7 Modalidades de Ordem de Atendimento</h3>
@@ -333,11 +328,11 @@
                         <li>A planilha deve conter colunas separadas por ponto e vírgula (<code>;</code>):
                             <br><code>Nº Agendamento(Opcional) ; Nome Completo ; Horário(HH:MM) ; Assunto ; CPF(Opcional)</code>
                         </li>
-                        <li>Clique em <strong>"Carregar CSV"</strong>.</li>
+                        <li>Clique no botão teal de <strong>"Carregar CSV"</strong> dentro da pauta.</li>
                     </ol>
 
                     <div class="note-box">
-                        <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Prompt Prático para IA:</strong> O sistema tem um botão "Como formatar pauta?". Nele, você pode copiar um texto pronto, colar no ChatGPT/Gemini junto com o seu PDF da pauta, e a IA devolverá o texto perfeitamente formatado com os <code>;</code> para importar no SIGEP.
+                        <strong><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg> Prompt Prático para IA:</strong> O sistema tem um link "Como formatar pauta?". Nele, você pode copiar um texto pronto, colar no ChatGPT/Gemini junto com o seu PDF da pauta, e a IA devolverá o texto perfeitamente formatado com os <code>;</code> para importar no SIGEP.
                     </div>
                 </section>
 
@@ -370,10 +365,10 @@
                                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span> 3 LIVRE(S)
                                 </span>
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 border border-red-300 text-[11px] font-black shadow-sm">
-                                    ⏸ 1 PAUSA(S)
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg> 1 PAUSA(S)
                                 </span>
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-black shadow-sm animate-pulse">
-                                    🔔 1 PUXADA(S)
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M21 17v-2l-2-2V9a7 7 0 0 0-14 0v4l-2 2v2h18Z"/></svg> 1 PUXADA(S)
                                 </span>
                                 <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold shadow-sm">
                                     Ações ▾
@@ -643,30 +638,29 @@
 
                 <!-- SEÇÃO 6: CAPTAÇÃO EXTERNA E CÂMERA INTELIGENTE -->
                 <section id="captacao-externa" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> 6. Captação Externa (Autocadastro, QR Code e Câmera Inteligente)</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> 6. Captação Externa (Triagem Digital)</h2>
                     <p>O módulo de <strong>Captação Externa (Triagem Digital - <code>captacao.html</code>)</strong> permite que o próprio assistido preencha seus dados, marque seus documentos e fotografe seu RG/CPF pelo celular enquanto aguarda na recepção ou mesmo antes de sair de casa.</p>
                     <ul>
                         <li><strong>Modal de Captação Direta (QR Code, WhatsApp e SMS):</strong> Dentro do modal de Detalhes/Checklist do assistido, clique no botão azul <strong>"🔗 Captação"</strong>. O sistema gera um <strong>QR Code na tela</strong> (para o assistido ler com a câmera do celular) e permite digitar o celular dele para enviar o link direto por <strong>WhatsApp</strong> ou <strong>SMS</strong> com um clique.</li>
                         <li><strong>Divulgação Progressiva Inteligente:</strong> Quando o assistido seleciona sua <em>Ocupação / Vínculo Empregatício</em> (CLT, Aposentado/BPC, Autônomo/Informal ou Desempregado), o formulário filtra e exibe automaticamente apenas os comprovantes de renda específicos daquele perfil.</li>
-                        <li><strong>Câmera Inteligente com Sensor de Luz e Foco:</strong> Na seção 4 do formulário, o assistido abre a câmera pelo navegador. O sistema analisa o brilho da imagem em tempo real: se estiver escuro, avisa <code>⚠️ Muito escuro! Procure mais luz</code>; se houver reflexo, avisa <code>⚠️ Muito claro / Reflexo</code>; e somente quando a imagem está nítida libera o botão verde pulsante <strong>"✨ CAPTURAR FOTO PERFEITA"</strong>.</li>
                         <li><strong>Busca Automática de CEP (ViaCEP) e Opção "Não Sei Informar":</strong> Ao digitar o CEP residencial ou comercial do Réu e clicar em <em>Buscar</em>, o sistema preenche Rua, Bairro, Cidade e UF sozinho. Caso o assistido desconheça dados socioeconômicos do Réu, há caixas rápidas de <em>"Não sei informar"</em>.</li>
-                        <li><strong>Autobloqueio de Segurança (LGPD):</strong> Assim que o assistido clica em <strong>"Enviar Dados"</strong>, o formulário salva tudo na pauta com o status <code>pre_triagem_concluida</code> e <strong>limpa/bloqueia imediatamente todos os campos sensíveis na tela do celular</strong> (<code>🔒 Dado protegido</code>), impedindo que terceiros vejam ou alterem os dados caso o link seja reaberto.</li>
+                        <li><strong>Autobloqueio de Segurança (LGPD):</strong> Assim que o assistido clica em <strong>"Enviar Dados"</strong>, o formulário salva tudo na pauta com o status <code>pre_triagem_concluida</code> e <strong>limpa/bloqueia imediatamente todos os campos sensíveis na tela do celular</strong>, impedindo que terceiros vejam ou alterem os dados caso o link seja reaberto.</li>
                     </ul>
 
-                    <!-- MOCKUP VISUAL 7: MODAL QR CODE CAPTAÇÃO + TELA DO CELULAR COM CÂMERA INTELIGENTE -->
+                    <!-- MOCKUP VISUAL 7: MODAL QR CODE CAPTAÇÃO -->
                     <div class="sigep-preview-window">
                         <div class="sigep-preview-bar">
                             <div class="sigep-preview-dots">
                                 <span class="sigep-preview-dot bg-red-500"></span>
                                 <span class="sigep-preview-dot bg-amber-400"></span>
                                 <span class="sigep-preview-dot bg-emerald-500"></span>
-                                <span class="ml-2 text-[11px] font-bold text-slate-300">Captação Direta (QR Code / WhatsApp) + Câmera Inteligente no Celular</span>
+                                <span class="ml-2 text-[11px] font-bold text-slate-300">Captação Direta (QR Code / WhatsApp)</span>
                             </div>
                             <span class="sigep-preview-label">Visual do Sistema • Triagem Digital</span>
                         </div>
-                        <div class="sigep-preview-body bg-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div class="sigep-preview-body bg-slate-100 flex justify-center items-center p-6">
                             <!-- Modal QR Code -->
-                            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 text-center max-w-xs mx-auto w-full">
+                            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 text-center max-w-xs w-full">
                                 <h4 class="text-base font-black text-slate-800 mb-1">Captação Direta</h4>
                                 <p class="text-[11px] text-slate-500 mb-3">Peça para o assistido ler o QR Code ou envie o link:</p>
                                 <div class="w-32 h-32 mx-auto mb-3 bg-slate-900 rounded-xl p-3 flex items-center justify-center border-4 border-slate-100">
@@ -684,28 +678,6 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div class="bg-green-500 text-white py-2 rounded-lg text-[11px] font-bold">WhatsApp</div>
                                     <div class="bg-blue-500 text-white py-2 rounded-lg text-[11px] font-bold">SMS</div>
-                                </div>
-                            </div>
-
-                            <!-- Tela do Celular com Câmera Inteligente -->
-                            <div class="bg-white p-4 rounded-2xl shadow-md border border-slate-200 max-w-sm mx-auto w-full space-y-3">
-                                <div class="flex items-center justify-between border-b pb-2">
-                                    <span class="text-[11px] font-black text-indigo-600 uppercase">📸 4. FOTO DO DOCUMENTO (RG / CPF)</span>
-                                    <span class="text-[9px] bg-green-100 text-green-800 font-black px-2 py-0.5 rounded-full">APP WEB</span>
-                                </div>
-                                <div class="relative w-full h-40 bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
-                                    <div class="text-slate-600 text-xs font-mono">[ Pré-visualização do Documento ]</div>
-                                    <div class="absolute inset-3 border-2 border-dashed border-white/70 rounded-lg flex items-end justify-center p-2">
-                                        <span class="bg-emerald-600/95 text-white text-[9px] font-black px-2.5 py-1 rounded uppercase tracking-wider shadow">
-                                            ✨ Perfeito! Pode fotografar
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="w-full bg-emerald-600 text-white font-black py-3 rounded-xl shadow text-xs uppercase tracking-widest text-center">
-                                    ✨ CAPTURAR FOTO PERFEITA
-                                </div>
-                                <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black p-2 rounded-lg text-center uppercase">
-                                    ✅ Foto Anexada com Sucesso
                                 </div>
                             </div>
                         </div>
@@ -984,10 +956,10 @@
                     </div>
                 </section>
 
-                <!-- SEÇÃO 9: PAINEL DA TV -->
+                <!-- SEÇÃO 9: PAINEL DA TV E TOTEM -->
                 <section id="painel-tv" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></svg></span> 9. Painel da TV, Modal de Chamada e Totem</h2>
-                    <p>O <strong>Painel da TV</strong> exibe, em uma Smart TV ou monitor da recepção, quem está sendo chamado, sem precisar de login.</p>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></svg></span> 9. Painel da TV, Modal de Chamada e Totem (White-Label)</h2>
+                    <p>O <strong>Painel da TV</strong> exibe, em uma Smart TV ou monitor da recepção, quem está sendo chamado, sem precisar de login. O <strong>Totem de Autoatendimento</strong> serve para o próprio assistido confirmar sua chegada digitando o CPF.</p>
 
                     <h3 class="sub-title">9.1. Modal "Definir Local e Delegar" (Chamada na TV)</h3>
                     <p>Quando o Painel da TV está ativo na pauta e você clica em <strong>"Atender"</strong> ou <strong>"Chamar Próximo"</strong>, o SIGEP abre o modal inteligente <strong>Definir Local e Delegar</strong>:</p>
@@ -1045,8 +1017,15 @@
                         </div>
                     </div>
 
-                    <h3 class="sub-title">9.2. Configurar Painel TV e Proteção por Senha/PIN</h3>
-                    <p>Em <strong>Menu de Ações → Configurar Painel TV</strong> você escolhe:</p>
+                    <h3 class="sub-title">9.2. Totem de Autoatendimento Inteligente (White-Label)</h3>
+                    <p>O <strong>Totem</strong> (<code>totem.html</code>) é uma tela otimizada para tablets ou terminais na recepção, permitindo que o cidadão confirme sua chegada digitando o CPF ou a combinação de Nome e Agendamento. Ele possui integração nativa com impressoras térmicas para emissão de senha de papel.</p>
+                    <ul>
+                        <li><strong>Totem Local vs Totem Global:</strong> O Totem pode ser gerado para uma única pauta específica ou para atuar de forma Global, onde busca o cidadão em <em>todas as pautas abertas daquele prédio (Órgão) no dia atual</em>.</li>
+                        <li><strong>Personalização Visual (White-Label):</strong> O link do Totem aceita parâmetros na URL para customizar <strong>Cores, Logo e Título</strong>, adaptando-se instantaneamente à identidade visual do seu órgão de instalação.</li>
+                    </ul>
+
+                    <h3 class="sub-title">9.3. Configurar Painel TV e Proteção por Senha/PIN</h3>
+                    <p>Em <strong>Menu de Ações → Configurar Painel TV</strong> (dentro da pauta ou na Recepção Central), você escolhe:</p>
                     <ul>
                         <li><strong>Modo de visualização:</strong>
                             <ul class="mt-2">
@@ -1063,23 +1042,24 @@
                     <div class="warning-box">
                         <strong>Som na TV:</strong> os navegadores podem bloquear o som até que alguém clique na tela. Depois de abrir o painel na TV, clique uma vez na página para liberar o aviso sonoro.
                     </div>
-
-                    <h3 class="sub-title">9.3. Ativar ou Desativar o Painel da TV e Totem</h3>
-                    <p>Se a sua pauta não usa TV, desligue a opção <strong>Utilizar Painel da TV</strong> em <em>Editar Configurações</em>. Já a opção <strong>Totem</strong> do Menu de Ações abre a tela de autoatendimento desta pauta em uma nova aba, pronta para ser deixada em um tablet ou computador na recepção.</p>
                 </section>
 
                 <!-- SEÇÃO 10: COLETAS -->
                 <section id="coletas" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span> 10. Coletas Estatísticas e BI</h2>
-                    <p>O módulo de <strong>Coletas</strong> serve para levantar dados estatísticos (por exemplo, produtividade de uma vara) por meio de formulários próprios, separados das pautas.</p>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span> 10. Coletas Estatísticas e BI (PowerBI / Looker)</h2>
+                    <p>O módulo de <strong>Coletas Estatísticas (<code>coleta.html</code>)</strong> atua como um hub avançado de formulários dinâmicos, desenvolvido para alimentar plataformas de Business Intelligence (BI) de forma estruturada e em tempo real.</p>
                     <ol>
-                        <li>Na tela inicial, abra o módulo <strong>Coletas</strong>.</li>
-                        <li>Clique em <strong>Nova Coleta</strong> e dê um nome (ex.: "Produtividade - Varas de Família").</li>
-                        <li>Em <strong>Configurar</strong>, monte o formulário: o dicionário de campos e os links externos de preenchimento.</li>
-                        <li>Compartilhe os links gerados com quem vai preencher.</li>
-                        <li>Em <strong>Resultados</strong>, acompanhe os dados consolidados e os gráficos (BI).</li>
+                        <li>Na tela inicial, acesse o módulo <strong>Módulo Coletas & BI</strong>.</li>
+                        <li>Clique em <strong>Nova Coleta</strong> e defina o escopo temporal (data de início e fim da campanha).</li>
+                        <li>Construa o formulário de forma ilimitada, adicionando campos de <em>Texto Curto, Texto Longo, Número, Data, Seleção Simples e Múltipla Escolha</em>.</li>
+                        <li>Gere links externos, protegidos por senha, específicos para cada órgão.</li>
                     </ol>
-                    <p>Cada coleta mostra quantos campos tem cadastrados e quantos links já foram gerados.</p>
+                    <p><strong>Diferenciais Operacionais da Tela de Coleta:</strong> O formulário gerado para a equipe preencher (<code>coleta.html</code>) possui as seguintes funcionalidades de alto rendimento:</p>
+                    <ul>
+                        <li><strong>Envio Individual Rápido:</strong> Ao preencher apenas um campo específico do formulário (ex.: apenas a quantidade de pessoas atendidas), o servidor pode usar o botão azul <em>"Enviar apenas este dado"</em> localizado logo abaixo do campo, registrando o dado imediatamente no banco sem precisar submeter o formulário inteiro.</li>
+                        <li><strong>Log Operacional em Tempo Real:</strong> A tela de Coleta possui um <em>histórico persistente na base da página</em> que lista todos os envios feitos pela equipe na sessão atual, garantindo que o servidor saiba exatamente o que já foi enviado.</li>
+                        <li><strong>Chat de Suporte Nativo:</strong> Um botão flutuante permite que a equipe reporte erros estruturais no formulário diretamente à coordenação (o envio fica separado dos dados estatísticos no banco, mas registrado na auditoria).</li>
+                    </ul>
                 </section>
 
                 <!-- SEÇÃO 11: GESTÃO E GOVERNANÇA -->
@@ -1116,7 +1096,7 @@
 
                     <div class="alert-box">
                         <strong class="text-lg">Prazo de 7 dias e exclusão de dados pessoais</strong>
-                        <p class="mt-2 text-red-900">A pauta vale por <strong>7 dias a partir da data de atuação</strong> (ou da data de criação, quando não há data de atuação). Passado esse prazo, <strong>a pauta expira e não pode mais ser aberta</strong> (inclusive na Mesa Digital), e o sistema realiza a limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
+                        <p class="mt-2 text-red-900">A pauta vale por <strong>7 dias a partir da data de atuação</strong> (ou da data de criação, quando não há data de atuação). Passado esse prazo, <strong>a pauta expira e não pode mais ser aberta</strong> (inclusive na Mesa Digital e na Recepção Central), e o sistema realiza a limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
                     </div>
 
                     <div class="success-box">
@@ -1125,7 +1105,7 @@
                     </div>
 
                     <div class="note-box">
-                        <strong>Outras proteções:</strong> fechar a pauta exige a senha do dono; o link público pode ocultar os nomes dos assistidos; o Painel da TV pode ser protegido por PIN; e todas as ações importantes ficam registradas no log de auditoria.
+                        <strong>Outras proteções:</strong> fechar a pauta exige a senha do dono; o link público de captação bloqueia os dados originais após o envio; o Painel da TV pode ser protegido por PIN; e todas as ações sensíveis ficam registradas no log de auditoria.
                     </div>
                 </section>
 
@@ -1298,7 +1278,7 @@
 
                 <footer class="mt-20 pt-8 border-t border-slate-200 text-center text-sm text-slate-500 pb-10">
                     <p class="font-bold">Manual do Usuário SIGEP</p>
-                    <p class="mt-2">&copy; <script>document.write(new Date().getFullYear())</script> Sistema de Gerenciamento de Pauta Institucional</p>
+                    <p class="mt-2">&copy; <script>document.write(new Date().getFullYear())</script> Sistema Integrado de Gestão de Pautas</p>
                 </footer>
 
             </div>
