@@ -834,19 +834,36 @@ export const StatisticsService = {
         comLoading('export-stats-detalhado-btn', () => this.exportDetailedStatisticsPDF(pautaName, { sortedGroups, totalGeral }));
     },
 
+    // Tabelas dos relatórios por equipe: sem grade, só linhas horizontais
     tabelaGrupo(doc, yPos, margin, config) {
+        const { didParseCell: parseUsuario, ...resto } = config;
+        const ESCURO = [30, 41, 59], LINHA = [203, 213, 225];
         doc.autoTable({
             startY: yPos,
-            theme: 'grid',
-            headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold' },
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineWidth: 0, textColor: [71, 85, 105] },
+            headStyles: { fillColor: [241, 245, 249], textColor: ESCURO, fontStyle: 'bold', halign: 'center', fontSize: 8 },
+            alternateRowStyles: { fillColor: [252, 253, 254] },
             margin: { left: margin, right: margin, bottom: 40 },
-            ...config
+            ...resto,
+            didParseCell: (d) => {
+                if (d.section === 'head' && d.row.index > 0) d.cell.text = d.cell.text.map(t => String(t).toUpperCase());
+                if (parseUsuario) parseUsuario(d);
+            },
+            didDrawCell: (d) => {
+                const { x, y, width, height } = d.cell;
+                const linha = (esp, cor) => { d.doc.setDrawColor(...cor); d.doc.setLineWidth(esp); d.doc.line(x, y + height, x + width, y + height); };
+                if (d.section === 'head' && d.row.index === d.table.head.length - 1) linha(1.2, ESCURO);
+                else if (d.section === 'body') linha(0.5, LINHA);
+                d.doc.setLineWidth(0.2);
+            }
         });
         return doc.lastAutoTable.finalY + 15;
     },
 
+    // Faixa de título de cada equipe (slate escuro)
     tituloGrupo(texto, colSpan) {
-        return [{ content: texto, colSpan, styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center', fontSize: 10 } }];
+        return [{ content: texto, colSpan, styles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'left', fontSize: 9, cellPadding: { top: 6, bottom: 6, left: 8, right: 8 } } }];
     },
 
     async exportEquipesPDF(pautaName, dados) {
@@ -878,7 +895,7 @@ export const StatisticsService = {
                 didParseCell: (data) => {
                     if (data.section === 'body' && data.column.index >= 2) {
                         const zero = data.row.raw[2] === 0 || data.row.raw[2] === '-';
-                        data.cell.styles.textColor = zero ? [150, 150, 150] : [22, 163, 74];
+                        data.cell.styles.textColor = zero ? [148, 163, 184] : [30, 41, 59];
                     }
                 }
             });
@@ -966,25 +983,28 @@ export const StatisticsService = {
         };
 
         const kpis = [
-            { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74], bg: [240, 253, 244] },
-            { v: String(d.atendidosComAgendaCount || 0), l: 'Agend/Reagend', c: [16, 185, 129], bg: [236, 253, 245] },
-            { v: String(d.atendidosSemAgendaCount || 0), l: 'Efetivados', c: [20, 184, 166], bg: [240, 253, 250] },
-            { v: String(d.faltososCount), l: 'Faltosos', c: [220, 38, 38], bg: [254, 242, 242] },
-            { v: d.comparecimento + '%', l: 'Comparecimento', c: [79, 70, 229], bg: [238, 242, 255] },
-            { v: (d.avgTimeDirect > 0 ? d.avgTimeDirect : 15) + ' min', l: 'Tempo médio', c: [37, 99, 235], bg: [239, 246, 255] }
+            { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74] },
+            { v: String(d.atendidosComAgendaCount || 0), l: 'Agend/Reagend', c: [71, 85, 105] },
+            { v: String(d.atendidosSemAgendaCount || 0), l: 'Efetivados', c: [71, 85, 105] },
+            { v: String(d.faltososCount), l: 'Faltosos', c: [153, 27, 27] },
+            { v: d.comparecimento + '%', l: 'Comparecimento', c: [30, 41, 59] },
+            { v: (d.avgTimeDirect > 0 ? d.avgTimeDirect : 15) + ' min', l: 'Tempo médio', c: [30, 41, 59] }
         ];
         const kw = (largura - 6 * (kpis.length - 1)) / kpis.length;
         kpis.forEach((k, i) => {
             const x = margin + i * (kw + 6);
-            doc.setFillColor(...k.bg);
-            doc.roundedRect(x, y, kw, 52, 5, 5, 'F');
+            doc.setFillColor(241, 245, 249);
+            doc.roundedRect(x, y, kw, 52, 4, 4, 'F');
+            doc.setFillColor(...k.c);
+            doc.roundedRect(x, y + 8, 3, 36, 1.5, 1.5, 'F');
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(16);
-            doc.setTextColor(...k.c);
-            doc.text(k.v, x + kw / 2, y + 24, { align: 'center' });
-            doc.setFontSize(7.5);
-            doc.setTextColor(60, 60, 60);
-            doc.text(k.l, x + kw / 2, y + 40, { align: 'center' });
+            doc.setFontSize(15);
+            doc.setTextColor(30, 41, 59);
+            doc.text(k.v, x + 11, y + 26);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            doc.setTextColor(100, 116, 139);
+            doc.text(k.l, x + 11, y + 40);
         });
         y += 72;
 
@@ -994,7 +1014,7 @@ export const StatisticsService = {
             const wAt = largura * d.atendidosCount / total;
             doc.setFillColor(22, 163, 74);
             doc.rect(margin, y, wAt, 18, 'F');
-            doc.setFillColor(220, 38, 38);
+            doc.setFillColor(153, 27, 27);
             doc.rect(margin + wAt, y, largura - wAt, 18, 'F');
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
@@ -1017,20 +1037,20 @@ export const StatisticsService = {
             y += 10;
             y = desenharColunas(doc, margin, y, largura, 120, d.horarios, [
                 { nome: 'Atendidos', cor: [22, 163, 74], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) },
-                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.faltososPorHorario[h] || 0) }
+                { nome: 'Faltosos', cor: [153, 27, 27], valores: d.horarios.map(h => d.faltososPorHorario[h] || 0) }
             ]) + 14;
         }
 
         if (d.assuntos.length > 0) {
             const totalDem = d.totalDemandas;
-            const itens = d.assuntos.map(a => ({ label: a.nome, valor: a.total, cor: [249, 115, 22], rotulo: `${a.total} (${pctF(a.total, totalDem)}%)` }));
+            const itens = d.assuntos.map(a => ({ label: a.nome, valor: a.total, cor: [71, 85, 105], rotulo: `${a.total} (${pctF(a.total, totalDem)}%)` }));
             garantir(itens.length * 19 + 50);
             titulo('Principais assuntos', `Top ${itens.length} de ${totalDem} demandas registradas`);
             y = desenharBarrasH(doc, margin, y, largura, itens) + 14;
         }
 
         if (d.ranking.length > 0) {
-            const itens = d.ranking.map(r => ({ label: r.nome, valor: r.atendimentos, cor: [59, 130, 246], rotulo: `${r.atendimentos} (${pctF(r.atendimentos, d.atendidosCount)}%)` }));
+            const itens = d.ranking.map(r => ({ label: r.nome, valor: r.atendimentos, cor: [51, 65, 85], rotulo: `${r.atendimentos} (${pctF(r.atendimentos, d.atendidosCount)}%)` }));
             garantir(itens.length * 19 + 50);
             titulo('Ranking de atendimentos por colaborador', `Top ${itens.length}; porcentagem sobre o total de atendidos`);
             y = desenharBarrasH(doc, margin, y, largura, itens) + 6;
