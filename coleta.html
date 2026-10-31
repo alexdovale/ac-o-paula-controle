@@ -11,10 +11,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SIGEP Coleta">
     
-    <link rel="apple-touch-icon" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
-    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
+    <link rel="apple-touch-icon" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da">
+    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da">
     
-    <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"Coleta Estratégica SIGEP","short_name":"SIGEP Coleta","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#1d4ed8","icons":[{"src":"https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6","sizes":"192x192","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"Coleta Estratégica SIGEP","short_name":"SIGEP Coleta","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#1d4ed8","icons":[{"src":"https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da","sizes":"192x192","type":"image/png"}]}'>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -36,9 +36,10 @@
 
     <div id="app-coleta" class="bg-white w-full max-w-2xl sm:rounded-2xl sm:shadow-xl overflow-hidden min-h-screen sm:min-h-full sm:border border-slate-200 flex flex-col relative">
         
-        <div class="bg-slate-50 p-6 border-b border-slate-200 flex justify-center sticky top-0 z-10">
-            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                 alt="Logo SIGEP" class="h-10 sm:h-12 w-auto grayscale">
+        <!-- LOGO ATUALIZADA (NA BARRA DE TOPO) -->
+        <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-center sticky top-0 z-10">
+            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
+                 alt="Logo SIGEP" class="h-12 sm:h-14 w-auto object-contain">
         </div>
 
         <div id="loading-box" class="text-center py-20 animate-fade-in flex-1">
@@ -52,18 +53,24 @@
                 <p class="text-slate-400 mt-2 font-medium text-sm">Plataforma de Coleta Estratégica</p>
             </div>
             <div class="p-6 sm:p-8 space-y-6">
+                
+                <!-- LOGO ATUALIZADA (NA ÁREA DE LOGIN) -->
+                <div class="flex justify-center mb-6 mt-2">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-vertical-sem-fundo-sigla-extenso.PNG?alt=media&token=a8c815ac-6e66-415f-bc67-f4e93e02d302" alt="Logo SIGEP Vertical Extenso" class="h-28 sm:h-32 w-auto object-contain drop-shadow-sm">
+                </div>
+
                 <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center">
-                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">🏢 Identificação de Origem</p>
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center justify-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg> Identificação de Origem</p>
                     <p id="auth-orgao-nome" class="font-black text-slate-800 text-xl"></p>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">🔑 Credencial de Acesso</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg> Credencial de Acesso</label>
                     <input type="password" id="input-senha" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner" placeholder="Digite sua senha...">
                 </div>
                 <button id="btn-validar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4 uppercase tracking-wider active:scale-[0.98]">
                     Acessar Formulário
                 </button>
-                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-4 rounded-xl border border-red-200">❌ Credencial incorreta. Tente novamente.</p>
+                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-4 rounded-xl border border-red-200 flex justify-center items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Credencial incorreta. Tente novamente.</p>
             </div>
         </div>
 
@@ -71,16 +78,16 @@
             
             <div id="header-coleta" class="bg-slate-50 border-b border-slate-200 p-4 px-6 flex flex-row justify-between items-center text-xs gap-3">
                 <div class="truncate">
-                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">🏢 Unidade Logada:</p>
+                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg> Unidade Logada:</p>
                     <span class="font-black text-slate-700 text-sm truncate block" id="label-orgao-logado">--</span>
                 </div>
-                <button onclick="window.location.reload()" class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-4 py-2.5 rounded-lg transition shadow-sm uppercase tracking-wide whitespace-nowrap active:bg-slate-200">
-                    Sair
+                <button onclick="window.location.reload()" class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-4 py-2.5 rounded-lg transition shadow-sm uppercase tracking-wide whitespace-nowrap active:bg-slate-200 flex items-center gap-1">
+                    Sair <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 </button>
             </div>
 
             <div class="bg-blue-700 p-6 sm:p-8 text-white border-b-4 border-blue-800 relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl">📊</div>
+                <div class="absolute top-0 right-0 p-4 opacity-20"><svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
                 <h1 id="titulo-coleta" class="text-xl sm:text-2xl font-black leading-tight uppercase tracking-wide relative z-10"></h1>
                 <p class="text-blue-200 text-sm mt-2 font-medium relative z-10">Preencha os dados abaixo com atenção.</p>
             </div>
@@ -88,18 +95,18 @@
             <form id="form-estatisticas" class="p-4 sm:p-8 space-y-6 flex-1">
                 
                 <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wide">👤 Nome do Operador <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wide flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> Nome do Operador <span class="text-red-500">*</span></label>
                     <input type="text" id="input-responsavel" required placeholder="Ex: João Silva (Matrícula / Cargo)" class="w-full p-4 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm">
                 </div>
 
                 <div class="border-t border-slate-200 pt-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-2">📋 Variáveis de Coleta</h3>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-2 flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg> Variáveis de Coleta</h3>
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
                 <div class="pt-8 border-t-2 border-slate-100 mt-8 pb-4">
                     <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-sm sm:text-base uppercase tracking-widest py-4 sm:py-5 rounded-xl transition shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.99]">
-                        <span>📤</span> ENVIAR FORMULÁRIO COMPLETO
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> ENVIAR FORMULÁRIO COMPLETO
                     </button>
                     <p class="text-[10px] text-slate-400 text-center mt-3 font-medium uppercase tracking-wide">Utilize este botão para enviar todos os campos preenchidos de uma só vez.</p>
                 </div>
@@ -107,7 +114,7 @@
 
             <div id="historico-container" class="hidden border-t-8 border-slate-100 p-4 sm:p-8 bg-slate-50 pb-20">
                 <div class="flex justify-between items-center mb-5">
-                    <h4 class="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-widest">📊 Log Operacional <br><span class="font-medium text-[9px]">Sessão Atual / Histórico Recente</span></h4>
+                    <h4 class="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg><div>Log Operacional <br><span class="font-medium text-[9px]">Sessão Atual / Histórico Recente</span></div></h4>
                     <span class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 whitespace-nowrap">Em tempo real</span>
                 </div>
                 <div id="historico-envios-lista" class="space-y-3"></div>
@@ -115,7 +122,7 @@
 
             <!-- BOTÃO FLUTUANTE DE CHAT / SUPORTE -->
             <button type="button" onclick="document.getElementById('modal-mensagem-suporte').classList.remove('hidden')" class="fixed bottom-5 left-5 z-40 bg-slate-800 hover:bg-slate-900 text-white rounded-full p-4 shadow-2xl transition transform hover:scale-105 flex items-center justify-center group active:scale-95 border-2 border-slate-700">
-                <span class="text-xl">💬</span>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                 <span class="max-w-0 overflow-hidden group-hover:max-w-[200px] transition-all duration-300 ease-in-out whitespace-nowrap text-xs font-bold pl-0 group-hover:pl-3 hidden sm:inline-block uppercase tracking-wider">
                     Suporte
                 </span>
@@ -131,14 +138,14 @@
                     <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Falar com a Coordenação</h3>
                     <p class="text-[10px] text-slate-500 font-bold uppercase mt-1">Dúvidas, Correções ou Suporte</p>
                 </div>
-                <button onclick="document.getElementById('modal-mensagem-suporte').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
+                <button onclick="document.getElementById('modal-mensagem-suporte').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-3xl transition">&times;</button>
             </div>
             
             <div class="space-y-4">
                 <textarea id="input-mensagem-suporte" rows="4" placeholder="Escreva sua mensagem aqui..." class="w-full p-4 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y bg-slate-50 focus:bg-white transition"></textarea>
                 
-                <button type="button" id="btn-enviar-mensagem" onclick="window.enviarMensagemSuporte(this)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center gap-2">
-                    <span>✉️</span> Enviar Mensagem
+                <button type="button" id="btn-enviar-mensagem" onclick="window.enviarMensagemSuporte(this)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl transition shadow-lg disabled:opacity-50 flex justify-center items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg> Enviar Mensagem
                 </button>
             </div>
         </div>
@@ -149,7 +156,9 @@
     <!-- MODAL DE AVISO (PUSH NOTIFICATION) -->
     <div id="modal-aviso-push" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[100] hidden p-4 animate-fade-in backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-sm w-full p-8 shadow-2xl border-2 border-amber-400 text-center">
-            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 font-black">📢</div>
+            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 font-black">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+            </div>
             <h3 class="text-xl font-black text-slate-800 uppercase tracking-wide mb-2">Comunicado Importante</h3>
             <p id="aviso-push-mensagem" class="text-sm text-slate-600 font-medium leading-relaxed mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100"></p>
             <button id="btn-ciente-aviso" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition shadow-lg uppercase tracking-widest text-sm">
@@ -193,7 +202,9 @@
 
         function showError(msg) {
             document.getElementById('loading-box').innerHTML = `
-                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 font-black">!</div>
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 font-black">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
                 <p class="text-slate-800 font-black text-lg uppercase tracking-wide mb-2">Acesso Indisponível</p>
                 <p class="text-slate-500 font-medium text-sm px-6 text-center leading-relaxed">${msg}</p>
                 <button onclick="window.location.reload()" class="mt-8 bg-slate-800 hover:bg-slate-900 text-white px-8 py-4 rounded-xl font-bold transition text-xs uppercase tracking-widest shadow-lg">Recarregar Aplicação</button>
@@ -221,7 +232,6 @@
             return null;
         }
 
-        // SISTEMA DE AVISOS (NOTIFICAÇÃO PUSH NA ABERTURA)
         function verificarAvisos() {
             const avisos = coletaConfig.avisos || [];
             if (avisos.length === 0) return;
@@ -260,7 +270,6 @@
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Ignora as mensagens de suporte no histórico de dados estatísticos da tela
                     if (!data.isMensagemSuporte) {
                         envios.push({ id: doc.id, ...data });
                     }
@@ -292,13 +301,13 @@
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm active:bg-slate-50 transition">
                     <div class="flex justify-between items-center p-4 bg-slate-100 cursor-pointer btn-toggle-detalhes" data-id="${item.id}">
                         <div class="flex items-center gap-3">
-                            <span class="font-bold text-slate-700 text-xs">🕒 ${item.horario}</span>
+                            <span class="font-bold text-slate-700 text-xs flex items-center gap-1.5"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${item.horario}</span>
                             <span class="text-[10px] text-slate-500 font-bold uppercase hidden sm:inline-block truncate max-w-[120px]">${escapeHTML(item.responsavel)}</span>
-                            ${item.isIndividual ? `<span class="bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[9px] font-black uppercase">🚀 Rápido</span>` : ''}
+                            ${item.isIndividual ? `<span class="bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[9px] font-black uppercase flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Rápido</span>` : ''}
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 rounded font-black text-[9px] uppercase tracking-wider ${item.sync ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-white'}">
-                                ${item.sync ? '✅ Salvo' : '⚠️ Pendente'}
+                            <span class="px-2 py-1 rounded font-black text-[9px] uppercase tracking-wider flex items-center gap-1 ${item.sync ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-white'}">
+                                ${item.sync ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Salvo' : '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Pendente'}
                             </span>
                         </div>
                     </div>
@@ -416,8 +425,8 @@
                     inputHtml = `
                         <select id="f_${campo.id}" class="${baseClassSelect}">
                             <option value="">Aguardando seleção...</option>
-                            <option value="Sim">✅ Sim, Confirmo</option>
-                            <option value="Não">❌ Não</option>
+                            <option value="Sim">Sim, Confirmo</option>
+                            <option value="Não">Não</option>
                         </select>`;
                 } else if (campo.tipo === 'selecao') {
                     inputHtml = `
@@ -441,7 +450,7 @@
                     botaoRapidoHtml = `
                         <div class="mt-4 flex justify-end">
                             <button type="button" onclick="window.enviarCampoIndividual('${campo.id}', this)" class="bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 border border-blue-200 font-black px-4 py-4 sm:py-2.5 rounded-xl sm:rounded-lg text-xs uppercase tracking-widest transition shadow-sm flex justify-center items-center gap-2 transform active:scale-[0.99] w-full sm:w-auto">
-                                <span>🚀</span> ENVIAR APENAS ESTE DADO
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> ENVIAR APENAS ESTE DADO
                             </button>
                         </div>
                     `;
@@ -528,7 +537,7 @@
         window.enviarCampoIndividual = async function(campoId, btnElement) {
             const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
             if (!nomeResponsavel) {
-                mostrarToast("⚠️ Preencha o nome do responsável (👤) no topo da página.", "warning");
+                mostrarToast("Preencha o nome do responsável no topo da página.", "warning");
                 document.getElementById('input-responsavel').scrollIntoView({behavior: 'smooth'});
                 setTimeout(() => document.getElementById('input-responsavel').focus(), 500);
                 return;
@@ -541,7 +550,7 @@
 
             const val = extrairValorCampo(campoId, campoDef.tipo);
             if (val === '' || val === null) {
-                mostrarToast(`⚠️ O campo "${campoDef.label}" precisa estar preenchido.`, "warning");
+                mostrarToast(`O campo "${campoDef.label}" precisa estar preenchido.`, "warning");
                 return;
             }
 
@@ -551,24 +560,21 @@
 
             const originalHTML = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = "⏳ Enviando...";
+            btnElement.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Enviando...`;
 
             const sucesso = await dispararPayload(respostas, nomeResponsavel, true);
 
             if (sucesso) {
                 limparCampoUI(campoId, campoDef.tipo);
-                mostrarToast("✅ Lançamento unitário validado e salvo!", "success");
+                mostrarToast("Lançamento unitário validado e salvo!", "success");
             } else {
-                mostrarToast("❌ Falha de rede. O registro falhou.", "error");
+                mostrarToast("Falha de rede. O registro falhou.", "error");
             }
 
             btnElement.disabled = false;
             btnElement.innerHTML = originalHTML;
         };
 
-        // ==========================================
-        // MENSAGEM / SUPORTE AO ADMIN (NOVIDADE)
-        // ==========================================
         window.enviarMensagemSuporte = async function(btnElement) {
             const texto = document.getElementById('input-mensagem-suporte').value.trim();
             if (!texto) {
@@ -584,23 +590,22 @@
                 orgaoOrigem: linkConfig.orgao,
                 responsavel: nomeResponsavel,
                 timestamp: new Date().toISOString(),
-                isMensagemSuporte: true, // FLAG QUE DIFERENCIA MENSAGEM DE DADOS DO BI
+                isMensagemSuporte: true,
                 textoMensagem: texto
             };
 
             const originalHTML = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = "⏳ Enviando mensagem...";
+            btnElement.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Enviando mensagem...`;
 
             try {
-                // Salva na mesma coleção, mas a flag protege o BI
                 await addDoc(collection(db, "respostas_coleta"), payload);
-                mostrarToast("✅ Sua mensagem foi enviada à coordenação.", "success");
+                mostrarToast("Sua mensagem foi enviada à coordenação.", "success");
                 document.getElementById('input-mensagem-suporte').value = '';
                 document.getElementById('modal-mensagem-suporte').classList.add('hidden');
             } catch (err) {
                 console.error(err);
-                mostrarToast("❌ Erro de conexão ao enviar a mensagem.", "error");
+                mostrarToast("Erro de conexão ao enviar a mensagem.", "error");
             }
 
             btnElement.disabled = false;
@@ -630,23 +635,23 @@
             });
 
             if (camposPreechidosCount === 0) {
-                mostrarToast("⚠️ Formule ao menos uma variável para submissão.", "warning");
+                mostrarToast("Formule ao menos uma variável para submissão.", "warning");
                 return;
             }
 
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = "⏳ PROCESSANDO TRANSMISSÃO...";
+            btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> PROCESSANDO TRANSMISSÃO...`;
 
             const sucesso = await dispararPayload(respostas, nomeResponsavel, false);
 
             if (sucesso) {
                 camposDesteLink.forEach(campo => limparCampoUI(campo.id, campo.tipo));
-                mostrarToast("✅ Formulário registrado com sucesso no Banco.", "success");
+                mostrarToast("Formulário registrado com sucesso no Banco.", "success");
                 
                 document.getElementById('historico-container').scrollIntoView({behavior: 'smooth', block: 'end'});
             } else {
-                mostrarToast("❌ Transmissão comprometida.", "error");
+                mostrarToast("Transmissão comprometida.", "error");
             }
             
             btn.disabled = false;
