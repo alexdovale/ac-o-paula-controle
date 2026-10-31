@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIGEP • Gestão de Documentos</title>
     <!-- Favicon Oficial -->
-    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
+    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sem-texto-sem-fundo.PNG?alt=media&token=71f18590-da74-40f9-a692-20843d4567da">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -20,15 +21,17 @@
         <!-- Cabeçalho Profissional -->
         <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-slate-200/80">
             <div class="flex items-center gap-4 w-full sm:w-auto">
-                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner shrink-0">
-                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                         alt="Logo SIGEP" class="h-10 w-10 object-contain">
-                </div>
+                
+                <!-- LOGO VERTICAL ATUALIZADA (SEM FUNDO/SOMBREAMENTO) -->
+                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/Logo%2FLogo-sigla-texto-vertical.PNG?alt=media&token=04da91f2-0a53-4d4a-ae10-287ab7bdc86e" 
+                     alt="Logo SIGEP" 
+                     class="h-12 sm:h-14 w-auto object-contain shrink-0">
+                
                 <div>
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                         SIGEP • Gestão de Documentos
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando status da pauta...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5"><svg class="w-3.5 h-3.5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Verificando status da pauta...</p>
                 </div>
             </div>
             <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
@@ -40,18 +43,19 @@
         <!-- Barra de Busca Avançada -->
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="relative w-full sm:w-[420px]">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">🔍</span>
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></span>
                 <input type="search" id="filtro-assistido" placeholder="Pesquisar por nome do assistido..." 
                     class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all-custom font-medium">
             </div>
-            <div class="text-xs text-slate-600 font-bold bg-slate-100/70 px-4 py-2.5 rounded-xl border border-slate-200/60 w-full sm:w-auto text-center" id="contador-status">
-                0 presentes na fila
+            <div class="text-xs text-slate-600 font-bold bg-slate-100/70 px-4 py-2.5 rounded-xl border border-slate-200/60 w-full sm:w-auto text-center flex items-center justify-center gap-1.5" id="contador-status">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> 0 presentes na fila
             </div>
         </div>
 
         <!-- Lista de Assistidos -->
         <div id="lista-assistidos-rapida" class="space-y-3.5">
-            <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">
+            <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs flex flex-col items-center justify-center gap-2">
+                <svg class="w-6 h-6 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 Carregando registros da pauta...
             </div>
         </div>
@@ -91,7 +95,6 @@
             if (!pautaId) {
                 exibirErroExpiracao("Pauta não informada", "Parâmetro <b>pautaId</b> ausente na URL de acesso.");
             } else {
-                // Validação de Fechamento manual no Firebase antes de carregar a lista
                 verificarValidadePauta(db, pautaId).then((pautaValida) => {
                     if (!pautaValida) return;
 
@@ -113,7 +116,8 @@
         } catch (erroInit) {
             console.error("Erro crítico:", erroInit);
             document.getElementById('lista-assistidos-rapida').innerHTML = `
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Erro ao inicializar serviços do Firebase. Verifique o arquivo config.js.
                 </div>`;
         }
@@ -128,7 +132,6 @@
 
                 const dataPauta = pautaDoc.data();
 
-                // Verifica se a pauta foi fechada manualmente pelo operador
                 if (dataPauta.isClosed === true) {
                     exibirErroExpiracao("Pauta Encerrada", "Este link não está mais acessível pois a pauta foi fechada pelo operador responsável.");
                     return false;
@@ -146,7 +149,7 @@
             document.getElementById('conteudo-principal').innerHTML = `
                 <div class="min-h-[70vh] flex items-center justify-center p-4">
                     <div class="bg-white p-8 rounded-2xl shadow-xl border border-amber-200 text-center max-w-md w-full">
-                        <span class="text-4xl mb-3 block">🔒</span>
+                        <span class="mb-4 flex justify-center text-amber-500"><svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></span>
                         <h2 class="font-black text-slate-800 text-base mb-1">${titulo}</h2>
                         <p class="text-xs text-slate-500 mt-2">${mensagem}</p>
                         <div class="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
@@ -159,15 +162,14 @@
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
             if (!modoLeituraExterna) {
-                descEl.innerHTML = "Modo Operador: Uploads, múltiplos links e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
+                descEl.innerHTML = "Modo Operador: Ferramentas liberadas <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
-                descEl.innerHTML = "Modo Equipe (Leitura): Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
+                descEl.innerHTML = "Modo Equipe (Leitura): Apenas visualização <span class='text-violet-600 font-bold'>● Restrito</span>";
             }
             if (window._assistidosCache) renderizarLista(window._assistidosCache);
         }
 
         function iniciarEscutaFirebase(database, idDaPauta) {
-            // Monitora fechamento em tempo real
             onSnapshot(doc(database, "pautas", idDaPauta), (docSnap) => {
                 if (docSnap.exists() && docSnap.data().isClosed === true) {
                     exibirErroExpiracao("Pauta Encerrada", "O operador encerrou esta pauta neste momento. O acesso aos documentos foi bloqueado.");
@@ -195,10 +197,10 @@
             const termoFiltro = document.getElementById('filtro-assistido').value.toLowerCase().trim();
 
             const filtrados = assistidos.filter(a => (a.name || '').toLowerCase().includes(termoFiltro));
-            document.getElementById('contador-status').textContent = filtrados.length + " assistidos presentes";
+            document.getElementById('contador-status').innerHTML = `<svg class="w-4 h-4 text-slate-500 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg> ${filtrados.length} presentes na fila`;
 
             if (filtrados.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">Nenhum assistido com chegada marcada encontrado.</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs flex flex-col items-center justify-center gap-2"><svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> Nenhum assistido com chegada marcada encontrado.</div>`;
                 return;
             }
 
@@ -237,14 +239,14 @@
                             <div>
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <h3 class="font-black text-slate-900 text-sm sm:text-base">${nomeSeguro}</h3>
-                                    <span class="bg-violet-50 text-violet-700 border border-violet-200/60 text-[10px] font-black px-2.5 py-0.5 rounded-lg">Agendamento: #${numAgendamento}</span>
-                                    <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg">⏰ ${horarioAgendado}</span>
-                                    <span class="bg-cyan-50 text-cyan-800 border border-cyan-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg">📑 Triagem: ${triagemStatus}</span>
+                                    <span class="bg-violet-50 text-violet-700 border border-violet-200/60 text-[10px] font-black px-2.5 py-0.5 rounded-lg flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path></svg> ${numAgendamento}</span>
+                                    <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${horarioAgendado}</span>
+                                    <span class="bg-cyan-50 text-cyan-800 border border-cyan-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> ${triagemStatus}</span>
                                 </div>
                                 <p class="text-[11px] text-slate-400 font-medium mt-1">Status na Fila: <span class="font-bold text-slate-700 uppercase">${statusSeguro}</span></p>
                             </div>
-                            <button ${onclickVerde} ${disabledAttr} class="px-4 py-2 rounded-xl font-black text-xs transition-all-custom shadow-sm shrink-0 ${btnVerdeClass}">
-                                ${a.noVerde ? '✅ No Verde / CNP' : '⏳ Pendente no Verde'}
+                            <button ${onclickVerde} ${disabledAttr} class="px-4 py-2 rounded-xl font-black text-xs transition-all-custom shadow-sm shrink-0 flex items-center gap-1.5 ${btnVerdeClass}">
+                                ${a.noVerde ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> No Verde / CNP' : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Pendente Verde'}
                             </button>
                         </div>`;
 
@@ -252,19 +254,19 @@
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
                             <div class="flex-1 w-full">
-                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Fazer Upload de PDF (Adobe Scan / Arquivo):</label>
+                                <label class="text-[10px] font-black uppercase text-violet-700 mb-1 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Upload de PDF (Adobe Scan / Arquivo):</label>
                                 <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-700 cursor-pointer">
                             </div>
-                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 self-end shadow-sm">
-                                🚀 Enviar para Nuvem
+                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 self-end shadow-sm flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Enviar para Nuvem
                             </button>
                         </div>
 
                         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-2 items-center">
                             <input type="text" id="desc-novo-${a.id}" placeholder="Descrição (Ex: RG, CPF, Certidão...)" class="w-full sm:w-1/3 p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
                             <input type="text" id="link-novo-${a.id}" placeholder="Cole o URL do documento aqui..." class="flex-1 w-full p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
-                            <button onclick="adicionarLinkManual('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shrink-0">
-                                ➕ Adicionar Link
+                            <button onclick="adicionarLinkManual('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shrink-0 flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Adicionar Link
                             </button>
                         </div>`;
                 }
@@ -276,21 +278,21 @@
                     listaDocs.forEach((docItem, index) => {
                         const isFirebaseStorage = docItem.url.includes('firebasestorage.googleapis.com');
                         const attrDownload = isFirebaseStorage ? 'download' : '';
-                        const textoBotaoLink = isFirebaseStorage ? '👁️ Abrir / Baixar' : '🌐 Abrir Link';
+                        const svgBotaoLink = isFirebaseStorage ? '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> Abrir / Baixar' : '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg> Abrir Link';
 
                         htmlFinal += `
                             <div class="flex flex-col sm:flex-row gap-2 items-center bg-slate-100/70 p-2.5 rounded-xl border border-slate-200">
-                                <span class="text-xs font-bold text-slate-700 w-full sm:w-1/3 truncate" title="${escapeHTML(docItem.descricao)}">📄 ${escapeHTML(docItem.descricao)}</span>
+                                <span class="text-xs font-bold text-slate-700 w-full sm:w-1/3 truncate flex items-center gap-1.5" title="${escapeHTML(docItem.descricao)}"><svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> ${escapeHTML(docItem.descricao)}</span>
                                 <input type="text" value="${escapeHTML(docItem.url)}" class="flex-1 w-full p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none text-slate-600" readonly>
                                 <div class="flex gap-1.5 w-full sm:w-auto justify-end">
                                     <a href="${docItem.url}" target="_blank" ${attrDownload} onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Consultou documento: ${escapeHTML(docItem.descricao)}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg text-xs transition flex items-center justify-center gap-1 shrink-0">
-                                        ${textoBotaoLink}
+                                        ${svgBotaoLink}
                                     </a>`;
                         
                         if (!modoLeituraExterna) {
                             htmlFinal += `
                                     <button onclick="removerDocumento('${pautaId}', '${a.id}', '${docItem.url}')" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-2 rounded-lg text-xs transition" title="Excluir link">
-                                        🗑️
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                     </button>`;
                         }
 
@@ -305,7 +307,7 @@
                         <div class="flex justify-end mt-1">
                             <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${primeiroLink}')" 
                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm">
-                                💬 Avisar Equipe via WhatsApp (${listaDocs.length} docs)
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> Avisar Equipe via WhatsApp (${listaDocs.length} docs)
                             </button>
                         </div>`;
                 }
@@ -484,3 +486,4 @@
     </script>
 </body>
 </html>
+
