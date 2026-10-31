@@ -1,4 +1,3 @@
-
 // js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
 
 import {
@@ -19,9 +18,10 @@ const DEFAULTS = {
     toleranciaMinutos: 15,
     useDelegationFlow: false,
     useDistributionFlow: false,
-    useTvPanel: true, // <-- MODO TV ATIVADO POR PADRÃO
-    tvToken: '',      // <-- TOKEN DE TV PADRÃO VAZIO
-    type: 'agendamento',
+    useTvPanel: true,
+    tvToken: '',      
+    naturezaFila: 'agendado', // Novo padrão: agendado ou avulso
+    type: 'agendamento', // Mantido por retrocompatibilidade
     tipo: 'normal'
 };
 
@@ -59,7 +59,6 @@ async function verificarNomeDuplicadoHoje(db, nome, userId) {
 
 export const PautaConfigService = {
 
-    // Abre a janela de Configuração da Pauta (modo operante, fluxos, tolerância...)
     abrirModalEdicao(app = this.app) {
         if (!app?.currentPautaData) return;
         document.getElementById('bi-links-modal')?.classList.add('hidden');
@@ -79,20 +78,9 @@ export const PautaConfigService = {
     _setupEventListeners() {
         const app = this._app;
 
+        // O botão agora abre diretamente o Modal de Criação (pulando a tela velha de tipo)
         document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
-            this._abrirModalTipo();
-        });
-
-        document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
-            document.getElementById('pauta-type-modal').classList.add('hidden');
-        });
-
-        document.querySelectorAll('.pauta-type-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const type = e.currentTarget.dataset.type;
-                document.getElementById('pauta-type-modal').classList.add('hidden');
-                this._abrirModalCriacao(type);
-            });
+            this._abrirModalCriacao(); 
         });
 
         document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
@@ -121,14 +109,14 @@ export const PautaConfigService = {
             document.getElementById('create-pauta-modal').classList.add('hidden');
         });
 
-        document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
+        // AVANÇAR DA TELA DE CRIAÇÃO PARA AS REGRAS DA FILA
+        document.getElementById('btn-avancar-pauta')?.addEventListener('click', () => {
             const modoEvento = this._app?.currentMode === 'evento';
             const unidade = document.getElementById('create-pauta-unidade-select')?.value;
             const dataOp = document.getElementById('create-pauta-date-input')?.value;
-            const name = document.getElementById('create-pauta-name-input').value.trim();
+            const name = document.getElementById('create-pauta-name-input')?.value.trim() || 'Nova Pauta'; 
 
             if (!modoEvento && !unidade) { showNotification("Selecione a Unidade Vinculada.", "error"); return; }
-            if (!name) { showNotification("O nome da pauta não pode ser vazio.", "error"); return; }
             if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
 
             document.getElementById('create-pauta-modal').classList.add('hidden');
@@ -170,48 +158,33 @@ export const PautaConfigService = {
         document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
             await this.salvarEdicaoConfig();
         });
+        
+        // Listener para o Checkbox de Multi-Salas mostrar/esconder o form de salas
+        document.getElementById('check-multisalas')?.addEventListener('change', (e) => {
+            const roomConfig = document.getElementById('room-config-container');
+            if(roomConfig) {
+                if(e.target.checked) {
+                    roomConfig.classList.remove('hidden');
+                    this._renderCustomRooms();
+                } else {
+                    roomConfig.classList.add('hidden');
+                }
+            }
+        });
     },
 
     // ── MODAIS E INJEÇÕES DINÂMICAS ────────────────────────────────────────────
 
-    _abrirModalTipo() {
-        document.getElementById('pauta-type-modal').classList.remove('hidden');
-    },
-
-    _abrirModalCriacao(type) {
+    _abrirModalCriacao() {
         const app = this._app;
-
-        let createModal = document.getElementById('create-pauta-modal');
-        if (!createModal) {
-            if (app && typeof app.abrirModalCriarPauta === 'function') {
-                app.tipoPautaSelecionado = type;
-                app.abrirModalCriarPauta();
-                createModal = document.getElementById('create-pauta-modal');
-            }
-        }
+        const createModal = document.getElementById('create-pauta-modal');
 
         if (!createModal) {
-            console.error("Modal 'create-pauta-modal' não foi encontrado ou gerado.");
+            console.error("Modal 'create-pauta-modal' não foi encontrado.");
             return;
         }
 
-        createModal.dataset.pautaType = type;
-
-        const roomConfig = document.getElementById('room-config-container');
-        if (roomConfig) {
-            const createModalSpace = createModal.querySelector('.space-y-4') || createModal.querySelector('.p-4');
-            if (createModalSpace && !createModalSpace.contains(roomConfig)) {
-                createModalSpace.appendChild(roomConfig);
-            }
-
-            if (type === 'multisala') {
-                roomConfig.classList.remove('hidden');
-                app.customRoomsList = [];
-                this._renderCustomRooms();
-            } else {
-                roomConfig.classList.add('hidden');
-            }
-        }
+        app.customRoomsList = []; // Limpa salas antigas
 
         const isEvento = app?.currentMode === 'evento';
         const orgaoWrapper = document.getElementById('orgao-integration-wrapper');
@@ -222,7 +195,7 @@ export const PautaConfigService = {
         this._injetarCampoData();
         this._injetarCampoToleranciaCriacao(); 
         this._adicionarSelectorModo();
-        this._injetarInterruptorTVCriacao(); // <-- INTERRUPTOR E TOKEN DE TV
+        this._injetarInterruptorTVCriacao();
 
         createModal.classList.remove('hidden');
     },
@@ -233,7 +206,7 @@ export const PautaConfigService = {
         if (!list) return;
 
         if (!app.customRoomsList || app.customRoomsList.length === 0) {
-            list.innerHTML = `<p class="text-xs text-gray-400 italic text-center py-2">Nenhum local adicionado.</p>`;
+            list.innerHTML = `<p class="text-xs text-gray-400 italic text-center py-2">Nenhuma sala/local adicionado.</p>`;
             return;
         }
 
@@ -247,16 +220,13 @@ export const PautaConfigService = {
 
     async _injetarSeletorUnidade() {
         const app = this._app;
-
         const isEvento = app?.currentMode === 'evento';
         if (isEvento) {
-            const existing = document.getElementById('pauta-unidade-container');
-            if (existing) existing.remove();
+            document.getElementById('pauta-unidade-container')?.remove();
             return;
         }
 
         let unidadeContainer = document.getElementById('pauta-unidade-container');
-
         if (!unidadeContainer) {
             const nameInput = document.getElementById('create-pauta-name-input');
             if (!nameInput) return;
@@ -266,7 +236,7 @@ export const PautaConfigService = {
             unidadeContainer.className = 'mb-4';
             unidadeContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-700 mb-1">${ico('building')} Unidade Vinculada <span class="text-red-500">*</span></label>
-                <select id="create-pauta-unidade-select" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                <select id="create-pauta-unidade-select" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
                     <option value="">Carregando unidades...</option>
                 </select>
                 <p class="text-[10px] text-gray-500 mt-1">Selecione o local onde esta pauta ocorrerá.</p>
@@ -275,17 +245,14 @@ export const PautaConfigService = {
         }
 
         const select = document.getElementById('create-pauta-unidade-select');
-
         try {
             const authUser = app.auth.currentUser;
             if (!authUser) return;
 
             const userDoc = await getDoc(doc(app.db, "users", authUser.uid));
             const userData = userDoc.exists() ? userDoc.data() : null;
-
             const snap = await getDocs(collection(app.db, "estrutura_unidades"));
             const todasUnidades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
             let userUnits = [];
 
             if (userData?.role === 'superadmin') {
@@ -309,7 +276,6 @@ export const PautaConfigService = {
 
     _injetarCampoData() {
         let dateInput = document.getElementById('create-pauta-date-input');
-
         if (!dateInput) {
             const nameInput = document.getElementById('create-pauta-name-input');
             if (nameInput) {
@@ -318,13 +284,12 @@ export const PautaConfigService = {
                 dateContainer.className = 'mb-4 mt-4';
                 dateContainer.innerHTML = `
                     <label class="block text-sm font-medium text-gray-700 mb-1">${ico('calendar')} Data de Operação <span class="text-red-500">*</span></label>
-                    <input type="date" id="create-pauta-date-input" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                    <input type="date" id="create-pauta-date-input" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
                 `;
                 nameInput.parentNode.insertBefore(dateContainer, nameInput.nextSibling);
                 dateInput = document.getElementById('create-pauta-date-input');
             }
         }
-
         if (dateInput && !dateInput.value) {
             dateInput.value = new Date().toISOString().split('T')[0];
         }
@@ -332,7 +297,6 @@ export const PautaConfigService = {
 
     _injetarCampoToleranciaCriacao() {
         let tolInput = document.getElementById('create-pauta-tolerancia-input');
-
         if (!tolInput) {
             const dateContainer = document.getElementById('pauta-data-container');
             if (dateContainer) {
@@ -341,7 +305,7 @@ export const PautaConfigService = {
                 tolContainer.className = 'mb-4 mt-4';
                 tolContainer.innerHTML = `
                     <label class="block text-sm font-medium text-gray-700 mb-1">${ico('clock')} Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
-                    <input type="number" id="create-pauta-tolerancia-input" value="${DEFAULTS.toleranciaMinutos}" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                    <input type="number" id="create-pauta-tolerancia-input" value="${DEFAULTS.toleranciaMinutos}" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
                 dateContainer.parentNode.insertBefore(tolContainer, dateContainer.nextSibling);
@@ -351,7 +315,6 @@ export const PautaConfigService = {
 
     _injetarCampoToleranciaEdicao(pautaData) {
         let tolInput = document.getElementById('edit-pauta-tolerancia-input');
-
         if (!tolInput) {
             const dateInput = document.getElementById('edit-pauta-date-input');
             if (dateInput) {
@@ -360,14 +323,13 @@ export const PautaConfigService = {
                 tolContainer.className = 'mb-4 mt-4';
                 tolContainer.innerHTML = `
                     <label class="block text-sm font-medium text-gray-700 mb-1">${ico('clock')} Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
-                    <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                    <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
                 dateInput.parentNode.parentNode.insertBefore(tolContainer, dateInput.parentNode.nextSibling);
                 tolInput = document.getElementById('edit-pauta-tolerancia-input');
             }
         }
-
         if (tolInput) {
             tolInput.value = pautaData.toleranciaMinutos !== undefined ? pautaData.toleranciaMinutos : DEFAULTS.toleranciaMinutos;
         }
@@ -380,19 +342,18 @@ export const PautaConfigService = {
             if (ref && ref.parentNode) {
                 containerCriacao = document.createElement('div');
                 containerCriacao.id = 'pauta-tv-container-criacao';
-                containerCriacao.className = 'mb-4 mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 space-y-3';
+                containerCriacao.className = 'mb-4 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3';
                 containerCriacao.innerHTML = `
                     <label class="flex items-center cursor-pointer gap-3">
-                        <input type="checkbox" id="check-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
+                        <input type="checkbox" id="check-use-tv-panel" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" checked>
                         <div>
                             <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
                             <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV.</span>
                         </div>
                     </label>
-                    <div class="pt-2 border-t border-indigo-200">
+                    <div class="pt-2 border-t border-blue-200">
                         <label class="block text-xs font-bold text-slate-800 mb-1">${ico('key', 'w-3.5 h-3.5')} Senha / Token de Acesso da TV (Opcional)</label>
-                        <input type="text" id="create-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
-                        <p class="text-[9px] text-slate-500 mt-0.5">Se preenchido, exigirá este PIN numérico para abrir o link da TV sem login.</p>
+                        <input type="text" id="create-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
                     </div>
                 `;
                 ref.parentNode.insertBefore(containerCriacao, ref.nextSibling);
@@ -407,32 +368,28 @@ export const PautaConfigService = {
             if (editRef && editRef.parentNode) {
                 containerEdicao = document.createElement('div');
                 containerEdicao.id = 'pauta-tv-container-edicao';
-                containerEdicao.className = 'mb-4 mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 space-y-3';
+                containerEdicao.className = 'mb-4 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3';
                 containerEdicao.innerHTML = `
                     <label class="flex items-center cursor-pointer gap-3">
-                        <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                        <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer">
                         <div>
                             <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
                             <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV.</span>
                         </div>
                     </label>
-                    <div class="pt-2 border-t border-indigo-200">
+                    <div class="pt-2 border-t border-blue-200">
                         <label class="block text-xs font-bold text-slate-800 mb-1">${ico('key', 'w-3.5 h-3.5')} Senha / Token de Acesso da TV (Opcional)</label>
-                        <input type="text" id="edit-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
-                        <p class="text-[9px] text-slate-500 mt-0.5">Se preenchido, exigirá este PIN numérico para abrir o link da TV sem login.</p>
+                        <input type="text" id="edit-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
                     </div>
                 `;
                 editRef.parentNode.insertBefore(containerEdicao, editRef.nextSibling);
             }
         }
         const editTvCheck = document.getElementById('edit-use-tv-panel');
-        if (editTvCheck) {
-            editTvCheck.checked = pautaData.useTvPanel !== false;
-        }
+        if (editTvCheck) editTvCheck.checked = pautaData.useTvPanel !== false;
+        
         const editTokenInput = document.getElementById('edit-pauta-tv-token');
-        if (editTokenInput) {
-            editTokenInput.value = pautaData.tvToken || '';
-        }
+        if (editTokenInput) editTokenInput.value = pautaData.tvToken || '';
     },
 
     _adicionarSelectorModo() {
@@ -460,41 +417,60 @@ export const PautaConfigService = {
                 <label class="block text-sm font-medium text-gray-700 mb-2">${ico('clipboard')} Tipo de Evento</label>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input type="radio" name="pauta-modo" value="mutirao" class="w-4 h-4 text-green-600" checked>
+                        <input type="radio" name="pauta-modo" value="mutirao" class="w-4 h-4 text-blue-600" checked>
                         <div>
                             <span class="text-sm font-bold">${ico('userPlus')} Mutirão</span>
                             <p class="text-[9px] text-gray-500">Evento concentrado</p>
                         </div>
                     </label>
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input type="radio" name="pauta-modo" value="plantao" class="w-4 h-4 text-green-600">
+                        <input type="radio" name="pauta-modo" value="plantao" class="w-4 h-4 text-blue-600">
                         <div>
                             <span class="text-sm font-bold">${ico('alertCircle')} Plantão</span>
                             <p class="text-[9px] text-gray-500">Atendimento emergencial</p>
                         </div>
                     </label>
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                        <input type="radio" name="pauta-modo" value="acao_social" class="w-4 h-4 text-green-600">
+                        <input type="radio" name="pauta-modo" value="acao_social" class="w-4 h-4 text-blue-600">
                         <div>
                             <span class="text-sm font-bold">${ico('heart')} Ação Social</span>
                             <p class="text-[9px] text-gray-500">Atividade comunitária</p>
                         </div>
                     </label>
                 </div>
-                <p class="text-[10px] text-amber-600 mt-2">${ico('alert', 'w-3 h-3')} Modos Mutirão, Plantão e Ação Social NÃO terão acesso à Recepção Central</p>
             `;
         }
     },
 
     _preencherFormEdicao(pautaData) {
-        const tipoAtual = pautaData.type || DEFAULTS.type;
+        // Nova Lógica de Separação
+        const naturezaAtual = pautaData.naturezaFila || (pautaData.type === 'multisala' ? 'agendado' : pautaData.type) || DEFAULTS.naturezaFila;
+        const isMultiAtual = pautaData.type === 'multisala' || (pautaData.customRooms && pautaData.customRooms.length > 0);
+        
         const ordemAtual = pautaData.ordemAtendimento || DEFAULTS.ordemAtendimento;
         const usaDelegacao = pautaData.useDelegationFlow === true;
         const usaDistribuicao = pautaData.useDistributionFlow === true;
 
-        document.querySelectorAll('input[name="edit-pauta-type"]').forEach(r => {
-            r.checked = r.value === tipoAtual;
+        // Preenche Radio Natureza Fila
+        document.querySelectorAll('input[name="tipo_atendimento"]').forEach(r => {
+            r.checked = r.value === naturezaAtual;
         });
+        
+        // Preenche Checkbox Multi-Salas
+        const checkMulti = document.getElementById('check-multisalas');
+        if(checkMulti) {
+            checkMulti.checked = isMultiAtual;
+            const roomConfig = document.getElementById('room-config-container');
+            if (roomConfig) {
+                if (isMultiAtual) {
+                    roomConfig.classList.remove('hidden');
+                    this._app.customRoomsList = pautaData.customRooms || pautaData.rooms || [];
+                    this._renderCustomRooms();
+                } else {
+                    roomConfig.classList.add('hidden');
+                }
+            }
+        }
         
         document.querySelectorAll('input[name="edit-ordem"]').forEach(r => {
             r.checked = r.value === ordemAtual;
@@ -514,38 +490,6 @@ export const PautaConfigService = {
 
         this._injetarCampoToleranciaEdicao(pautaData);
         this._injetarInterruptorTVEdicao(pautaData);
-
-        const app = this._app;
-        const roomConfig = document.getElementById('room-config-container');
-        
-        if (roomConfig) {
-            const typeSelectionAreaEdit = document.querySelector('#edit-pauta-config-modal .space-y-4') || document.querySelector('#edit-pauta-config-modal .p-5');
-            if (typeSelectionAreaEdit && !typeSelectionAreaEdit.contains(roomConfig)) {
-                typeSelectionAreaEdit.appendChild(roomConfig);
-            }
-
-            if (tipoAtual === 'multisala') {
-                roomConfig.classList.remove('hidden');
-                app.customRoomsList = pautaData.customRooms || pautaData.rooms || [];
-                this._renderCustomRooms();
-            } else {
-                roomConfig.classList.add('hidden');
-            }
-        }
-
-        document.querySelectorAll('input[name="edit-pauta-type"]').forEach(r => {
-            r.addEventListener('change', (e) => {
-                if (roomConfig) {
-                    if (e.target.value === 'multisala') {
-                        roomConfig.classList.remove('hidden');
-                        app.customRoomsList = pautaData.customRooms || pautaData.rooms || [];
-                        this._renderCustomRooms();
-                    } else {
-                        roomConfig.classList.add('hidden');
-                    }
-                }
-            });
-        });
     },
 
     // ── CRIAÇÃO ────────────────────────────────────────────────────────────────
@@ -554,8 +498,14 @@ export const PautaConfigService = {
         const app = this._app;
         const user = app.auth.currentUser;
 
-        const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-        const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+        // CAPTURA A NOVA ESTRUTURA (Agendado/Avulso e Multi-Salas)
+        const tipoAtendimento = document.querySelector('input[name="tipo_atendimento"]:checked')?.value || 'agendado';
+        const isMultiSalas = document.getElementById('check-multisalas')?.checked || false;
+        
+        // Mantém 'multisala' como TYPE para retrocompatibilidade com partes antigas do sistema
+        const pautaType = isMultiSalas ? 'multisala' : tipoAtendimento;
+
+        const pautaName = document.getElementById('create-pauta-name-input')?.value.trim() || 'Nova Pauta';
         const orgaoId  = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value;
 
@@ -581,7 +531,6 @@ export const PautaConfigService = {
                                    || 'normal';
 
         if (!isEvento && !unidadeId) { showNotification("Por favor, selecione uma Unidade Vinculada.", "error"); return; }
-        if (!pautaName) { showNotification("O nome da pauta não pode ser vazio.", "error"); return; }
         if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
 
         const duplicado = await verificarNomeDuplicadoHoje(app.db, pautaName, user.uid);
@@ -596,7 +545,8 @@ export const PautaConfigService = {
                 orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
                 unidadeId: isEvento ? null : unidadeId,
                 unidadeNome: isEvento ? null : unidadeNome,
-                type: pautaType || DEFAULTS.type,
+                type: pautaType,
+                naturezaFila: tipoAtendimento, // Guarda a informação real (agendado ou avulso)
                 tipo: tipoSelecionado,
                 owner: user.uid,
                 members: [user.uid],
@@ -606,22 +556,22 @@ export const PautaConfigService = {
                 dataOperacao: dataOp,
                 toleranciaMinutos: toleranciaMinutos,
                 useTvPanel: useTvPanel,
-                tvToken: tvToken, // <--- SALVA O TOKEN DA TV NO BANCO
+                tvToken: tvToken,
                 ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
                 useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                 useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
             };
 
-            if (pautaType === 'multisala') {
-                novaPautaData.customRooms = app.customRoomsList;
-                novaPautaData.rooms = app.customRoomsList;
+            if (isMultiSalas) {
+                novaPautaData.customRooms = app.customRoomsList || [];
+                novaPautaData.rooms = app.customRoomsList || [];
             }
 
             const pautaRef = await addDoc(collection(app.db, "pautas"), novaPautaData);
 
             await logAction(
                 app.db, app.auth, app.currentUserName, pautaRef.id, 'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) [TV: ${useTvPanel}, Token: ${tvToken ? 'Sim' : 'Não'}]`
+                `Criou pauta "${pautaName}" (${pautaType}) [TV: ${useTvPanel}]`
             );
 
             if (orgaoId && !isEvento) {
@@ -655,7 +605,9 @@ export const PautaConfigService = {
     },
 
     _limparFormCriacao() {
-        document.getElementById('create-pauta-name-input').value = '';
+        const nameInput = document.getElementById('create-pauta-name-input');
+        if(nameInput) nameInput.value = '';
+        
         const orgaoInput = document.getElementById('select-orgao-integracao');
         if (orgaoInput) orgaoInput.value = '';
 
@@ -665,9 +617,9 @@ export const PautaConfigService = {
         document.getElementById('pauta-modo-container')?.remove();
         document.getElementById('pauta-tv-container-criacao')?.remove();
 
-        document.getElementById('delegation-flow-modal').classList.add('hidden');
-        document.getElementById('create-pauta-modal').classList.add('hidden');
-        document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+        document.getElementById('delegation-flow-modal')?.classList.add('hidden');
+        document.getElementById('create-pauta-modal')?.classList.add('hidden');
+        document.getElementById('ordem-atendimento-modal')?.classList.add('hidden');
     },
 
     // ── EDIÇÃO ─────────────────────────────────────────────────────────────────
@@ -675,7 +627,12 @@ export const PautaConfigService = {
     async salvarEdicaoConfig() {
         const app = this._app;
 
-        const newType       = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
+        // Captura edição (Mesma lógica de separação)
+        const tipoAtendimento = document.querySelector('input[name="tipo_atendimento"]:checked')?.value || 'agendado';
+        const isMultiSalas = document.getElementById('check-multisalas')?.checked || false;
+        
+        const newType       = isMultiSalas ? 'multisala' : tipoAtendimento;
+        
         const newOrdem      = document.querySelector('input[name="edit-ordem"]:checked')?.value;
         const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
         const newDist       = document.getElementById('edit-use-distribution')?.checked || false;
@@ -698,16 +655,18 @@ export const PautaConfigService = {
         try {
             const updates = {
                 type: newType,
+                naturezaFila: tipoAtendimento,
                 ordemAtendimento: newOrdem,
                 useDelegationFlow: newDelegation,
                 useDistributionFlow: newDist,
                 toleranciaMinutos: newTol,
                 useTvPanel: newTvPanel,
-                tvToken: newTvToken // <--- SALVA A ATUALIZAÇÃO DO TOKEN DA TV
+                tvToken: newTvToken 
             };
+            
             if (newDate) updates.dataOperacao = newDate;
 
-            if (newType === 'multisala') {
+            if (isMultiSalas) {
                 updates.customRooms = app.customRoomsList || [];
                 updates.rooms = app.customRoomsList || [];
             } else {
@@ -776,11 +735,11 @@ export const PautaConfigService = {
 
             await logAction(
                 app.db, app.auth, app.currentUserName, app.currentPauta.id, 'EDIT_PAUTA_CONFIG',
-                `Editou config: TV=${newTvPanel}, Token=${newTvToken ? 'Sim' : 'Não'}, del=${newDelegation}, dist=${newDist}`
+                `Editou config: TV=${newTvPanel}, del=${newDelegation}, dist=${newDist}`
             );
 
             showNotification("Configurações atualizadas com sucesso!", "success");
-            document.getElementById('edit-pauta-config-modal').classList.add('hidden');
+            document.getElementById('edit-pauta-config-modal')?.classList.add('hidden');
 
         } catch (error) {
             console.error("Erro ao salvar configurações:", error);
@@ -800,12 +759,16 @@ export const PautaConfigService = {
         
         const tvCheck = document.getElementById('check-use-tv-panel');
         const tvTokenInput = document.getElementById('create-pauta-tv-token');
+        
+        const tipoAtendimento = document.querySelector('input[name="tipo_atendimento"]:checked')?.value || 'agendado';
+        const isMultiSalas = document.getElementById('check-multisalas')?.checked || false;
 
         const template = {
             id: Date.now().toString(),
             nome: nome.trim(),
             tipo: tipoSelecionado,
-            type: document.getElementById('create-pauta-modal')?.dataset.pautaType || DEFAULTS.type,
+            naturezaFila: tipoAtendimento,
+            type: isMultiSalas ? 'multisala' : tipoAtendimento,
             toleranciaMinutos: parseInt(document.getElementById('create-pauta-tolerancia-input')?.value) || DEFAULTS.toleranciaMinutos,
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
@@ -826,8 +789,22 @@ export const PautaConfigService = {
         const t = templates.find(t => t.id === id);
         if (!t) return;
 
-        const createModal = document.getElementById('create-pauta-modal');
-        if (createModal) createModal.dataset.pautaType = t.type;
+        const naturezaAtual = t.naturezaFila || (t.type === 'multisala' ? 'agendado' : t.type) || 'agendado';
+        const isMultiAtual = t.type === 'multisala';
+
+        document.querySelectorAll('input[name="tipo_atendimento"]').forEach(r => {
+            r.checked = r.value === naturezaAtual;
+        });
+        
+        const checkMulti = document.getElementById('check-multisalas');
+        if(checkMulti) {
+            checkMulti.checked = isMultiAtual;
+            const roomConfig = document.getElementById('room-config-container');
+            if (roomConfig) {
+                if (isMultiAtual) roomConfig.classList.remove('hidden');
+                else roomConfig.classList.add('hidden');
+            }
+        }
 
         const modoRadios = document.querySelectorAll('input[name="pauta-modo"]');
         modoRadios.forEach(radio => {
@@ -894,6 +871,7 @@ export const PautaConfigService = {
                     orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
                     type: item.type || DEFAULTS.type,
                     tipo: item.tipo || DEFAULTS.tipo,
+                    naturezaFila: item.type === 'multisala' ? 'agendado' : (item.type || DEFAULTS.naturezaFila),
                     owner: user.uid,
                     members: [user.uid],
                     memberEmails: [user.email],
@@ -993,4 +971,3 @@ export const PautaConfigService = {
 };
 
 export default PautaConfigService;
-
